@@ -394,6 +394,15 @@
   .lyric-card .lyric-line mark {
     background: var(--highlighter); color: var(--ink); padding: 0 3px; font-weight: 700;
   }
+  /* album colour: left rule tint + small inline tag */
+  .lyric-card { border-left: 3px solid var(--album-color, var(--ink-soft)); }
+  .album-tag {
+    display: inline-block; margin-left: 8px;
+    font-family: var(--type); font-size: 9px; letter-spacing: 0.8px;
+    color: var(--album-color, var(--ink-soft));
+    vertical-align: middle; opacity: 0.85;
+    text-transform: uppercase;
+  }
   .countdown {
     text-align: center; margin-top: 18px;
     font-family: var(--type); font-size: 12px; color: var(--ink-soft);
@@ -858,6 +867,21 @@ function renderBracelet() {
 }
 
 /* ---------- Data load ---------- */
+/* ---------- Album colours (left-rule tint + tag on lyric cards) ---------- */
+const ALBUM_COLORS = {
+  "Taylor Swift":                     "#5a9ea6",
+  "Fearless":                         "#b8943a",
+  "Speak Now":                        "#8b5fa0",
+  "Red":                              "#a32a2a",
+  "1989":                             "#4a8fb5",
+  "reputation":                       "#555555",
+  "Lover":                            "#c4649a",
+  "folklore":                         "#7a8a72",
+  "evermore":                         "#7a5a38",
+  "Midnights":                        "#3d4f8a",
+  "The Tortured Poets Department":    "#7a6e60",
+};
+
 async function loadData() {
   const [wordsRes, songsRes] = await Promise.all([
     fetch("words.json"),
@@ -865,7 +889,10 @@ async function loadData() {
   ]);
   if (!wordsRes.ok || !songsRes.ok) throw new Error("Failed to fetch data files");
   const words = await wordsRes.json();
-  allSongs = await songsRes.json();
+  const grouped = await songsRes.json();
+  allSongs = grouped.flatMap(({ album, songs }) =>
+    songs.map((s) => ({ ...s, album }))
+  );
   playableWords = words.filter((w) => songsContainingWord(w).length >= 1);
   if (!playableWords.length) throw new Error("No playable words found in data");
 }
@@ -1102,15 +1129,21 @@ function showCircledChoice(song, done) {
   setTimeout(done, 640);
 }
 
+function lyricCard(song, word) {
+  const line = extractLineWithWord(song.lyrics, word);
+  const color = ALBUM_COLORS[song.album] || "var(--ink-soft)";
+  const albumLabel = song.album ? `<span class="album-tag" style="--album-color:${color}">${escapeHtml(song.album)}</span>` : "";
+  return `<div class="lyric-card" style="--album-color:${color}">
+    <div class="song-title">${escapeHtml(song.title)}${albumLabel}</div>
+    <div class="lyric-line">"${highlightWord(line, word)}"</div>
+  </div>`;
+}
+
 function showCorrectFeedback(song) {
-  const line = extractLineWithWord(song.lyrics, currentWord);
   const fb = $("feedback");
   fb.innerHTML = `
     <div class="banner good">that's the one</div>
-    <div class="lyric-card">
-      <div class="song-title">${escapeHtml(song.title)}</div>
-      <div class="lyric-line">"${highlightWord(line, currentWord)}"</div>
-    </div>
+    ${lyricCard(song, currentWord)}
     <div class="countdown">next page in <b id="cd">5</b></div>`;
   runCountdown();
 }
@@ -1119,13 +1152,7 @@ function showWrongFeedback(song, isTimeout) {
   const fb = $("feedback");
   const reason = isTimeout ? "the page ran out" : "not this verse";
   const examples = shuffle(currentSongs.slice()).slice(0, 3);
-  const cards = examples.map((s) => {
-    const line = extractLineWithWord(s.lyrics, currentWord);
-    return `<div class="lyric-card">
-      <div class="song-title">${escapeHtml(s.title)}</div>
-      <div class="lyric-line">"${highlightWord(line, currentWord)}"</div>
-    </div>`;
-  }).join("");
+  const cards = examples.map((s) => lyricCard(s, currentWord)).join("");
   fb.innerHTML = `
     <div class="banner bad">${reason}</div>
     <p class="hint" style="margin-top:0;">songs that use "<b>${escapeHtml(currentWord)}</b>":</p>
