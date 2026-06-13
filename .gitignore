@@ -1,0 +1,15 @@
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Local song-builder tool + its data
+add_song/
+
+# Local editor / tooling config
+.claude/
+.vscode/
+.idea/
+
+# Logs and temp
+*.log
+Thumbs.db

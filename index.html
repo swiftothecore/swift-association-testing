@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Swift To The Song Association</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+<style>
+  /* =========================================================
+     THE SONGWRITER'S NOTEBOOK — core feel (Phases 0–3)
+     ========================================================= */
+
+  :root {
+    --paper: #f5efe1;
+    --paper-edge: #efe7d4;
+    --desk: #c8bca6;
+    --ink: #2b2722;            /* graphite body ink */
+    --ink-soft: #6f675a;       /* faded pencil */
+    --rule: rgba(43, 39, 34, 0.07);   /* ruled lines */
+    --margin: rgba(178, 58, 58, 0.45); /* red margin rule */
+
+    /* Era tokens (overridden per round by [data-era]) */
+    --ink-accent: #a9791f;
+    --highlighter: rgba(247, 201, 72, 0.55);
+    --bead: #c8951f;
+    --page-wash: rgba(212, 160, 23, 0.05);
+
+    --line: 32px;  /* notebook baseline rhythm */
+    --serif: Georgia, "Times New Roman", serif;
+    --hand: "Caveat", "Bradley Hand", "Segoe Script", cursive;
+    --type: "Courier Prime", "Courier New", monospace;
+  }
+
+  /* ---- Era palettes (accent / highlighter / bead / wash) ---- */
+  body[data-era="gold"]     { --ink-accent:#a9791f; --highlighter:rgba(247,201,72,0.55); --bead:#c8951f; --page-wash:rgba(212,160,23,0.05); }
+  body[data-era="lavender"] { --ink-accent:#6d5aa6; --highlighter:rgba(186,160,235,0.50); --bead:#8b73c9; --page-wash:rgba(139,115,201,0.05); }
+  body[data-era="red"]      { --ink-accent:#9b2226; --highlighter:rgba(225,90,95,0.42);  --bead:#b23a3f; --page-wash:rgba(178,58,63,0.05); }
+  body[data-era="denim"]    { --ink-accent:#3f6fa3; --highlighter:rgba(120,170,220,0.45); --bead:#5b87b8; --page-wash:rgba(91,135,184,0.05); }
+  body[data-era="graphite"] { --ink-accent:#4a4a4a; --highlighter:rgba(130,130,130,0.40); --bead:#6b6b6b; --page-wash:rgba(90,90,90,0.05); }
+  body[data-era="midnight"] { --ink-accent:#2b3a67; --highlighter:rgba(90,110,180,0.42); --bead:#3d4f86; --page-wash:rgba(43,58,103,0.06); }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: var(--type);
+    color: var(--ink);
+    background:
+      radial-gradient(1100px 700px at 50% -10%, #d6cbb4 0%, var(--desk) 60%, #b9ad96 100%);
+    background-attachment: fixed;
+    display: flex;
+    justify-content: center;
+    padding: 40px 18px 64px;
+  }
+
+  .app { width: 100%; max-width: 600px; }
+
+  /* ---------- Title ---------- */
+  header.title { text-align: center; margin-bottom: 22px; }
+  header.title h1 {
+    margin: 0;
+    font-family: var(--hand);
+    font-weight: 700;
+    font-size: clamp(22px, 6.4vw, 44px);
+    line-height: 1.1;
+    white-space: nowrap;
+    color: var(--ink);
+    transform: rotate(-1.4deg);
+  }
+  header.title p {
+    margin: 10px 0 0;
+    font-family: var(--type);
+    font-size: 12px; letter-spacing: 1px; color: var(--ink-soft);
+  }
+
+  /* ---------- Paper page ---------- */
+  .card {
+    position: relative;
+    background:
+      linear-gradient(var(--page-wash), var(--page-wash)),
+      repeating-linear-gradient(
+        to bottom,
+        var(--paper) 0,
+        var(--paper) calc(var(--line) - 1px),
+        var(--rule) calc(var(--line) - 1px),
+        var(--rule) var(--line)
+      );
+    background-color: var(--paper);
+    border-radius: 3px;
+    padding: 30px 30px 34px 58px;   /* extra left pad for the margin */
+    box-shadow:
+      0 1px 0 #fff inset,
+      0 18px 40px rgba(60, 50, 35, 0.28),
+      0 2px 6px rgba(60, 50, 35, 0.18);
+    /* deckled / torn-ish edge softness */
+    transition: background 0.5s ease;
+  }
+  /* red margin rule */
+  .card::before {
+    content: "";
+    position: absolute; top: 0; bottom: 0; left: 44px;
+    width: 2px; background: var(--margin);
+    opacity: 0.8;
+  }
+
+  .screen { display: none; }
+  .screen.active { display: block; animation: fade 0.4s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  /* ---------- Buttons (hand-drawn / taped) ---------- */
+  button {
+    font-family: var(--type); cursor: pointer; border: none;
+    transition: background 0.18s, color 0.18s, transform 0.12s, box-shadow 0.2s;
+  }
+  button:active { transform: translateY(1px) scale(0.99); }
+
+  .btn-primary {
+    display: block; width: 100%; margin: 0 auto;
+    padding: 14px 18px; font-size: 15px; letter-spacing: 1px; font-weight: 700;
+    color: var(--ink); background: var(--highlighter);
+    border: 2px solid var(--ink);
+    border-radius: 2px;
+    box-shadow: 3px 3px 0 rgba(43, 39, 34, 0.18);
+    transform: rotate(-0.6deg);
+  }
+  .btn-primary:hover { background: var(--ink); color: var(--paper); }
+
+  .btn-ghost {
+    width: 100%; margin-top: 14px; padding: 12px;
+    font-size: 13px; letter-spacing: 1px; color: var(--ink);
+    background: transparent; border: 1.5px dashed var(--ink-soft); border-radius: 2px;
+  }
+  .btn-ghost:hover { background: var(--highlighter); border-style: solid; }
+
+  /* ---------- Hall of Fame (handwritten list) ---------- */
+  .podium-title {
+    font-family: var(--hand); font-weight: 700; font-size: 26px;
+    color: var(--ink); margin: 0 0 6px; transform: rotate(-0.8deg);
+  }
+  .podium { list-style: none; margin: 0 0 4px; padding: 0; }
+  .podium li {
+    display: flex; align-items: baseline; gap: 12px;
+    padding: 4px 0; min-height: var(--line);
+    font-family: var(--hand); font-size: 23px; color: var(--ink);
+  }
+  .podium li .rank-num { width: 28px; color: var(--ink-soft); font-family: var(--type); font-size: 13px; }
+  .podium li.rank-1 .rank-num { color: var(--ink-accent); }
+  .podium li .name { flex: 1; }
+  .podium li .pts { font-family: var(--type); font-size: 16px; color: var(--ink-accent); }
+  .podium li .leader-tag, .podium li .you-tag {
+    font-family: var(--type); font-size: 10px; letter-spacing: 1px;
+    border: 1px solid var(--ink); padding: 1px 5px; color: var(--ink);
+    transform: rotate(-2deg);
+  }
+  .podium li.you .name { text-decoration: underline wavy var(--ink-accent); text-underline-offset: 4px; }
+
+  /* ---------- Bracelet (round progress + score) ---------- */
+  .bracelet-wrap { margin-bottom: 26px; }
+  .bracelet-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--type); font-size: 12px; color: var(--ink-soft);
+    margin-bottom: 8px; letter-spacing: 0.5px;
+  }
+  .bracelet-meta .charms { color: var(--ink-accent); font-weight: 700; }
+  .bracelet { position: relative; padding: 4px 0 2px; }
+  .bracelet svg { width: 100%; height: auto; display: block; overflow: visible; }
+
+  /* SVG bracelet parts (colours flow from the era tokens) */
+  .b-thread { fill: none; stroke: var(--ink-soft); stroke-linecap: round; }
+  .b-knot { fill: none; stroke: var(--ink-soft); stroke-linecap: round; }
+  .b-seed { fill: var(--bead); opacity: 0.45; }
+  .b-future { fill: var(--paper); stroke: var(--ink-soft); opacity: 0.5; }
+  .b-letter { fill: #fffdf6; stroke: var(--ink-soft); }
+  .b-letter-text { fill: var(--ink-soft); font-family: "Courier Prime", "Courier New", monospace; font-weight: 700; }
+  .b-miss { fill: var(--paper-edge); stroke: var(--ink-soft); }
+  .b-miss-dot { fill: var(--ink-soft); opacity: 0.7; }
+  .b-bead { fill: var(--bead); stroke: var(--ink); }
+  .b-gloss { fill: #fff; opacity: 0.55; }
+
+  .b-halo {
+    fill: none; stroke: var(--bead);
+    transform-box: fill-box; transform-origin: center;
+    animation: halo 1.8s ease-out infinite;
+  }
+  @keyframes halo {
+    0%   { transform: scale(0.8); opacity: 0.45; }
+    70%  { transform: scale(1.55); opacity: 0; }
+    100% { transform: scale(1.55); opacity: 0; }
+  }
+
+  /* charms dangle from the thread and sway gently; a fresh one swings in */
+  .charm-dangle { transform-box: fill-box; transform-origin: 50% 0%; animation: sway 5.5s ease-in-out infinite; }
+  .charm-dangle.fresh { animation: swingIn 1.4s cubic-bezier(.34,1.56,.64,1), sway 5.5s ease-in-out 1.4s infinite; }
+  @keyframes sway {
+    0%, 100% { transform: rotate(2.4deg); }
+    50%      { transform: rotate(-2.4deg); }
+  }
+  @keyframes swingIn {
+    0%   { transform: rotate(26deg); }
+    40%  { transform: rotate(-14deg); }
+    70%  { transform: rotate(7deg); }
+    100% { transform: rotate(0deg); }
+  }
+
+  .bracelet-finished { max-width: 440px; margin: 0 auto 10px; }
+  .bracelet-caption {
+    text-align: center; font-family: var(--hand); font-size: 19px;
+    color: var(--ink-soft); margin: 14px 0 0;
+  }
+
+  /* ---------- Word + highlighter ---------- */
+  .word-label {
+    font-family: var(--type); font-size: 12px; letter-spacing: 1px;
+    color: var(--ink-soft); margin-bottom: 6px; transform: rotate(-0.5deg);
+  }
+  .word-wrap { text-align: center; margin: 6px 0 14px; }
+  .word {
+    display: inline-block; position: relative;
+    font-family: var(--hand); font-weight: 700;
+    font-size: clamp(50px, 12vw, 80px); line-height: 1.05;
+    color: var(--ink); padding: 0 10px;
+    transform: rotate(-1.2deg);
+  }
+  /* highlighter swipe behind the word */
+  .word::before {
+    content: ""; position: absolute; z-index: -1;
+    left: -2px; right: -2px; top: 38%; bottom: 8%;
+    background: var(--highlighter);
+    transform: rotate(-1.6deg) skewX(-6deg);
+    border-radius: 40% 55% 45% 50% / 60% 50% 55% 45%;
+    transition: background 0.4s ease;
+  }
+
+  /* ---------- Timer (draining highlighter underline) ---------- */
+  .timer-wrap { max-width: 320px; margin: 0 auto 30px; }
+  .timer-track {
+    height: 8px; background: rgba(43,39,34,0.08); border-radius: 6px; overflow: hidden;
+  }
+  .timer-fill {
+    height: 100%; width: 100%; border-radius: 6px;
+    background: var(--bead);
+    transition: width 0.1s linear, background 0.3s;
+  }
+  .timer-fill.low { background: var(--margin); }
+  .timer-label {
+    text-align: center; margin-top: 7px;
+    font-family: var(--type); font-size: 12px; color: var(--ink-soft);
+  }
+
+  /* ---------- Input + dropdown (interim paper styling) ---------- */
+  .input-area { position: relative; }
+  #songInput {
+    width: 100%; padding: 10px 4px;
+    font-family: var(--type); font-size: 17px;
+    border: none; border-bottom: 2px solid var(--ink); border-radius: 0;
+    background: transparent; color: var(--ink); outline: none;
+  }
+  #songInput::placeholder { color: var(--ink-soft); font-style: italic; }
+  #songInput:focus { box-shadow: inset 0 -2px 0 var(--ink-accent); }
+  .dropdown {
+    position: absolute; left: 0; right: 0; top: calc(100% + 6px);
+    z-index: 100; display: none;
+  }
+  .dropdown.show { display: block; }
+  .dropdown .item {
+    padding: 10px 14px; cursor: pointer;
+    font-family: var(--type); font-size: 14px; color: var(--ink);
+    background: var(--paper-edge);
+    border: 1.5px solid var(--ink-soft); border-radius: 2px;
+    margin-bottom: 6px; box-shadow: 2px 2px 0 rgba(43,39,34,0.12);
+    transform: rotate(-0.4deg);
+    transition: transform 0.12s, background 0.12s;
+  }
+  .dropdown .item:nth-child(even) { transform: rotate(0.5deg); }
+  .dropdown .item.active, .dropdown .item:hover {
+    background: var(--highlighter); transform: rotate(0deg) scale(1.01);
+  }
+
+  .hint {
+    text-align: center; font-family: var(--hand); font-size: 17px;
+    color: var(--ink-soft); margin-top: 16px;
+  }
+
+  /* ---------- Feedback (interim) ---------- */
+  .feedback { margin-top: 6px; }
+  .feedback .banner {
+    text-align: center; font-family: var(--hand); font-weight: 700;
+    font-size: 38px; padding: 4px 0 12px;
+  }
+  .feedback .banner.good { color: var(--ink-accent); }
+  .feedback .banner.bad { color: var(--margin); }
+  .lyric-card { border-left: 3px solid var(--ink-accent); padding: 2px 0 2px 14px; margin-bottom: 16px; }
+  .lyric-card .song-title {
+    font-family: var(--type); font-size: 11px; letter-spacing: 1px;
+    color: var(--ink-soft); margin-bottom: 4px;
+  }
+  .lyric-card .lyric-line { font-family: var(--hand); font-size: 24px; color: var(--ink); line-height: 1.3; }
+  .lyric-card .lyric-line mark {
+    background: var(--highlighter); color: var(--ink); padding: 0 3px; font-weight: 700;
+  }
+  .countdown {
+    text-align: center; margin-top: 18px;
+    font-family: var(--type); font-size: 12px; color: var(--ink-soft);
+  }
+  .countdown b { display: block; font-family: var(--hand); font-size: 46px; color: var(--ink-accent); line-height: 1.3; }
+
+  /* ---------- Results ---------- */
+  .final-score { text-align: center; margin-bottom: 18px; }
+  .final-score .big {
+    font-family: var(--hand); font-weight: 700; font-size: 88px; line-height: 1;
+    color: var(--ink); transform: rotate(-2deg); display: inline-block;
+  }
+  .final-score .sub { font-family: var(--type); font-size: 12px; letter-spacing: 1px; color: var(--ink-soft); margin-top: 4px; }
+
+  .name-prompt { margin-top: 18px; text-align: center; }
+  .name-prompt p { font-family: var(--hand); font-size: 22px; color: var(--ink); margin: 0 0 10px; }
+  .name-prompt input {
+    width: 100%; padding: 8px 4px; text-align: center;
+    font-family: var(--hand); font-size: 24px;
+    border: none; border-bottom: 2px solid var(--ink); border-radius: 0;
+    background: transparent; color: var(--ink); outline: none; margin-bottom: 12px;
+  }
+
+  .loading, .error {
+    text-align: center; padding: 40px 16px;
+    font-family: var(--hand); font-size: 24px; color: var(--ink-soft);
+  }
+  .error { color: var(--margin); }
+  .error code { font-family: var(--type); font-size: 13px; background: rgba(43,39,34,0.08); padding: 2px 6px; }
+  .sr-note {
+    text-align: center; margin-top: 18px;
+    font-family: var(--type); font-size: 10px; letter-spacing: 0.5px; color: var(--ink-soft); opacity: 0.8;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .screen.active { animation: none; }
+    .b-halo, .charm-dangle, .charm-dangle.fresh { animation: none; }
+    .card, .timer-fill, .word::before { transition: none; }
+  }
+</style>
+</head>
+<body data-era="gold">
+<div class="app">
+  <header class="title">
+    <h1>Swift to the Song Association</h1>
+    <p>13 pages · 10 seconds each</p>
+  </header>
+
+  <!-- START SCREEN -->
+  <section id="screen-start" class="screen card">
+    <div id="loading" class="loading">opening the notebook…</div>
+    <div id="startContent" style="display:none;">
+      <p class="podium-title">Hall of Fame</p>
+      <ul id="startPodium" class="podium"></ul>
+      <button id="playBtn" class="btn-primary" style="margin-top:18px;">Start writing</button>
+      <p class="hint">jot the song that holds the word, then press Enter</p>
+    </div>
+  </section>
+
+  <!-- GAME SCREEN -->
+  <section id="screen-game" class="screen card">
+    <div class="bracelet-wrap">
+      <div class="bracelet-meta">
+        <span>page <b id="pageNum">1</b> of 13</span>
+        <span class="charms">★ <b id="charmCount">0</b></span>
+      </div>
+      <div id="bracelet" class="bracelet"></div>
+    </div>
+
+    <p class="word-label">write a song with</p>
+    <div class="word-wrap"><span id="wordDisplay" class="word">—</span></div>
+
+    <div class="timer-wrap">
+      <div class="timer-track"><div id="timerFill" class="timer-fill"></div></div>
+      <div class="timer-label"><span id="timerLabel">10.0</span>s</div>
+    </div>
+
+    <div id="playArea">
+      <div class="input-area">
+        <input id="songInput" type="text" autocomplete="off" spellcheck="false"
+               placeholder="write the line…" />
+        <div id="dropdown" class="dropdown"></div>
+      </div>
+      <p class="hint">Enter accepts the top match</p>
+    </div>
+
+    <div id="feedback" class="feedback"></div>
+  </section>
+
+  <!-- RESULTS SCREEN -->
+  <section id="screen-results" class="screen card">
+    <p class="word-label" style="text-align:center;">the final tally</p>
+    <div class="final-score">
+      <div class="big" id="finalScore">0</div>
+      <div class="sub" id="finalSub">out of 13</div>
+    </div>
+
+    <p class="bracelet-caption">the bracelet you made</p>
+    <div id="resultBracelet" class="bracelet bracelet-finished"></div>
+
+    <div id="namePrompt" class="name-prompt" style="display:none;">
+      <p>a new high score — sign the page</p>
+      <input id="nameInput" type="text" maxlength="20" placeholder="your name" />
+      <button id="saveNameBtn" class="btn-primary">Sign</button>
+    </div>
+
+    <p class="podium-title" style="margin-top:22px;">Hall of Fame</p>
+    <ul id="resultPodium" class="podium"></ul>
+    <button id="againBtn" class="btn-primary" style="margin-top:18px;">Turn back to page one</button>
+  </section>
+
+  <p class="sr-note">Open via a local server (e.g. <code>python3 -m http.server</code>) — opening the file directly blocks data loading.</p>
+</div>
+
+<script>
+"use strict";
+
+/* ---------- Constants & state ---------- */
+const TOTAL_ROUNDS = 13;
+const ROUND_SECONDS = 10;
+const RECENT_WINDOW = 5;
+const HS_KEY = "swiftSongAssociation.highscores";
+const DEFAULT_PODIUM = [
+  { name: "Sabrina Carpenter", score: 13 },
+  { name: "Taylor Swift", score: 12 },
+  { name: "Olivia Rodrigo", score: 10 },
+  { name: "SwiftLover13", score: 8 },
+  { name: "Selena Gomez", score: 4 },
+];
+
+/* Era engine */
+const ERAS = ["gold", "lavender", "red", "denim", "graphite", "midnight"];
+const TENDER_ERAS = ["lavender", "denim"];   // round 5 (Track 5) leans tender
+const FINALE_ERAS = ["gold", "midnight"];    // round 13 leans grand
+let recentEras = [];
+
+let allSongs = [];
+let playableWords = [];
+let score = 0;
+let round = 0;
+let recentWords = [];
+let roundResults = [];   // per-round true/false for the bracelet
+let currentWord = "";
+let currentSongs = [];
+let dropdownItems = [];
+let activeIndex = -1;
+let timerId = null;
+let countdownId = null;
+let timerStart = 0;
+let roundLocked = false;
+let debounceId = null;
+
+/* ---------- DOM ---------- */
+const $ = (id) => document.getElementById(id);
+const screens = {
+  start: $("screen-start"),
+  game: $("screen-game"),
+  results: $("screen-results"),
+};
+function showScreen(name) {
+  Object.values(screens).forEach((s) => s.classList.remove("active"));
+  screens[name].classList.add("active");
+}
+
+/* ---------- Era selection ---------- */
+function pickEra() {
+  let pool;
+  if (round === 5) pool = TENDER_ERAS;
+  else if (round === TOTAL_ROUNDS) pool = FINALE_ERAS;
+  else pool = ERAS.filter((e) => !recentEras.includes(e));
+  if (!pool.length) pool = ERAS;
+  const era = pool[Math.floor(Math.random() * pool.length)];
+  recentEras.push(era);
+  if (recentEras.length > 3) recentEras.shift();
+  return era;
+}
+function applyEra(era) { document.body.setAttribute("data-era", era); }
+
+/* ---------- Matching helpers ---------- */
+function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+function wordRegex(word) { return new RegExp("\\b" + escapeRegExp(word) + "\\b", "i"); }
+function songsContainingWord(word) {
+  const rx = wordRegex(word);
+  return allSongs.filter((s) => rx.test(s.lyrics));
+}
+function extractLineWithWord(lyrics, word) {
+  const rx = wordRegex(word);
+  const lines = lyrics.split("\n");
+  const line = lines.find((l) => rx.test(l)) || lines[0] || "";
+  return line.trim();
+}
+function highlightWord(line, word) {
+  const rx = new RegExp("\\b(" + escapeRegExp(word) + ")\\b", "ig");
+  return escapeHtml(line).replace(rx, "<mark>$1</mark>");
+}
+function escapeHtml(s) {
+  return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+/* ---------- High scores ---------- */
+function loadHighScores() {
+  try {
+    const raw = localStorage.getItem(HS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length) return parsed;
+    }
+  } catch (e) { /* ignore */ }
+  return DEFAULT_PODIUM.slice();
+}
+function saveHighScores(list) {
+  try { localStorage.setItem(HS_KEY, JSON.stringify(list)); } catch (e) { /* ignore */ }
+}
+function renderPodium(el, list, youName) {
+  el.innerHTML = "";
+  list.forEach((entry, i) => {
+    const li = document.createElement("li");
+    li.classList.add("rank-" + (i + 1));
+    if (youName && entry.name === youName && entry.__you) li.classList.add("you");
+    const num = String(i + 1).padStart(2, "0");
+    const leader = i === 0 ? `<span class="leader-tag">★ leader</span>` : "";
+    const tag = li.classList.contains("you") ? `<span class="you-tag">you</span>` : "";
+    li.innerHTML =
+      `<span class="rank-num">${num}</span>` +
+      `<span class="name">${escapeHtml(entry.name)} ${leader}${tag}</span>` +
+      `<span class="pts">${entry.score}</span>`;
+    el.appendChild(li);
+  });
+}
+
+/* ---------- Bracelet (hand-strung SVG) ---------- */
+let justEarnedIndex = -1; // bead that just became a charm, for the swing-in
+
+function starPath(cx, cy, rOut, rIn) {
+  let d = "";
+  for (let k = 0; k < 10; k++) {
+    const r = k % 2 === 0 ? rOut : rIn;
+    const a = -Math.PI / 2 + (k * Math.PI) / 5;
+    d += (k ? "L" : "M") + (cx + r * Math.cos(a)).toFixed(2) + "," + (cy + r * Math.sin(a)).toFixed(2);
+  }
+  return d + "Z";
+}
+
+function buildBraceletSVG(results, activeRound, freshIndex) {
+  const W = 520, H = 64, xL = 26, xR = W - 26;
+  // the thread sags between its tied ends like a real bracelet laid on the page
+  const yAt = (x) => 20 + 10 * Math.sin(Math.PI * ((x - xL) / (xR - xL)));
+  const tx0 = xL - 16, tx1 = xR + 16;
+
+  let d = "";
+  for (let s = 0; s <= 48; s++) {
+    const x = tx0 + ((tx1 - tx0) * s) / 48;
+    d += (s ? "L" : "M") + x.toFixed(1) + "," + yAt(x).toFixed(1);
+  }
+  // two offset strands read as twisted floss
+  let svg = `<path class="b-thread" d="${d}" stroke-width="1.7" opacity="0.55"/>` +
+            `<path class="b-thread" d="${d}" stroke-width="1" opacity="0.35" stroke-dasharray="6 4" transform="translate(0 1.3)"/>`;
+
+  const knot = (x, y, dir) =>
+    `<path class="b-knot" stroke-width="1.3" opacity="0.65" d="M${x},${y} q${5 * dir},-7 ${2 * dir},-11 M${x},${y} q${7 * dir},1 ${11 * dir},-4"/>` +
+    `<circle cx="${x}" cy="${y}" r="2.2" fill="var(--ink-soft)" opacity="0.7"/>`;
+  svg += knot(tx0, yAt(tx0), -1) + knot(tx1, yAt(tx1), 1);
+
+  // tiny seed beads strung between the main beads
+  for (let i = 0; i < TOTAL_ROUNDS - 1; i++) {
+    const x = xL + ((xR - xL) * (i + 0.5)) / (TOTAL_ROUNDS - 1);
+    svg += `<circle class="b-seed" cx="${x.toFixed(1)}" cy="${yAt(x).toFixed(1)}" r="1.9"/>`;
+  }
+
+  for (let i = 0; i < TOTAL_ROUNDS; i++) {
+    const x = +(xL + ((xR - xL) * i) / (TOTAL_ROUNDS - 1)).toFixed(1);
+    const y = +yAt(x).toFixed(1);
+    const answered = results[i];
+
+    if (answered === true) {
+      // a small bead on the thread, with a star charm dangling from a jump ring
+      svg += `<circle cx="${x}" cy="${y}" r="4.1" class="b-bead" stroke-width="1"/>`;
+      const fresh = i === freshIndex;
+      const delay = fresh ? "" : ` style="animation-delay:${(-(i * 0.9) % 5.5).toFixed(2)}s"`;
+      svg += `<g class="charm-dangle${fresh ? " fresh" : ""}"${delay}>` +
+        `<circle cx="${x}" cy="${y + 5.4}" r="2.3" fill="none" stroke="var(--ink)" stroke-width="1" opacity="0.7"/>` +
+        `<path d="${starPath(x, y + 15.5, 7.4, 3.1)}" class="b-bead" stroke-width="1.1" stroke-linejoin="round"/>` +
+        `<circle cx="${x - 1.9}" cy="${y + 12.6}" r="1.2" class="b-gloss"/>` +
+        `</g>`;
+    } else if (answered === false) {
+      // a quiet matte spacer bead
+      svg += `<circle cx="${x}" cy="${y}" r="4.9" class="b-miss" stroke-width="1"/>` +
+             `<circle cx="${x}" cy="${y}" r="1.1" class="b-miss-dot"/>`;
+    } else if (i + 1 === activeRound) {
+      // the bead being strung right now: bigger, glossy, with a soft halo pulse
+      svg += `<circle cx="${x}" cy="${y}" r="9" class="b-halo" stroke-width="2"/>` +
+             `<circle cx="${x}" cy="${y}" r="8.4" class="b-bead" stroke-width="1.4"/>` +
+             `<ellipse cx="${x - 2.6}" cy="${y - 3.1}" rx="3" ry="1.8" class="b-gloss" transform="rotate(-20 ${x - 2.6} ${y - 3.1})"/>`;
+    } else if (i === TOTAL_ROUNDS - 1) {
+      // the finale slot is a classic white letter bead
+      svg += `<g transform="rotate(6 ${x} ${y})">` +
+        `<rect x="${x - 7}" y="${y - 7}" width="14" height="14" rx="3.5" class="b-letter" stroke-width="1.1" opacity="0.8"/>` +
+        `<text x="${x}" y="${y + 2.6}" text-anchor="middle" font-size="7.5" class="b-letter-text">13</text>` +
+        `</g>`;
+    } else {
+      svg += `<circle cx="${x}" cy="${y}" r="5.6" class="b-future" stroke-width="1.1"/>`;
+    }
+  }
+
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${svg}</svg>`;
+}
+
+function renderBracelet() {
+  $("bracelet").innerHTML = buildBraceletSVG(roundResults, round, justEarnedIndex);
+  $("charmCount").textContent = roundResults.filter(Boolean).length;
+  $("pageNum").textContent = Math.min(Math.max(round, 1), TOTAL_ROUNDS);
+}
+
+/* ---------- Data load ---------- */
+async function loadData() {
+  const [wordsRes, songsRes] = await Promise.all([
+    fetch("words.json"),
+    fetch("songs.json"),
+  ]);
+  if (!wordsRes.ok || !songsRes.ok) throw new Error("Failed to fetch data files");
+  const words = await wordsRes.json();
+  allSongs = await songsRes.json();
+  playableWords = words.filter((w) => songsContainingWord(w).length >= 1);
+  if (!playableWords.length) throw new Error("No playable words found in data");
+}
+
+/* ---------- Game flow ---------- */
+function startGame() {
+  score = 0;
+  round = 0;
+  recentWords = [];
+  recentEras = [];
+  roundResults = [];
+  showScreen("game");
+  nextRound();
+}
+
+function pickWord() {
+  const pool = playableWords.filter((w) => !recentWords.includes(w));
+  const choices = pool.length ? pool : playableWords;
+  const word = choices[Math.floor(Math.random() * choices.length)];
+  recentWords.push(word);
+  if (recentWords.length > RECENT_WINDOW) recentWords.shift();
+  return word;
+}
+
+function nextRound() {
+  if (round >= TOTAL_ROUNDS) { endGame(); return; }
+  round++;
+  roundLocked = false;
+  justEarnedIndex = -1;
+  currentWord = pickWord();
+  currentSongs = songsContainingWord(currentWord);
+  applyEra(pickEra());
+
+  $("wordDisplay").textContent = currentWord;
+  $("feedback").innerHTML = "";
+  $("playArea").style.display = "";
+  renderBracelet();
+  const input = $("songInput");
+  input.value = "";
+  input.disabled = false;
+  hideDropdown();
+  input.focus();
+
+  startTimer();
+}
+
+function startTimer() {
+  clearTimer();
+  timerStart = performance.now();
+  const fill = $("timerFill");
+  const label = $("timerLabel");
+  fill.style.width = "100%";
+  fill.classList.remove("low");
+
+  timerId = setInterval(() => {
+    const elapsed = (performance.now() - timerStart) / 1000;
+    const remaining = Math.max(0, ROUND_SECONDS - elapsed);
+    const pct = (remaining / ROUND_SECONDS) * 100;
+    fill.style.width = pct + "%";
+    label.textContent = remaining.toFixed(1);
+    fill.classList.toggle("low", remaining <= 3);
+    if (remaining <= 0) {
+      label.textContent = "0.0";
+      submitAnswer(null, true);
+    }
+  }, 100);
+}
+function clearTimer() {
+  if (timerId) { clearInterval(timerId); timerId = null; }
+}
+
+/* ---------- Dropdown (searches whole catalog) ---------- */
+function rankMatches(query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const scored = [];
+  for (const song of allSongs) {
+    const t = song.title.toLowerCase();
+    const idx = t.indexOf(q);
+    if (idx === -1) continue;
+    const rank = idx === 0 ? 0 : 1;
+    scored.push({ song, rank, idx });
+  }
+  scored.sort((a, b) => a.rank - b.rank || a.idx - b.idx || a.song.title.localeCompare(b.song.title));
+  return scored.slice(0, 6).map((s) => s.song);
+}
+
+function updateDropdown() {
+  const q = $("songInput").value;
+  dropdownItems = rankMatches(q);
+  activeIndex = dropdownItems.length ? 0 : -1;
+  renderDropdown();
+}
+function renderDropdown() {
+  const dd = $("dropdown");
+  if (!dropdownItems.length) { hideDropdown(); return; }
+  dd.innerHTML = "";
+  dropdownItems.forEach((song, i) => {
+    const div = document.createElement("div");
+    div.className = "item" + (i === activeIndex ? " active" : "");
+    div.innerHTML = `${escapeHtml(song.title)}`;
+    div.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      submitAnswer(song, false);
+    });
+    dd.appendChild(div);
+  });
+  dd.classList.add("show");
+}
+function hideDropdown() { $("dropdown").classList.remove("show"); }
+
+/* ---------- Submit & feedback ---------- */
+function submitAnswer(song, isTimeout) {
+  if (roundLocked) return;
+
+  if (!song && !isTimeout) {
+    if (dropdownItems.length) {
+      song = dropdownItems[activeIndex >= 0 ? activeIndex : 0];
+    } else {
+      const typed = $("songInput").value.trim().toLowerCase();
+      song = allSongs.find((s) => s.title.toLowerCase() === typed) || null;
+    }
+    if (!song) return;
+  }
+
+  roundLocked = true;
+  clearTimer();
+  hideDropdown();
+  $("songInput").disabled = true;
+  $("playArea").style.display = "none";
+
+  const correct = !!song && currentSongs.some((s) => s.title === song.title);
+  roundResults[round - 1] = correct;
+  justEarnedIndex = correct ? round - 1 : -1;
+  if (correct) {
+    score++;
+    showCorrectFeedback(song);
+  } else {
+    showWrongFeedback(song, isTimeout);
+  }
+  renderBracelet();
+}
+
+function showCorrectFeedback(song) {
+  const line = extractLineWithWord(song.lyrics, currentWord);
+  const fb = $("feedback");
+  fb.innerHTML = `
+    <div class="banner good">that's the one</div>
+    <div class="lyric-card">
+      <div class="song-title">${escapeHtml(song.title)}</div>
+      <div class="lyric-line">"${highlightWord(line, currentWord)}"</div>
+    </div>
+    <div class="countdown">next page in <b id="cd">5</b></div>`;
+  runCountdown();
+}
+
+function showWrongFeedback(song, isTimeout) {
+  const fb = $("feedback");
+  const reason = isTimeout ? "the page ran out" : "not this verse";
+  const examples = shuffle(currentSongs.slice()).slice(0, 3);
+  const cards = examples.map((s) => {
+    const line = extractLineWithWord(s.lyrics, currentWord);
+    return `<div class="lyric-card">
+      <div class="song-title">${escapeHtml(s.title)}</div>
+      <div class="lyric-line">"${highlightWord(line, currentWord)}"</div>
+    </div>`;
+  }).join("");
+  fb.innerHTML = `
+    <div class="banner bad">${reason}</div>
+    <p class="hint" style="margin-top:0;">songs that use "<b>${escapeHtml(currentWord)}</b>":</p>
+    ${cards}
+    <button id="continueBtn" class="btn-ghost">next page</button>`;
+  $("continueBtn").addEventListener("click", nextRound);
+}
+
+function runCountdown() {
+  let n = 5;
+  const el = $("cd");
+  if (countdownId) clearInterval(countdownId);
+  countdownId = setInterval(() => {
+    n--;
+    if (n <= 0) {
+      clearInterval(countdownId);
+      countdownId = null;
+      nextRound();
+    } else if (el) {
+      el.textContent = n;
+    }
+  }, 1000);
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/* ---------- End game ---------- */
+function endGame() {
+  clearTimer();
+  applyEra(FINALE_ERAS[Math.floor(Math.random() * FINALE_ERAS.length)]);
+  showScreen("results");
+  $("resultBracelet").innerHTML = buildBraceletSVG(roundResults, 0, -1);
+  $("finalScore").textContent = score;
+  $("finalSub").textContent = "out of " + TOTAL_ROUNDS;
+
+  const list = loadHighScores();
+  const lowest = list.length >= 5 ? list[list.length - 1].score : -1;
+  const beats = list.length < 5 || score > lowest;
+
+  const nameDiv = $("namePrompt");
+  if (beats && score > 0) {
+    nameDiv.style.display = "";
+    renderPodium($("resultPodium"), sortHs(list), null);
+    const save = () => {
+      const name = ($("nameInput").value || "You").trim().slice(0, 20) || "You";
+      const updated = sortHs(list.concat([{ name, score, __you: true }])).slice(0, 5);
+      saveHighScores(updated.map(({ name, score }) => ({ name, score })));
+      nameDiv.style.display = "none";
+      renderPodium($("resultPodium"), updated, name);
+    };
+    $("saveNameBtn").onclick = save;
+    $("nameInput").onkeydown = (e) => { if (e.key === "Enter") save(); };
+    setTimeout(() => $("nameInput").focus(), 50);
+  } else {
+    nameDiv.style.display = "none";
+    renderPodium($("resultPodium"), sortHs(list), null);
+  }
+}
+function sortHs(list) { return list.slice().sort((a, b) => b.score - a.score); }
+
+/* ---------- Input wiring ---------- */
+function wireInput() {
+  const input = $("songInput");
+  input.addEventListener("input", () => {
+    if (debounceId) clearTimeout(debounceId);
+    debounceId = setTimeout(updateDropdown, 120);
+  });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      submitAnswer(null, false);
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (dropdownItems.length) { activeIndex = (activeIndex + 1) % dropdownItems.length; renderDropdown(); }
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (dropdownItems.length) { activeIndex = (activeIndex - 1 + dropdownItems.length) % dropdownItems.length; renderDropdown(); }
+    } else if (e.key === "Escape") {
+      hideDropdown();
+    }
+  });
+}
+
+/* ---------- Init ---------- */
+async function init() {
+  showScreen("start");
+  applyEra("gold");
+  renderPodium($("startPodium"), sortHs(loadHighScores()), null);
+  $("playBtn").addEventListener("click", startGame);
+  $("againBtn").addEventListener("click", () => {
+    applyEra("gold");
+    renderPodium($("startPodium"), sortHs(loadHighScores()), null);
+    showScreen("start");
+    $("startContent").style.display = "";
+  });
+  wireInput();
+
+  try {
+    await loadData();
+    $("loading").style.display = "none";
+    $("startContent").style.display = "";
+    renderPodium($("startPodium"), sortHs(loadHighScores()), null);
+  } catch (err) {
+    $("loading").outerHTML = `
+      <div class="error">
+        <p><b>Couldn't open the notebook.</b></p>
+        <p>${escapeHtml(err.message)}</p>
+        <p>Run a local server in this folder:<br><code>python3 -m http.server 8000</code><br>then open <code>http://localhost:8000</code></p>
+      </div>`;
+  }
+}
+
+document.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>
