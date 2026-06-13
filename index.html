@@ -57,7 +57,7 @@
     padding: 40px 18px 64px;
   }
 
-  .app { width: 100%; max-width: 600px; }
+  .app { width: 100%; max-width: 600px; perspective: 1700px; }
 
   /* ---------- Title ---------- */
   header.title { text-align: center; margin-bottom: 22px; }
@@ -133,6 +133,21 @@
   .screen { display: none; }
   .screen.active { display: block; animation: fade 0.4s ease; }
   @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  /* page turn between rounds — the page flips up from its top edge */
+  #screen-game.turning-out, #screen-game.turning-in {
+    transform-origin: top center; backface-visibility: hidden;
+  }
+  #screen-game.turning-out { animation: pageOut 0.22s ease-in forwards; }
+  #screen-game.turning-in { animation: pageIn 0.30s cubic-bezier(.2,.85,.3,1) forwards; }
+  @keyframes pageOut {
+    from { transform: rotateX(0deg); }
+    to   { transform: rotateX(-90deg); filter: brightness(0.9); }
+  }
+  @keyframes pageIn {
+    from { transform: rotateX(90deg); filter: brightness(0.9); }
+    to   { transform: rotateX(0deg); filter: brightness(1); }
+  }
 
   /* ---------- Buttons (hand-drawn / taped) ---------- */
   button {
@@ -406,6 +421,7 @@
     .word-wrap { animation: none; }
     .margin-tally.show { animation: none; opacity: 0.9; }
     .cc-ring { animation: none; stroke-dashoffset: 0; }
+    #screen-game.turning-out, #screen-game.turning-in { animation: none; }
     .card, .timer-fill, .word::before { transition: none; }
     /* vignette stays (it's a colour/state change, not motion) */
   }
@@ -721,6 +737,23 @@ function pickWord() {
 
 function nextRound() {
   if (round >= TOTAL_ROUNDS) { endGame(); return; }
+  // First round (from the start screen) and reduced motion advance instantly;
+  // otherwise turn the page: the answered page flips up, the next era page drops in.
+  if (round === 0 || prefersReducedMotion()) {
+    advanceRound();
+    return;
+  }
+  const card = $("screen-game");
+  card.classList.add("turning-out");
+  setTimeout(() => {
+    card.classList.remove("turning-out");
+    advanceRound();           // swap content while the page is edge-on (unseen)
+    card.classList.add("turning-in");
+    setTimeout(() => card.classList.remove("turning-in"), 320);
+  }, 220);
+}
+
+function advanceRound() {
   round++;
   roundLocked = false;
   justEarnedIndex = -1;
