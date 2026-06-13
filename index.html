@@ -549,7 +549,10 @@ function applyEra(era) { document.body.setAttribute("data-era", era); }
 
 /* ---------- Matching helpers ---------- */
 function escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
-function wordRegex(word) { return new RegExp("\\b" + escapeRegExp(word) + "\\b", "i"); }
+// Prefix-stem match: the word as the start of a token, plus any trailing letters,
+// so "gold" matches "golden", "dream" matches "dreamer". The leading \b keeps it
+// safe (e.g. "love" won't match "glove"/"clover"; "rain" won't match "train").
+function wordRegex(word) { return new RegExp("\\b" + escapeRegExp(word) + "[a-z']*\\b", "i"); }
 function songsContainingWord(word) {
   const rx = wordRegex(word);
   return allSongs.filter((s) => rx.test(s.lyrics));
@@ -561,7 +564,8 @@ function extractLineWithWord(lyrics, word) {
   return line.trim();
 }
 function highlightWord(line, word) {
-  const rx = new RegExp("\\b(" + escapeRegExp(word) + ")\\b", "ig");
+  // Highlight the whole variant token (e.g. "golden", not just "gold").
+  const rx = new RegExp("\\b(" + escapeRegExp(word) + "[a-z']*)\\b", "ig");
   return escapeHtml(line).replace(rx, "<mark>$1</mark>");
 }
 function escapeHtml(s) {
