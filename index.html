@@ -424,6 +424,73 @@
   .error { color: var(--margin); }
   .error code { font-family: var(--type); font-size: 13px; background: rgba(43,39,34,0.08); padding: 2px 6px; }
 
+  /* ---------- Stats page ---------- */
+  .stats-nav {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 18px;
+  }
+  .stats-nav .stats-title {
+    font-family: var(--hand); font-weight: 700; font-size: 26px;
+    color: var(--ink); transform: rotate(-0.8deg);
+  }
+  .btn-link {
+    font-family: var(--type); font-size: 11px; letter-spacing: 1px;
+    color: var(--ink-soft); background: none; border: none; cursor: pointer;
+    text-decoration: underline; text-underline-offset: 3px; padding: 4px 0;
+  }
+  .btn-link:hover { color: var(--ink); }
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 0; border: 1.5px solid rgba(43,39,34,0.12);
+    border-radius: 2px; margin-bottom: 22px;
+  }
+  .stat-cell {
+    padding: 12px 8px 10px; text-align: center;
+    border-right: 1.5px solid rgba(43,39,34,0.12);
+  }
+  .stat-cell:last-child { border-right: none; }
+  .stat-cell .stat-val {
+    font-family: var(--hand); font-size: 42px; font-weight: 700;
+    color: var(--ink); line-height: 1; display: block;
+  }
+  .stat-cell .stat-lbl {
+    font-family: var(--type); font-size: 10px; letter-spacing: 1px;
+    color: var(--ink-soft); display: block; margin-top: 4px; text-transform: uppercase;
+  }
+  .streak-row {
+    display: flex; gap: 0; border: 1.5px solid rgba(43,39,34,0.12);
+    border-radius: 2px; margin-bottom: 22px;
+  }
+  .streak-cell {
+    flex: 1; padding: 12px 8px 10px; text-align: center;
+    border-right: 1.5px solid rgba(43,39,34,0.12);
+  }
+  .streak-cell:last-child { border-right: none; }
+  .streak-cell .stat-val { font-family: var(--hand); font-size: 42px; font-weight: 700; color: var(--ink-accent); line-height: 1; display: block; }
+  .streak-cell .stat-lbl { font-family: var(--type); font-size: 10px; letter-spacing: 1px; color: var(--ink-soft); display: block; margin-top: 4px; text-transform: uppercase; }
+  .histogram-label {
+    font-family: var(--type); font-size: 10px; letter-spacing: 1px;
+    color: var(--ink-soft); text-transform: uppercase; margin-bottom: 10px;
+  }
+  .histogram {
+    display: flex; align-items: flex-end; gap: 4px;
+    height: 64px; margin-bottom: 4px;
+  }
+  .histogram-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .histogram-bar {
+    width: 100%; background: var(--bead); opacity: 0.5; border-radius: 1px;
+    min-height: 2px; transition: height 0.3s ease;
+  }
+  .histogram-bar.has-you { opacity: 0.9; }
+  .histogram-score {
+    font-family: var(--type); font-size: 9px; color: var(--ink-soft);
+    text-align: center; line-height: 1;
+  }
+  .stats-empty {
+    font-family: var(--hand); font-size: 20px; color: var(--ink-soft);
+    text-align: center; padding: 24px 0 8px; font-style: italic;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .screen.active { animation: none; }
     .b-halo, .charm-dangle, .charm-dangle.fresh { animation: none; }
@@ -431,7 +498,7 @@
     .margin-tally.show { animation: none; opacity: 0.9; }
     .cc-ring { animation: none; stroke-dashoffset: 0; }
     .page-flip-sheet { display: none; }
-    .card, .timer-fill, .word::before { transition: none; }
+    .card, .timer-fill, .word::before, .histogram-bar { transition: none; }
     /* vignette stays (it's a colour/state change, not motion) */
   }
 </style>
@@ -450,8 +517,18 @@
       <p class="podium-title">Hall of Fame</p>
       <ul id="startPodium" class="podium"></ul>
       <button id="playBtn" class="btn-primary" style="margin-top:18px;">Start writing</button>
+      <button id="statsBtn" class="btn-ghost">stats &amp; streaks</button>
       <p class="hint">jot the song that holds the word, then press Enter</p>
     </div>
+  </section>
+
+  <!-- STATS SCREEN -->
+  <section id="screen-stats" class="screen card">
+    <div class="stats-nav">
+      <span class="stats-title">Stats</span>
+      <button id="statsBackBtn" class="btn-link">← back</button>
+    </div>
+    <div id="statsBody"></div>
   </section>
 
   <!-- GAME SCREEN -->
@@ -505,6 +582,7 @@
     <p class="podium-title" style="margin-top:22px;">Hall of Fame</p>
     <ul id="resultPodium" class="podium"></ul>
     <button id="againBtn" class="btn-primary" style="margin-top:18px;">Turn back to page one</button>
+    <button id="resultsStatsBtn" class="btn-ghost">stats &amp; streaks</button>
   </section>
 </div>
 
@@ -516,6 +594,8 @@ const TOTAL_ROUNDS = 13;
 const ROUND_SECONDS = 10;
 const RECENT_WINDOW = 5;
 const HS_KEY = "swiftSongAssociation.highscores";
+const STATS_KEY = "swiftSongAssociation.stats";
+const STREAK_THRESHOLD = 7; // score >= this counts toward a streak
 const DEFAULT_PODIUM = [
   { name: "Sabrina Carpenter", score: 13 },
   { name: "Taylor Swift", score: 12 },
@@ -545,6 +625,7 @@ let countdownId = null;
 let timerStart = 0;
 let roundLocked = false;
 let debounceId = null;
+let statsBackTarget = "start";
 
 /* ---------- DOM ---------- */
 const $ = (id) => document.getElementById(id);
@@ -552,6 +633,7 @@ const screens = {
   start: $("screen-start"),
   game: $("screen-game"),
   results: $("screen-results"),
+  stats: $("screen-stats"),
 };
 function showScreen(name) {
   Object.values(screens).forEach((s) => s.classList.remove("active"));
@@ -595,6 +677,70 @@ function highlightWord(line, word) {
 }
 function escapeHtml(s) {
   return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+/* ---------- Stats ---------- */
+function loadStats() {
+  try {
+    const raw = localStorage.getItem(STATS_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s && typeof s.played === "number") return s;
+    }
+  } catch (e) { /* ignore */ }
+  return { played: 0, best: 0, totalScore: 0, scoreCounts: Array(14).fill(0), lastPlayed: null, currentStreak: 0, maxStreak: 0 };
+}
+function saveStats(s) {
+  try { localStorage.setItem(STATS_KEY, JSON.stringify(s)); } catch (e) { /* ignore */ }
+}
+function updateStats(gameScore) {
+  const s = loadStats();
+  s.played += 1;
+  s.best = Math.max(s.best, gameScore);
+  s.totalScore += gameScore;
+  s.scoreCounts[gameScore] = (s.scoreCounts[gameScore] || 0) + 1;
+  s.lastPlayed = new Date().toISOString().slice(0, 10);
+  if (gameScore >= STREAK_THRESHOLD) {
+    s.currentStreak += 1;
+    s.maxStreak = Math.max(s.maxStreak, s.currentStreak);
+  } else {
+    s.currentStreak = 0;
+  }
+  saveStats(s);
+  return s;
+}
+function renderStats(lastScore) {
+  const s = loadStats();
+  const el = $("statsBody");
+  if (s.played === 0) {
+    el.innerHTML = `<p class="stats-empty">no games yet — start writing!</p>`;
+    return;
+  }
+  const avg = (s.totalScore / s.played).toFixed(1);
+  const maxCount = Math.max(...s.scoreCounts, 1);
+
+  const bars = s.scoreCounts.map((count, score) => {
+    const h = Math.round((count / maxCount) * 56);
+    const isYou = (score === lastScore);
+    return `<div class="histogram-col">
+      <div class="histogram-bar${isYou ? " has-you" : ""}" style="height:${Math.max(h, count > 0 ? 4 : 2)}px"></div>
+      <div class="histogram-score">${score}</div>
+    </div>`;
+  }).join("");
+
+  el.innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-cell"><span class="stat-val">${s.played}</span><span class="stat-lbl">Played</span></div>
+      <div class="stat-cell"><span class="stat-val">${s.best}</span><span class="stat-lbl">Best</span></div>
+      <div class="stat-cell"><span class="stat-val">${avg}</span><span class="stat-lbl">Average</span></div>
+    </div>
+    <div class="streak-row">
+      <div class="streak-cell"><span class="stat-val">${s.currentStreak}</span><span class="stat-lbl">Current streak</span></div>
+      <div class="streak-cell"><span class="stat-val">${s.maxStreak}</span><span class="stat-lbl">Best streak</span></div>
+    </div>
+    <p class="histogram-label">score distribution</p>
+    <div class="histogram">${bars}</div>
+  `;
 }
 
 /* ---------- High scores ---------- */
@@ -1017,6 +1163,7 @@ function endGame() {
   clearTimer();
   resetTension();
   applyEra(FINALE_ERAS[Math.floor(Math.random() * FINALE_ERAS.length)]);
+  updateStats(score);
   showScreen("results");
   $("resultBracelet").innerHTML = buildBraceletSVG(roundResults, 0, -1);
   $("finalScore").textContent = score;
@@ -1076,6 +1223,13 @@ async function init() {
   applyEra("gold");
   renderPodium($("startPodium"), sortHs(loadHighScores()), null);
   $("playBtn").addEventListener("click", startGame);
+  $("statsBtn").addEventListener("click", () => { statsBackTarget = "start"; renderStats(null); showScreen("stats"); });
+  $("resultsStatsBtn").addEventListener("click", () => { statsBackTarget = "results"; renderStats(score); showScreen("stats"); });
+  $("statsBackBtn").addEventListener("click", () => {
+    const prev = statsBackTarget;
+    showScreen(prev);
+    if (prev === "start") { $("startContent").style.display = ""; }
+  });
   $("againBtn").addEventListener("click", () => {
     applyEra("gold");
     renderPodium($("startPodium"), sortHs(loadHighScores()), null);
