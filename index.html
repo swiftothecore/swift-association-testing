@@ -399,10 +399,6 @@
   }
   .error { color: var(--margin); }
   .error code { font-family: var(--type); font-size: 13px; background: rgba(43,39,34,0.08); padding: 2px 6px; }
-  .sr-note {
-    text-align: center; margin-top: 18px;
-    font-family: var(--type); font-size: 10px; letter-spacing: 0.5px; color: var(--ink-soft); opacity: 0.8;
-  }
 
   @media (prefers-reduced-motion: reduce) {
     .screen.active { animation: none; }
@@ -485,8 +481,6 @@
     <ul id="resultPodium" class="podium"></ul>
     <button id="againBtn" class="btn-primary" style="margin-top:18px;">Turn back to page one</button>
   </section>
-
-  <p class="sr-note">Open via a local server (e.g. <code>python3 -m http.server</code>) — opening the file directly blocks data loading.</p>
 </div>
 
 <script>
@@ -1030,7 +1024,7 @@ async function init() {
       <div class="error">
         <p><b>Couldn't open the notebook.</b></p>
         <p>${escapeHtml(err.message)}</p>
-        <p>Run a local server in this folder:<br><code>python3 -m http.server 8000</code><br>then open <code>http://localhost:8000</code></p>
+        <p>Try refreshing the page.</p>
       </div>`;
   }
 }
