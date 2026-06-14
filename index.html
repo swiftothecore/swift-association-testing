@@ -63,7 +63,49 @@
     padding: 40px 18px 64px;
   }
 
-  .app { width: 100%; max-width: 600px; position: relative; perspective: 1700px; perspective-origin: 50% 0%; }
+  .app { width: 100%; max-width: 600px; position: relative; z-index: 1; perspective: 1700px; perspective-origin: 50% 0%; }
+
+  /* ---------- Desk props (decorative, desktop only) ----------
+     Quiet, semi-realistic objects scattered on the oak desk to either side of
+     the notebook. Anchored to the notebook's edges (50% ± 300px) so they hug the
+     page at any width. Hidden on narrow screens where there's no bare desk. */
+  .desk-items { position: fixed; inset: 0; z-index: 0; pointer-events: none; display: none; }
+  .desk-item {
+    position: absolute; opacity: 0.92;
+    filter: drop-shadow(3px 7px 6px rgba(46,32,14,0.30)) saturate(0.88);
+  }
+  .desk-item svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+  /* left gutter */
+  .di-glasses { width: 158px; top: 13%;  right: calc(50% + 300px + 36px); transform: rotate(-7deg); }
+  .di-mug     { width: 132px; top: 41%;  right: calc(50% + 300px + 30px); }
+  .di-pencil  { width: 196px; top: 70%;  right: calc(50% + 300px + 14px); transform: rotate(7deg); }
+  /* right gutter */
+  .di-floss   { width: 150px; top: 14%;  left:  calc(50% + 300px + 30px); }
+  .di-cassette{ width: 178px; top: 42%;  left:  calc(50% + 300px + 26px); transform: rotate(-5deg); }
+  .di-picks   { width: 120px; top: 71%;  left:  calc(50% + 300px + 44px); transform: rotate(6deg); }
+
+  /* mug steam — faint wisps drifting up */
+  .desk-steam path { animation: deskSteam 4.4s ease-in-out infinite; transform-origin: center bottom; }
+  .desk-steam path:nth-child(2) { animation-delay: 1.3s; }
+  .desk-steam path:nth-child(3) { animation-delay: 2.6s; }
+  @keyframes deskSteam {
+    0%   { opacity: 0; transform: translateY(4px) scaleY(0.75); }
+    35%  { opacity: 0.55; }
+    70%  { opacity: 0.18; }
+    100% { opacity: 0; transform: translateY(-12px) scaleY(1.15); }
+  }
+  /* a dangling bead on the floss spool sways gently */
+  .desk-sway { transform-box: fill-box; transform-origin: 50% 0%; animation: deskSway 5.2s ease-in-out infinite; }
+  @keyframes deskSway { 0%,100% { transform: rotate(-2.4deg); } 50% { transform: rotate(2.4deg); } }
+
+  @media (min-width: 1040px) {
+    .desk-items { display: block; }
+    .di-glasses, .di-picks { display: none; }   /* the extras wait for more room */
+  }
+  @media (min-width: 1320px) {
+    .di-glasses, .di-picks { display: block; }
+  }
 
   /* ---------- Title ---------- */
   header.title { text-align: center; margin-bottom: 22px; }
@@ -694,11 +736,125 @@
     .blue-wash { animation: none; opacity: 0.16; }
     .sparkle, .star-shower { display: none; }
     .toast, .toast.leaving { animation: none; }
+    .desk-steam path, .desk-sway { animation: none; }
+    .desk-steam { opacity: 0.3; }
     /* vignette stays (it's a colour/state change, not motion) */
   }
 </style>
 </head>
 <body data-era="gold">
+<div class="desk-items" aria-hidden="true">
+  <!-- LEFT: reading glasses -->
+  <div class="desk-item di-glasses">
+    <svg viewBox="0 0 170 84" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="glLens" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cfe0e6" stop-opacity="0.55"/><stop offset="1" stop-color="#aebfc6" stop-opacity="0.3"/></linearGradient></defs>
+      <g fill="none" stroke="#6b4a2b" stroke-width="4.5" stroke-linecap="round"><path d="M16 24 C30 20 42 23 50 30"/><path d="M154 24 C140 20 128 23 120 30"/></g>
+      <path d="M78 38 q7 -8 14 0" fill="none" stroke="#6b4a2b" stroke-width="4.5"/>
+      <ellipse cx="56" cy="46" rx="30" ry="24" fill="url(#glLens)" stroke="#6b4a2b" stroke-width="5"/>
+      <ellipse cx="114" cy="46" rx="30" ry="24" fill="url(#glLens)" stroke="#6b4a2b" stroke-width="5"/>
+      <path d="M44 34 q10 -6 20 2" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M102 34 q10 -6 20 2" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="2.5" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <!-- LEFT: coffee mug + steam -->
+  <div class="desk-item di-mug">
+    <svg viewBox="0 0 140 156" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="mugBody" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e8e2d6"/><stop offset="0.5" stop-color="#f3eee4"/><stop offset="0.78" stop-color="#d6cdbc"/><stop offset="1" stop-color="#c2b7a1"/></linearGradient>
+        <radialGradient id="mugCoffee" cx="0.42" cy="0.4" r="0.7"><stop offset="0" stop-color="#5a3a21"/><stop offset="1" stop-color="#382310"/></radialGradient>
+      </defs>
+      <g class="desk-steam" fill="none" stroke="#cfc4b2" stroke-width="3.4" stroke-linecap="round">
+        <path d="M52 58 q-8 -12 2 -22 q9 -10 1 -22"/>
+        <path d="M72 58 q8 -12 -2 -22 q-9 -10 -1 -22"/>
+        <path d="M90 58 q-7 -11 2 -20 q8 -9 1 -19"/>
+      </g>
+      <path d="M104 84 q26 2 24 26 q-2 22 -26 22" fill="none" stroke="#c6bba4" stroke-width="11"/>
+      <path d="M104 84 q26 2 24 26 q-2 22 -26 22" fill="none" stroke="#e7e0d2" stroke-width="5"/>
+      <path d="M30 72 q39 -8 78 0 l-6 64 q-3 14 -17 16 q-16 2 -32 0 q-14 -2 -17 -16 z" fill="url(#mugBody)" stroke="#b0a48c" stroke-width="1.6"/>
+      <ellipse cx="69" cy="73" rx="39" ry="9" fill="url(#mugCoffee)" stroke="#2c1b0e" stroke-width="1.4"/>
+      <ellipse cx="61" cy="71" rx="13" ry="3" fill="#7a5536" opacity="0.5"/>
+      <path d="M40 82 q4 38 8 54" fill="none" stroke="#ffffff" stroke-opacity="0.38" stroke-width="4" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <!-- LEFT: pencil -->
+  <div class="desk-item di-pencil">
+    <svg viewBox="0 0 232 54" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="pcBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6c54a"/><stop offset="0.5" stop-color="#e9a92f"/><stop offset="1" stop-color="#c8861d"/></linearGradient></defs>
+      <path d="M6 27 L30 19 L30 35 Z" fill="#3a3a3a"/>
+      <path d="M6 27 L18 23 L18 31 Z" fill="#1f1f1f"/>
+      <path d="M30 16 L52 14 L52 40 L30 38 Z" fill="#e6c08a"/>
+      <path d="M30 16 L52 14 L52 27 L30 27 Z" fill="#f1d6a6"/>
+      <rect x="52" y="13" width="140" height="28" fill="url(#pcBody)"/>
+      <rect x="52" y="13" width="140" height="6" fill="#ffffff" opacity="0.28"/>
+      <rect x="52" y="35" width="140" height="6" fill="#7a4f12" opacity="0.32"/>
+      <rect x="192" y="12" width="22" height="30" fill="#cfc7bb"/>
+      <g fill="#9a9082"><rect x="196" y="12" width="2" height="30"/><rect x="204" y="12" width="2" height="30"/><rect x="210" y="12" width="2" height="30"/></g>
+      <path d="M214 14 q14 0 14 13 q0 13 -14 13 Z" fill="#d98aa0"/>
+      <path d="M214 15 q8 0 11 7" fill="none" stroke="#ffffff" stroke-opacity="0.4" stroke-width="2"/>
+    </svg>
+  </div>
+  <!-- RIGHT: friendship-bracelet floss spool, beads + paper stars -->
+  <div class="desk-item di-floss">
+    <svg viewBox="0 0 150 124" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="flWood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d8b483"/><stop offset="1" stop-color="#b88f5c"/></linearGradient>
+        <linearGradient id="flThread" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e0708f"/><stop offset="1" stop-color="#c24f72"/></linearGradient>
+      </defs>
+      <ellipse cx="40" cy="34" rx="13" ry="30" fill="url(#flWood)" stroke="#9a7244" stroke-width="1.4"/>
+      <rect x="40" y="10" width="64" height="48" fill="url(#flThread)"/>
+      <rect x="40" y="10" width="64" height="10" fill="#7aa6d8" opacity="0.7"/>
+      <rect x="40" y="48" width="64" height="10" fill="#e8c45a" opacity="0.65"/>
+      <g stroke="#a83f63" stroke-width="1" opacity="0.45"><path d="M48 11 L48 57 M58 10 L58 58 M68 10 L68 58 M78 10 L78 58 M88 10 L88 58 M96 11 L96 57"/></g>
+      <ellipse cx="104" cy="34" rx="13" ry="30" fill="url(#flWood)" stroke="#9a7244" stroke-width="1.4"/>
+      <ellipse cx="100" cy="26" rx="4" ry="10" fill="#ffffff" opacity="0.18"/>
+      <g class="desk-sway">
+        <path d="M104 44 q14 18 6 40 q-3 10 4 22" fill="none" stroke="#c24f72" stroke-width="2.6" stroke-linecap="round"/>
+        <circle cx="110" cy="92" r="5.5" fill="#7aa6d8" stroke="#3f6fa3" stroke-width="1"/>
+        <circle cx="112" cy="104" r="5" fill="#e8c45a" stroke="#b8943a" stroke-width="1"/>
+        <circle cx="114" cy="115" r="4.5" fill="#cf6f8f" stroke="#a83f63" stroke-width="1"/>
+      </g>
+      <path d="M20 76 l3 6 6.5 0.8 -4.8 4.5 1.3 6.5 -6 -3.2 -6 3.2 1.3 -6.5 -4.8 -4.5 6.5 -0.8 z" fill="#e6b84a" stroke="#b8923a" stroke-width="0.8"/>
+      <path d="M30 100 l2 4 4.4 0.5 -3.2 3 0.9 4.4 -4.1 -2.2 -4.1 2.2 0.9 -4.4 -3.2 -3 4.4 -0.5 z" fill="#d98aa0" stroke="#a83f63" stroke-width="0.7"/>
+    </svg>
+  </div>
+  <!-- RIGHT: cassette tape (blank ruled label, no artwork) -->
+  <div class="desk-item di-cassette">
+    <svg viewBox="0 0 192 124" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="csShell" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a4742"/><stop offset="1" stop-color="#322f2b"/></linearGradient></defs>
+      <rect x="4" y="6" width="184" height="112" rx="9" fill="url(#csShell)" stroke="#211f1c" stroke-width="2"/>
+      <g fill="#6b6760"><circle cx="16" cy="18" r="2.4"/><circle cx="176" cy="18" r="2.4"/><circle cx="16" cy="106" r="2.4"/><circle cx="176" cy="106" r="2.4"/><circle cx="96" cy="107" r="2.4"/></g>
+      <rect x="22" y="16" width="148" height="40" rx="3" fill="#efe7d4" stroke="#cbbfa6" stroke-width="1.4"/>
+      <path d="M22 28 H170" stroke="#b23a3f" stroke-width="1" opacity="0.5"/>
+      <g stroke="#9aa0c0" stroke-width="0.8" opacity="0.55"><path d="M28 39 H164"/><path d="M28 48 H164"/></g>
+      <rect x="34" y="62" width="124" height="42" rx="6" fill="#26241f" stroke="#191712" stroke-width="1.4"/>
+      <circle cx="66" cy="83" r="15" fill="#3a3732" stroke="#1c1a16" stroke-width="1.4"/>
+      <circle cx="66" cy="83" r="6" fill="#dcd3c0"/>
+      <g stroke="#1c1a16" stroke-width="1.4"><path d="M66 77 V71 M66 89 V95 M60 83 H54 M72 83 H78 M61.7 78.7 L57 74 M70.3 78.7 L75 74 M61.7 87.3 L57 92 M70.3 87.3 L75 92"/></g>
+      <circle cx="126" cy="83" r="15" fill="#3a3732" stroke="#1c1a16" stroke-width="1.4"/>
+      <circle cx="126" cy="83" r="9.5" fill="#5a4a32"/>
+      <circle cx="126" cy="83" r="6" fill="#dcd3c0"/>
+      <g stroke="#1c1a16" stroke-width="1.4"><path d="M126 77 V71 M126 89 V95 M120 83 H114 M132 83 H138"/></g>
+      <rect x="84" y="94" width="24" height="8" rx="2" fill="#0f0e0c"/>
+    </svg>
+  </div>
+  <!-- RIGHT: guitar picks -->
+  <div class="desk-item di-picks">
+    <svg viewBox="0 0 122 112" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="pk1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#caa24a"/><stop offset="1" stop-color="#8a5a22"/></linearGradient>
+        <linearGradient id="pk2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c75d6e"/><stop offset="1" stop-color="#8f3247"/></linearGradient>
+      </defs>
+      <g transform="rotate(-20 40 56)">
+        <path d="M40 14 C70 14 74 40 62 66 C54 84 46 95 40 95 C34 95 26 84 18 66 C6 40 10 14 40 14 Z" fill="url(#pk2)" stroke="#6f2436" stroke-width="2"/>
+        <path d="M26 30 q14 -8 28 0" fill="none" stroke="#ffffff" stroke-opacity="0.3" stroke-width="3" stroke-linecap="round"/>
+      </g>
+      <g transform="rotate(16 80 54)">
+        <path d="M80 12 C110 12 114 38 102 64 C94 82 86 93 80 93 C74 93 66 82 58 64 C46 38 50 12 80 12 Z" fill="url(#pk1)" stroke="#5e3a14" stroke-width="2"/>
+        <path d="M66 28 q14 -8 28 0" fill="none" stroke="#ffffff" stroke-opacity="0.32" stroke-width="3" stroke-linecap="round"/>
+      </g>
+    </svg>
+  </div>
+</div>
 <div id="toastLayer" class="toast-layer" aria-live="polite"></div>
 <div class="app">
   <header class="title">
