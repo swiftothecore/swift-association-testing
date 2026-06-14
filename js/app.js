@@ -356,13 +356,23 @@ function refreshStartBoard() {
 }
 function updateBlurb() {
   const b = $("modeBlurb");
-  if (!b) return;
-  if (gameType === "infinite") {
-    const v = infiniteVariant === "sudden" ? "one miss ends it" : "three lives";
-    b.textContent = v + " · " + currentMode.blurb;
-  } else {
-    b.textContent = currentMode.blurb;
+  if (b) {
+    if (gameType === "infinite") {
+      const v = infiniteVariant === "sudden" ? "one miss ends it" : "three lives";
+      b.textContent = v + " · " + currentMode.blurb;
+    } else {
+      b.textContent = currentMode.blurb;
+    }
   }
+  updateTagline();
+}
+// Masthead tagline reflects the active/selected game config.
+function updateTagline() {
+  const el = $("tagline");
+  if (!el) return;
+  el.textContent = gameType === "infinite"
+    ? `endless pages · ${currentMode.seconds} seconds each`
+    : `${TOTAL_ROUNDS} pages · ${currentMode.seconds} seconds each`;
 }
 function renderModePicker() {
   const tabs = $("modeTabs");
@@ -450,6 +460,7 @@ function startGame() {
   gameType = "classic";
   resetRunState();
   applyInputHints();
+  updateTagline();
   $("pageTotalWrap").style.display = "";
   $("pageTotal").textContent = TOTAL_ROUNDS;
   showScreen("game");
@@ -465,6 +476,7 @@ function startInfinite(variant, opts) {
   const carry = !!(opts && opts.carry);
   if (!carry) resetRunState();
   applyInputHints();
+  updateTagline();
   $("pageTotalWrap").style.display = "none";
   showScreen("game");
   // Fresh runs use nextRound's round-0 instant path; a carried run is mid-game,
