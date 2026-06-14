@@ -12,6 +12,7 @@ add_song/
 
 # Local Claude project notes (kept local, not published)
 CLAUDE.md
+PLAN.md
 
 # Logs and temp
 *.log
