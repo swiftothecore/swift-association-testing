@@ -451,6 +451,7 @@ function advanceRound() {
   $("feedback").innerHTML = "";
   $("playArea").style.display = "";
   renderBracelet();
+  renderLives();
   const input = $("songInput");
   input.value = "";
   input.disabled = false;

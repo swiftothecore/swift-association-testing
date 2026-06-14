@@ -160,6 +160,34 @@
     100% { opacity: 0; transform: rotate(-9deg) scale(1.15) translateY(-8px); }
   }
 
+  /* infinite-mode lives: pencil tally strokes scrawled down the outer margin,
+     each crossed out as a life is spent */
+  .lives-tally {
+    position: absolute; left: 10px; top: 90px; z-index: 6;
+    display: none; flex-direction: column; gap: 11px;
+    pointer-events: none;
+  }
+  .lives-tally.show { display: flex; }
+  .life-mark {
+    position: relative; width: 4px; height: 26px; border-radius: 2px;
+    background: var(--ink-soft);
+    transform: rotate(-8deg); opacity: 0.85;
+    transition: opacity 0.3s ease;
+  }
+  .life-mark.spent { opacity: 0.32; }
+  /* the diagonal slash that crosses out a spent life */
+  .life-mark.spent::after {
+    content: ""; position: absolute; left: -7px; top: 11px;
+    width: 20px; height: 2.5px; border-radius: 2px;
+    background: var(--margin); transform: rotate(28deg);
+    transform-origin: center;
+    animation: strike 0.34s ease-out;
+  }
+  @keyframes strike {
+    from { width: 0; opacity: 0; }
+    to   { width: 20px; opacity: 1; }
+  }
+
   .screen { display: none; }
   .screen.active { display: block; animation: fade 0.4s ease; }
   @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
@@ -762,6 +790,7 @@
     .b-halo, .charm-dangle, .charm-dangle.fresh { animation: none; }
     .word-wrap { animation: none; }
     .margin-tally.show { animation: none; opacity: 0.9; }
+    .life-mark.spent::after { animation: none; }
     .rarity-stamp.show { animation: none; opacity: 0.58; transform: rotate(7deg) scale(1); }
     .cc-ring { animation: none; stroke-dashoffset: 0; }
     .page-flip-sheet { display: none; }
