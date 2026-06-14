@@ -26,7 +26,7 @@ let titleIndex = new Map();   // normalizeTitle(title|alias) -> song, built in l
 let playableWords = [];
 let score = 0;
 let round = 0;
-let recentWords = [];
+let usedWords = [];
 let roundResults = [];   // per-round true/false for the bracelet
 let roundAlbums = [];    // per-round album of the picked song (for the final bracelet)
 let currentWord = "";
@@ -318,7 +318,7 @@ function startGame() {
   gameTimeouts = 0;
   gameMaxStreak = 0;
   newlyUnlocked = [];
-  recentWords = [];
+  usedWords = [];
   recentEras = [];
   roundResults = [];
   roundAlbums = [];
@@ -330,11 +330,13 @@ function startGame() {
 
 function pickWord() {
   const bucket = wordBuckets[currentMode.pool] || playableWords;
-  const pool = bucket.filter((w) => !recentWords.includes(w));
+  // No-repeat within a game: exclude every word already used this run. Buckets
+  // are guaranteed ≥ TOTAL_ROUNDS words (see buildWordBuckets' MIN), so the pool
+  // only empties on a degenerate list — fall back to the full bucket if so.
+  const pool = bucket.filter((w) => !usedWords.includes(w));
   const choices = pool.length ? pool : bucket;
   const word = choices[Math.floor(Math.random() * choices.length)];
-  recentWords.push(word);
-  if (recentWords.length > RECENT_WINDOW) recentWords.shift();
+  usedWords.push(word);
   return word;
 }
 
