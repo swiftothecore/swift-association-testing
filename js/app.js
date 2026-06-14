@@ -1,19 +1,22 @@
 "use strict";
 import { $, escapeRegExp, escapeHtml, prefersReducedMotion, shuffle, chance } from "./util.js";
 import {
-  TOTAL_ROUNDS, ROUND_SECONDS, RECENT_WINDOW,
-  HS_KEY, STATS_KEY, ACH_KEY, DIFF_KEY,
-  MODES, MODE_ORDER, DEFAULT_PODIUM,
+  TOTAL_ROUNDS, RECENT_WINDOW, DIFF_KEY,
+  MODES, MODE_ORDER,
   ERAS, TENDER_ERAS, FINALE_ERAS,
   ALBUM_COLORS,
   ACHIEVEMENTS, ACH_ICONS, ACH_BY_ID,
   PEN_SVG, STAR_SVG, SPARKLE_SVG, DOODLE_SVG,
 } from "./config.js";
 import { buildBraceletSVG } from "./bracelet.js";
+import {
+  loadHighScores, saveHighScores,
+  loadStats, updateStats, totalPlayed,
+  loadAchievements, saveAchievements,
+  loadMode,
+} from "./storage.js";
 
 /* ---------- Constants & state ---------- */
-const STREAK_THRESHOLD = 7; // score >= this counts toward a streak
-
 let currentMode = MODES.medium;
 let wordBuckets = { easy: [], all: [], hard: [], ultra: [] };
 let recentEras = [];
@@ -97,39 +100,6 @@ function highlightWord(line, word, strict) {
 }
 
 /* ---------- Stats ---------- */
-// Medium keeps the legacy key for back-compat; other modes get a suffix.
-function statsKey(mode) { return mode === "medium" ? STATS_KEY : STATS_KEY + "." + mode; }
-function loadStats(mode = currentMode.id) {
-  try {
-    const raw = localStorage.getItem(statsKey(mode));
-    if (raw) {
-      const s = JSON.parse(raw);
-      if (s && typeof s.played === "number") return s;
-    }
-  } catch (e) { /* ignore */ }
-  return { played: 0, best: 0, totalScore: 0, scoreCounts: Array(14).fill(0), lastPlayed: null, currentStreak: 0, maxStreak: 0 };
-}
-function saveStats(s, mode = currentMode.id) {
-  try { localStorage.setItem(statsKey(mode), JSON.stringify(s)); } catch (e) { /* ignore */ }
-}
-// Total games across every mode — for the global "play N games" achievements.
-function totalPlayed() { return MODE_ORDER.reduce((n, m) => n + loadStats(m).played, 0); }
-function updateStats(gameScore, mode = currentMode.id) {
-  const s = loadStats(mode);
-  s.played += 1;
-  s.best = Math.max(s.best, gameScore);
-  s.totalScore += gameScore;
-  s.scoreCounts[gameScore] = (s.scoreCounts[gameScore] || 0) + 1;
-  s.lastPlayed = new Date().toISOString().slice(0, 10);
-  if (gameScore >= STREAK_THRESHOLD) {
-    s.currentStreak += 1;
-    s.maxStreak = Math.max(s.maxStreak, s.currentStreak);
-  } else {
-    s.currentStreak = 0;
-  }
-  saveStats(s, mode);
-  return s;
-}
 function renderStats(lastScore, viewMode = currentMode.id) {
   const s = loadStats(viewMode);
   const el = $("statsBody");
@@ -177,22 +147,12 @@ function renderStats(lastScore, viewMode = currentMode.id) {
 let earnedAchievements = {};   // persisted: { id: "YYYY-MM-DD" }
 let newlyUnlocked = [];        // ids unlocked this game (for the results recap)
 
-function loadAchievements() {
-  try {
-    const raw = localStorage.getItem(ACH_KEY);
-    if (raw) { const o = JSON.parse(raw); if (o && typeof o === "object") return o; }
-  } catch (e) { /* ignore */ }
-  return {};
-}
-function saveAchievements() {
-  try { localStorage.setItem(ACH_KEY, JSON.stringify(earnedAchievements)); } catch (e) { /* ignore */ }
-}
 function charmMarkup(icon) { return `<span class="charm" aria-hidden="true">${ACH_ICONS[icon]}</span>`; }
 
 function unlock(id, toast) {
   if (!ACH_BY_ID[id] || earnedAchievements[id]) return;
   earnedAchievements[id] = new Date().toISOString().slice(0, 10);
-  saveAchievements();
+  saveAchievements(earnedAchievements);
   newlyUnlocked.push(id);
   if (toast) showToast(ACH_BY_ID[id]);
 }
@@ -238,21 +198,6 @@ function achievementsGridHTML() {
 }
 
 /* ---------- High scores (separate board per mode) ---------- */
-// Medium keeps the legacy key for back-compat; other modes get a suffix.
-function hsKey(mode) { return mode === "medium" ? HS_KEY : HS_KEY + "." + mode; }
-function loadHighScores(mode = currentMode.id) {
-  try {
-    const raw = localStorage.getItem(hsKey(mode));
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length) return parsed;
-    }
-  } catch (e) { /* ignore */ }
-  return DEFAULT_PODIUM.slice();
-}
-function saveHighScores(list, mode = currentMode.id) {
-  try { localStorage.setItem(hsKey(mode), JSON.stringify(list)); } catch (e) { /* ignore */ }
-}
 function renderPodium(el, list, youName) {
   el.innerHTML = "";
   list.forEach((entry, i) => {
@@ -319,13 +264,6 @@ function buildWordBuckets() {
 }
 
 /* ---------- Difficulty ---------- */
-function loadMode() {
-  try {
-    const id = localStorage.getItem(DIFF_KEY);
-    if (id && MODES[id]) return MODES[id];
-  } catch (e) { /* ignore */ }
-  return MODES.medium;
-}
 function setMode(id) {
   if (!MODES[id]) return;
   currentMode = MODES[id];
@@ -693,7 +631,7 @@ function endGame() {
   renderResultRecap();
   if (score === TOTAL_ROUNDS) celebratePerfect();
 
-  const list = loadHighScores();
+  const list = loadHighScores(currentMode.id);
   const lowest = list.length >= 5 ? list[list.length - 1].score : -1;
   const beats = list.length < 5 || score > lowest;
 
@@ -704,7 +642,7 @@ function endGame() {
     const save = () => {
       const name = ($("nameInput").value || "You").trim().slice(0, 20) || "You";
       const updated = sortHs(list.concat([{ name, score, __you: true }])).slice(0, 5);
-      saveHighScores(updated.map(({ name, score }) => ({ name, score })));
+      saveHighScores(updated.map(({ name, score }) => ({ name, score })), currentMode.id);
       nameDiv.style.display = "none";
       renderPodium($("resultPodium"), updated, name);
     };
