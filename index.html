@@ -445,6 +445,14 @@
     font-family: var(--type); font-size: 12px; color: var(--ink-soft);
   }
   .countdown b { display: block; font-family: var(--hand); font-size: 46px; color: var(--ink-accent); line-height: 1.3; }
+  .countdown-skip {
+    margin-top: 8px;
+    font-family: var(--type); font-size: 11px; letter-spacing: 1px;
+    color: var(--ink-soft); background: transparent;
+    border: none; border-bottom: 1px dashed var(--ink-soft);
+    padding: 2px 1px; cursor: pointer;
+  }
+  .countdown-skip:hover { color: var(--ink); border-bottom-color: var(--ink); }
 
   /* ---------- Results ---------- */
   .final-score { text-align: center; margin-bottom: 18px; }
@@ -1126,7 +1134,7 @@ function buildBraceletSVG(results, activeRound, freshIndex, albums) {
 }
 
 function renderBracelet() {
-  $("bracelet").innerHTML = buildBraceletSVG(roundResults, round, justEarnedIndex);
+  $("bracelet").innerHTML = buildBraceletSVG(roundResults, round, justEarnedIndex, roundAlbums);
   $("charmCount").textContent = roundResults.filter(Boolean).length;
   $("pageNum").textContent = Math.min(Math.max(round, 1), TOTAL_ROUNDS);
 }
@@ -1430,7 +1438,9 @@ function showCorrectFeedback(song) {
   fb.innerHTML = `
     <div class="banner good">✓ that's the one</div>
     ${lyricCard(song, currentWord, false)}
-    <div class="countdown">next page in <b id="cd">5</b></div>`;
+    <div class="countdown">next page in <b id="cd">5</b></div>
+    <button id="skipBtn" class="countdown-skip">skip →</button>`;
+  $("skipBtn").addEventListener("click", advanceFromFeedback);
   celebrateCorrect(correctStreak);
   runCountdown();
 }
@@ -1445,7 +1455,16 @@ function showWrongFeedback(song, isTimeout) {
     <span class="red-note">songs that hold "<b>${escapeHtml(currentWord)}</b>"</span>
     ${cards}
     <button id="continueBtn" class="btn-ghost">next page →</button>`;
-  $("continueBtn").addEventListener("click", nextRound);
+  $("continueBtn").addEventListener("click", advanceFromFeedback);
+}
+
+// Leave the verdict and turn the page — used by the skip button, the
+// "next page" button, and the Enter key. Guarded so it only fires while a
+// verdict is on screen (and clears any running countdown first).
+function advanceFromFeedback() {
+  if (!roundLocked) return;
+  if (countdownId) { clearInterval(countdownId); countdownId = null; }
+  nextRound();
 }
 
 function runCountdown() {
@@ -1712,6 +1731,14 @@ function wireInput() {
     } else if (e.key === "Escape") {
       hideDropdown();
     }
+  });
+  // After a verdict the input is disabled, so a document-level Enter advances
+  // the page: skips the correct-answer countdown, or fires "next page" on a miss.
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    if (!screens.game.classList.contains("active") || !roundLocked) return;
+    e.preventDefault();
+    advanceFromFeedback();
   });
 }
 
