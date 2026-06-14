@@ -381,6 +381,17 @@ function nextRound() {
   setTimeout(finish, 500);
 }
 
+// How rare the round's word is, from its number of valid answers. Returns a
+// name (for data-rarity) and t in 0..1 (common→scarce) used to scale the
+// highlighter swipe's weight, so rarer words *feel* rarer without touching the
+// era engine's hue.
+function rarityTier(n) {
+  if (n >= 12) return { name: "common",   t: 0 };
+  if (n >= 6)  return { name: "uncommon", t: 0.4 };
+  if (n >= 3)  return { name: "rare",     t: 0.75 };
+  return { name: "scarce", t: 1 };
+}
+
 function advanceRound() {
   round++;
   roundLocked = false;
@@ -388,6 +399,11 @@ function advanceRound() {
   currentWord = pickWord();
   currentSongs = validSongs(currentWord, currentMode.strict, currentMode.noTitle);
   applyEra(pickEra());
+
+  const rar = rarityTier(currentSongs.length);
+  const wrap = $("wordDisplay").parentNode;   // .word-wrap
+  wrap.dataset.rarity = rar.name;
+  wrap.style.setProperty("--rarity", rar.t);
 
   $("wordDisplay").textContent = currentWord;
   $("feedback").innerHTML = "";

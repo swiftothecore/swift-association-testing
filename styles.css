@@ -334,14 +334,18 @@
     color: var(--ink); padding: 0 10px;
     transform: rotate(-1.2deg);
   }
-  /* highlighter swipe behind the word */
+  /* highlighter swipe behind the word — its weight scales with --rarity
+     (set per round from the word's answer count), so rarer words get a bolder,
+     more saturated swipe while the hue stays era-driven. */
   .word::before {
     content: ""; position: absolute; z-index: -1;
-    left: -2px; right: -2px; top: 38%; bottom: 8%;
+    left: -2px; right: -2px;
+    top: calc(38% - var(--rarity, 0) * 9%); bottom: 8%;
     background: var(--highlighter);
+    opacity: calc(0.7 + var(--rarity, 0) * 0.3);
     transform: rotate(-1.6deg) skewX(-6deg);
     border-radius: 40% 55% 45% 50% / 60% 50% 55% 45%;
-    transition: background 0.4s ease;
+    transition: background 0.4s ease, opacity 0.4s ease, top 0.4s ease;
   }
 
   /* ---------- Timer (draining highlighter underline) ---------- */
