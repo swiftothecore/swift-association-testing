@@ -66,24 +66,24 @@
   .app { width: 100%; max-width: 600px; position: relative; z-index: 1; perspective: 1700px; perspective-origin: 50% 0%; }
 
   /* ---------- Desk props (decorative, desktop only) ----------
-     Quiet, semi-realistic objects scattered on the oak desk to either side of
-     the notebook. Anchored to the notebook's edges (50% ± 300px) so they hug the
-     page at any width. Hidden on narrow screens where there's no bare desk. */
-  .desk-items { position: fixed; inset: 0; z-index: 0; pointer-events: none; display: none; }
+     Quiet, semi-realistic objects that straddle the screen edges — each runs
+     roughly half off the viewport so the desk reads as continuing past the
+     window. Hidden on narrow screens where they'd crowd the notebook. */
+  .desk-items { position: fixed; inset: 0; z-index: 0; pointer-events: none; display: none; overflow: hidden; }
   .desk-item {
     position: absolute; opacity: 0.92;
     filter: drop-shadow(3px 7px 6px rgba(46,32,14,0.30)) saturate(0.88);
   }
   .desk-item svg { display: block; width: 100%; height: auto; overflow: visible; }
 
-  /* left gutter */
-  .di-glasses { width: 158px; top: 13%;  right: calc(50% + 300px + 36px); transform: rotate(-7deg); }
-  .di-mug     { width: 132px; top: 41%;  right: calc(50% + 300px + 30px); }
-  .di-pencil  { width: 196px; top: 70%;  right: calc(50% + 300px + 14px); transform: rotate(7deg); }
-  /* right gutter */
-  .di-floss   { width: 150px; top: 14%;  left:  calc(50% + 300px + 30px); }
-  .di-cassette{ width: 178px; top: 42%;  left:  calc(50% + 300px + 26px); transform: rotate(-5deg); }
-  .di-picks   { width: 120px; top: 71%;  left:  calc(50% + 300px + 44px); transform: rotate(6deg); }
+  /* left edge — pinned to left:0, shifted so ~half hangs off the screen */
+  .di-glasses { width: 170px; top: 10%;  left: 0; transform: translateX(-50%) rotate(-7deg); }
+  .di-mug     { width: 142px; top: 39%;  left: 0; transform: translateX(-46%); }
+  .di-pencil  { width: 216px; top: 72%;  left: 0; transform: translateX(-50%) rotate(7deg); }
+  /* right edge */
+  .di-floss   { width: 158px; top: 11%;  right: 0; transform: translateX(28%); }
+  .di-cassette{ width: 190px; top: 40%;  right: 0; transform: translateX(50%) rotate(-5deg); }
+  .di-picks   { width: 128px; top: 72%;  right: 0; transform: translateX(48%) rotate(6deg); }
 
   /* mug steam — faint wisps drifting up */
   .desk-steam path { animation: deskSteam 4.4s ease-in-out infinite; transform-origin: center bottom; }
@@ -99,13 +99,7 @@
   .desk-sway { transform-box: fill-box; transform-origin: 50% 0%; animation: deskSway 5.2s ease-in-out infinite; }
   @keyframes deskSway { 0%,100% { transform: rotate(-2.4deg); } 50% { transform: rotate(2.4deg); } }
 
-  @media (min-width: 1040px) {
-    .desk-items { display: block; }
-    .di-glasses, .di-picks { display: none; }   /* the extras wait for more room */
-  }
-  @media (min-width: 1320px) {
-    .di-glasses, .di-picks { display: block; }
-  }
+  @media (min-width: 1040px) { .desk-items { display: block; } }
 
   /* ---------- Title ---------- */
   header.title { text-align: center; margin-bottom: 22px; }
@@ -2043,6 +2037,10 @@ function wireInput() {
     if (e.key === "Enter") {
       e.preventDefault();
       e.stopPropagation();        // this keypress submits — don't let it also bubble to the page-advance handler
+      // The dropdown refresh is debounced (120ms). If a keystroke is still
+      // pending, flush it now so Enter accepts a match for what's *currently*
+      // typed — not the previous query's stale top result.
+      if (debounceId) { clearTimeout(debounceId); debounceId = null; updateDropdown(); }
       submitAnswer(null, false);
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
