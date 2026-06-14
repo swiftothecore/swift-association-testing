@@ -386,10 +386,10 @@ function nextRound() {
 // highlighter swipe's weight, so rarer words *feel* rarer without touching the
 // era engine's hue.
 function rarityTier(n) {
-  if (n >= 12) return { name: "common",   t: 0 };
-  if (n >= 6)  return { name: "uncommon", t: 0.4 };
-  if (n >= 3)  return { name: "rare",     t: 0.75 };
-  return { name: "scarce", t: 1 };
+  if (n >= 12) return { name: "common",   t: 0,    stamp: "" };
+  if (n >= 6)  return { name: "uncommon", t: 0.4,  stamp: "uncommon" };
+  if (n >= 3)  return { name: "rare",     t: 0.75, stamp: "rare find" };
+  return { name: "scarce", t: 1, stamp: "scarce" };
 }
 
 function advanceRound() {
@@ -404,6 +404,10 @@ function advanceRound() {
   const wrap = $("wordDisplay").parentNode;   // .word-wrap
   wrap.dataset.rarity = rar.name;
   wrap.style.setProperty("--rarity", rar.t);
+  const stamp = $("rarityStamp");
+  stamp.classList.remove("show");
+  stamp.textContent = rar.stamp;
+  if (rar.stamp) { void stamp.offsetWidth; stamp.classList.add("show"); } // reflow re-fires the stamp-in
 
   $("wordDisplay").textContent = currentWord;
   $("feedback").innerHTML = "";
