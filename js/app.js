@@ -143,9 +143,33 @@ function renderStats(lastScore, viewMode = currentMode.id) {
       <div class="histogram">${bars}</div>`;
   }
 
-  el.innerHTML = tabs + body + achievementsGridHTML();
+  el.innerHTML = tabs + body + infiniteStatsHTML() + achievementsGridHTML();
   el.querySelectorAll("[data-statmode]").forEach((b) =>
     b.addEventListener("click", () => renderStats(lastScore, b.dataset.statmode)));
+}
+
+// Infinite runs aren't comparable to the 13-round game (scores can exceed 13 and
+// the 0–13 histogram is meaningless), so they get their own compact summary:
+// best rounds survived + games played per variant × difficulty.
+function infiniteStatsHTML() {
+  const rows = [];
+  for (const variant of ["3lives", "sudden"]) {
+    for (const m of MODE_ORDER) {
+      const st = loadStats("inf-" + variant + "-" + m);
+      if (st.played > 0) {
+        rows.push(`<tr><td>${VARIANT_LABELS[variant]}</td><td>${MODES[m].label}</td>` +
+          `<td class="num">${st.best}</td><td class="num">${st.played}</td></tr>`);
+      }
+    }
+  }
+  if (!rows.length) {
+    return `<p class="histogram-label" style="margin-top:24px;">infinite</p>` +
+      `<p class="stats-empty">no infinite runs yet — try Infinite mode!</p>`;
+  }
+  return `<p class="histogram-label" style="margin-top:24px;">infinite · best rounds survived</p>` +
+    `<table class="inf-stats"><thead><tr><th>lives</th><th>difficulty</th>` +
+    `<th class="num">best</th><th class="num">played</th></tr></thead>` +
+    `<tbody>${rows.join("")}</tbody></table>`;
 }
 
 /* ---------- Achievements ---------- */

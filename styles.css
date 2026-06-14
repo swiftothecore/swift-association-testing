@@ -650,6 +650,21 @@
     font-family: var(--hand); font-size: 20px; color: var(--ink-soft);
     text-align: center; padding: 24px 0 8px; font-style: italic;
   }
+  /* infinite-mode summary table */
+  .inf-stats {
+    width: 100%; border-collapse: collapse; margin-bottom: 4px;
+    font-family: var(--type); font-size: 13px; color: var(--ink);
+  }
+  .inf-stats th {
+    font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--ink-soft); font-weight: 400; text-align: left;
+    padding: 4px 8px; border-bottom: 1px solid var(--rule);
+  }
+  .inf-stats td {
+    padding: 6px 8px; border-bottom: 1px solid var(--rule);
+  }
+  .inf-stats .num { text-align: right; }
+  .inf-stats tbody .num { font-family: var(--hand); font-size: 18px; font-weight: 700; color: var(--ink-accent); }
 
   /* ---------- Easter eggs (Phase 8) ---------- */
   /* Margin doodles — faint hand-drawn ink scribbles in the page corners */
