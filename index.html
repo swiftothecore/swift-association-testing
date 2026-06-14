@@ -564,6 +564,16 @@
     max-width: 44px; line-height: 1.05;
   }
 
+  /* reputation-era snake — a detailed serpent that slithers across the page */
+  .snake-overlay {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    z-index: 3; pointer-events: none; overflow: visible;
+    opacity: 0; animation: snakeFade 0.55s ease forwards;
+    filter: drop-shadow(2px 4px 3px rgba(20,16,12,0.22));
+  }
+  .snake-overlay.leaving { animation: none; opacity: 0; transition: opacity 0.7s ease; }
+  @keyframes snakeFade { to { opacity: 1; } }
+
   /* The three pens — a rare swap of the resting pencil */
   .input-area[data-pen]::before { content: none; }
   .pen-glyph { position: absolute; left: -2px; bottom: 5px; z-index: 1; width: 22px; height: 22px; pointer-events: none; color: var(--ink-soft); }
@@ -937,14 +947,15 @@ function renderStats(lastScore) {
 /* ---------- Achievements ---------- */
 const ACH_KEY = "swiftSongAssociation.achievements";
 const ACH_ICONS = {
-  star:    `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M12 2 L14.6 9 L22 9.3 L16 14 L18 21.5 L12 17 L6 21.5 L8 14 L2 9.3 L9.4 9 Z"/></svg>`,
-  sparkle: `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M12 1 C13 8 16 11 23 12 C16 13 13 16 12 23 C11 16 8 13 1 12 C8 11 11 8 12 1 Z"/></svg>`,
-  shield:  `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M12 2 L20 5 V11 C20 16 16.5 20 12 22 C7.5 20 4 16 4 11 V5 Z"/><path class="ink" d="M8.4 12 l2.6 2.6 4.6 -5.2"/></svg>`,
-  bolt:    `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M13 2 L4 14 H10.5 L9.5 22 L20 9 H13 Z"/></svg>`,
-  refresh: `<svg viewBox="0 0 24 24"><path class="ink" d="M19.5 12 a7.5 7.5 0 1 1 -2.2 -5.3"/><path class="ink-fill" d="M18 2.5 L19 8 L13.6 7.2 Z"/></svg>`,
-  key:     `<svg viewBox="0 0 24 24"><circle class="ink-fill" cx="8" cy="8" r="5"/><circle class="ink" cx="8" cy="8" r="1.7" fill="var(--paper)"/><path class="ink" d="M11.6 11.6 L20 20 M17 17 l2.2 -2.2 M14.3 14.3 l2.2 -2.2"/></svg>`,
-  gem:     `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M6 3 H18 L22 9 L12 22 L2 9 Z"/><path class="ink" d="M2 9 H22 M9 3 L7.2 9 L12 22 M15 3 L16.8 9 L12 22"/></svg>`,
-  rise:    `<svg viewBox="0 0 24 24"><path class="ink" d="M4 18 l8 -8 8 8 M4 12 l8 -8 8 8"/></svg>`,
+  // hung charms: filled bead bodies (ink-fill) with inked detail (ink)
+  star:    `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M12 2.2 L14.7 8.7 L21.7 9.3 L16.3 13.9 L18 20.8 L12 17.1 L6 20.8 L7.7 13.9 L2.3 9.3 L9.3 8.7 Z"/><path class="ink" stroke-width="0.9" opacity="0.7" d="M12 6 L13.2 9.2 L16.6 9.5"/></svg>`,
+  sparkle: `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M10.6 1.6 C11.6 7.4 14 9.8 19.8 10.8 C14 11.8 11.6 14.2 10.6 20 C9.6 14.2 7.2 11.8 1.4 10.8 C7.2 9.8 9.6 7.4 10.6 1.6 Z"/><path class="ink-fill" d="M18.8 14.6 C19.2 16.6 19.8 17.2 21.8 17.6 C19.8 18 19.2 18.6 18.8 20.6 C18.4 18.6 17.8 18 15.8 17.6 C17.8 17.2 18.4 16.6 18.8 14.6 Z"/></svg>`,
+  shield:  `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M12 1.8 L20 4.6 V11 C20 16.2 16.6 20.2 12 22.2 C7.4 20.2 4 16.2 4 11 V4.6 Z"/><path class="ink" d="M8.3 11.8 l2.7 2.7 4.8 -5.6"/></svg>`,
+  bolt:    `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M13.6 1.8 L4.4 13.6 H10 L9 22.2 L19.6 9.5 H13.3 Z"/><path class="ink" stroke-width="0.9" opacity="0.6" d="M12 6 L9 13"/></svg>`,
+  refresh: `<svg viewBox="0 0 24 24"><path class="ink" stroke-width="2.1" d="M19.4 14.2 A8 8 0 1 1 17 6.4"/><path class="ink-fill" d="M17.3 1.4 L19.1 7.6 L12.8 6.7 Z"/></svg>`,
+  key:     `<svg viewBox="0 0 24 24"><circle class="ink-fill" cx="8" cy="8" r="5.4"/><circle cx="8" cy="8" r="1.9" fill="var(--paper)"/><path class="ink" d="M11.8 11.8 L20 20 M16.8 16.8 l2.4 -2.4 M14.2 14.2 l2.2 -2.2"/></svg>`,
+  gem:     `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M6.6 3 H17.4 L21.6 9 L12 21.6 L2.4 9 Z"/><path class="ink" d="M2.4 9 H21.6 M8.8 3 L6.9 9 L12 21.6 M15.2 3 L17.1 9 L12 21.6"/></svg>`,
+  rise:    `<svg viewBox="0 0 24 24"><path class="ink" stroke-width="2.1" stroke-linecap="round" d="M3 19 L9.5 12.5 L13 16 L20.5 6.5"/><path class="ink-fill" d="M14.6 5 L21.5 4 L21 10.8 Z"/></svg>`,
 };
 const ACHIEVEMENTS = [
   { id: "enchanted",        name: "Enchanted",        desc: "Finish your first game",              secret: false, icon: "sparkle" },
@@ -1548,9 +1559,9 @@ let gameMaxStreak = 0;           // best streak reached this game
 
 const PEN_LABELS = { quill: "quill pen", fountain: "fountain pen", glitter: "glitter gel pen" };
 const PEN_SVG = {
-  quill: `<svg viewBox="0 0 24 24"><g class="ink"><path d="M4 20 C10 18 18 10 20.5 3 C12.5 5 6.5 12 4 20 Z"/><path d="M6 18 L13 11"/></g></svg>`,
-  fountain: `<svg viewBox="0 0 24 24"><g class="ink"><path d="M6 18 L16 8"/><path d="M16 8 L20 4"/></g><path class="ink-fill" d="M4 20 L6.5 17.5 L9 21 Z"/></svg>`,
-  glitter: `<svg viewBox="0 0 24 24"><g class="ink"><path d="M6 18 L15 9"/><path d="M15 9 L19 5"/></g><path class="ink-fill" d="M4 20 L6 18 L8.5 20.5 Z"/><g class="glitter-spark"><path d="M18 13 l1 2.2 2.2 1 -2.2 1 -1 2.2 -1 -2.2 -2.2 -1 2.2 -1 z"/><circle cx="21" cy="8" r="1"/><circle cx="13.5" cy="18" r="0.9"/></g></svg>`,
+  quill: `<svg viewBox="0 0 24 24"><g class="ink"><path d="M4.5 19.5 C9 12.5 14 6.5 21 2.5 C19.2 10.8 15 16.8 8 19.8 Z"/><path d="M18.5 5 L7.5 16.5"/><path d="M15.5 6.5 l-3.6 -1 M13.5 8.5 l-3.6 -1 M11.5 10.5 l-3.6 -1 M9.5 12.5 l-3.6 -1"/></g></svg>`,
+  fountain: `<svg viewBox="0 0 24 24"><g class="ink"><path d="M19.5 2.8 L8.5 13.8"/><path d="M8.5 13.8 L6 16.3"/></g><path class="ink-fill" d="M6 16.3 L3.2 21 L8 18.6 Z"/><path class="ink" stroke-width="1" d="M5 18.6 L6.8 16.8"/></svg>`,
+  glitter: `<svg viewBox="0 0 24 24"><g class="ink"><path d="M18.5 3.5 L8 14"/><path d="M8 14 L5 17"/></g><path class="ink-fill" d="M5 17 L2.6 21.4 L7 19 Z"/><g class="glitter-spark"><path d="M18.5 11 l1 2.2 2.2 1 -2.2 1 -1 2.2 -1 -2.2 -2.2 -1 2.2 -1 z"/><circle cx="21.2" cy="6.8" r="1"/><circle cx="13" cy="18.4" r="0.9"/></g></svg>`,
 };
 
 const STAR_SVG = `<svg viewBox="0 0 24 24"><path d="M12 2 L14.6 9 L22 9.3 L16 14 L18 21.5 L12 17 L6 21.5 L8 14 L2 9.3 L9.4 9 Z" fill="currentColor"/></svg>`;
@@ -1559,16 +1570,18 @@ const SPARKLE_SVG = `<svg viewBox="0 0 24 24"><path d="M12 1 C13 8 16 11 23 12 C
 const DOODLE_SVG = {
   // a fence panel with 5 diamond cut-outs in a quincunx (Taylor's fence photo)
   fence: `<svg viewBox="0 0 76 64"><g class="ink"><rect x="3" y="6" width="70" height="52" rx="2"/><line x1="20" y1="6" x2="20" y2="58"/><line x1="38" y1="6" x2="38" y2="58"/><line x1="56" y1="6" x2="56" y2="58"/><path d="M14 18 l5 5 -5 5 -5 -5 z"/><path d="M62 18 l5 5 -5 5 -5 -5 z"/><path d="M14 42 l5 5 -5 5 -5 -5 z"/><path d="M62 42 l5 5 -5 5 -5 -5 z"/><path d="M38 30 l5 5 -5 5 -5 -5 z"/></g></svg>`,
-  snake: `<svg viewBox="0 0 70 44"><g class="ink"><path d="M4 32 C14 32 14 16 24 16 C34 16 34 32 44 32 C52 32 54 22 60 19"/></g><path class="ink-fill" d="M60 19 l6 -2 -2 5 z"/><g class="ink"><path d="M67 15 l3 -1 m-3 2 l3 1"/></g></svg>`,
-  scarf: `<svg viewBox="0 0 60 56"><g class="ink"><path d="M12 8 C24 14 36 14 48 8"/><path d="M14 12 C24 18 36 18 46 12"/><path d="M30 16 L26 48"/><path d="M30 16 L36 46"/><path d="M24 48 l1.5 5 m1 -5 l-1.5 5 m4 -5 l1.5 5"/><path d="M34 46 l1.5 5 m1 -5 l-1.5 5 m4 -5 l1.5 5"/></g></svg>`,
-  cat: `<svg viewBox="0 0 60 48"><g class="ink"><path d="M10 34 C6 22 18 12 30 14 C44 16 54 26 50 36 C46 44 16 46 10 34 Z"/><path d="M44 22 l4 -7 1 8"/><path d="M50 23 l6 -4 -1 7"/><path d="M12 35 C20 41 40 41 48 34"/></g></svg>`,
-  guitar: `<svg viewBox="0 0 40 60"><g class="ink"><path d="M20 14 C12 14 10 24 14 30 C8 34 8 48 20 50 C32 48 32 34 26 30 C30 24 28 14 20 14 Z"/><circle cx="20" cy="36" r="4"/><rect x="18" y="2" width="4" height="13" rx="1"/><line x1="20" y1="15" x2="20" y2="30"/></g></svg>`,
+  // a quiet inked coil — the reduced-motion stand-in for the slithering snake
+  snake: `<svg viewBox="0 0 84 58"><g class="ink"><path d="M8 42 C20 42 20 28 32 28 C44 28 44 42 56 42 C66 42 70 32 67 24"/><path d="M67 24 C65 17 71 12 76 15"/></g><path class="ink-fill" d="M73 11 a3.2 3.2 0 1 1 0.1 0 z"/><circle cx="74.4" cy="13.6" r="0.7" fill="var(--paper)"/><g class="ink"><path d="M77 13 l5 -2 m-5 3.4 l5 1"/></g><g class="ink" stroke-width="1.3" opacity="0.6"><path d="M17 40 l2 -3 m7 0 l2 -3 m9 4 l2 3 m7 -1 l2 3"/></g></svg>`,
+  scarf: `<svg viewBox="0 0 60 58"><g class="ink"><path d="M13 9 C26 18 34 18 47 9"/><path d="M15 14 C26 21 34 21 45 14"/><path d="M27 18 C24 26 24 31 28 35 L24 51"/><path d="M33 18 C36 26 36 31 32 35 L36 49"/><path d="M27.5 35 L32.5 35"/></g><g class="ink" stroke-width="0.9" opacity="0.65"><path d="M26 24 l8 0.4 M25.4 28 l9 0.4 M26.5 31 l7 0.4"/></g><g class="ink" stroke-width="1.4"><path d="M22 51 l-0.8 5 m3.2 -6 l0.4 6 m3.4 -6 l1 5"/><path d="M34 49 l-0.8 5 m3.4 -6 l0.4 6 m3.4 -6 l1 5"/></g></svg>`,
+  cat: `<svg viewBox="0 0 60 56"><g class="ink"><path d="M16 13 L20 25 M16 13 L13 24"/><path d="M44 13 L40 25 M44 13 L47 24"/><path d="M13 27 C9 33 9 44 14 49 C21 53 39 53 46 49 C51 44 51 33 47 27 C40 20 20 20 13 27 Z"/><path d="M46 47 C55 47 59 38 55 31"/></g><g class="ink" stroke-width="1.5"><circle cx="24" cy="35" r="1.3" class="ink-fill"/><circle cx="36" cy="35" r="1.3" class="ink-fill"/><path d="M30 38 l0 2.4 M30 40.4 l-3 2 M30 40.4 l3 2"/></g><g class="ink" stroke-width="0.9" opacity="0.7"><path d="M22 39 l-9 -1.5 m9 4 l-9 1.5 M38 39 l9 -1.5 m-9 4 l9 1.5"/></g></svg>`,
+  guitar: `<svg viewBox="0 0 44 60"><g class="ink"><path d="M22 23 C15 23 12 31 16 36 C10 41 11 53 22 55 C33 53 34 41 28 36 C32 31 29 23 22 23 Z"/><circle cx="22" cy="41" r="4.4"/><rect x="19.4" y="5" width="5.2" height="18" rx="1.4"/><path d="M20 5 q-2.4 -2 -0.2 -3.4 M24 5 q2.4 -2 0.2 -3.4"/><path d="M22 23 L22 36"/><path d="M16.5 48 L27.5 48"/></g><g class="ink" stroke-width="0.8" opacity="0.7"><path d="M20.4 23 L20.4 34 M22 23 L22 34 M23.6 23 L23.6 34"/></g><g class="ink" stroke-width="1.2"><circle cx="20" cy="3" r="0.6" class="ink-fill"/><circle cx="24" cy="3" r="0.6" class="ink-fill"/></g></svg>`,
   thirteen: `<svg viewBox="0 0 40 40"><text x="6" y="29" font-family="Caveat, cursive" font-size="29" fill="var(--ink-soft)">13</text><ellipse cx="19" cy="20" rx="17" ry="14.5" fill="none" stroke="var(--ink-soft)" stroke-width="1.5" transform="rotate(-8 19 20)"/></svg>`,
 };
 
 function chance(p) { return Math.random() < p; }
 
 function clearEggs() {
+  stopSnake();
   const layer = $("doodleLayer");
   if (layer) layer.innerHTML = "";
 }
@@ -1622,7 +1635,7 @@ function runRoundEggs() {
   if (round === 5) {
     addDoodle("fence", "corner-br", 76, 64);
   } else if (era === "graphite" && chance(0.5)) {
-    addDoodle("snake", "corner-br", 70, 44);
+    slitherSnake();
   } else if (midnightHour) {
     addMarginNote("meet me at midnight");
   } else if (chance(0.14)) {
@@ -1654,6 +1667,158 @@ function triggerBlueWash() {
   w.className = "blue-wash"; w.setAttribute("aria-hidden", "true");
   card.appendChild(w);
   setTimeout(() => w.remove(), 1700);
+}
+
+// A detailed serpent that slithers right across the page during a reputation
+// (graphite) round. The body follows the head along a travelling sine wave
+// (follow-the-leader), tapers to a point at the tail, wears a scale pattern,
+// and flicks a forked tongue. Built frame-by-frame so the undulation is real,
+// not a sliding sticker. Reduced motion gets a quiet inked coil instead.
+let snakeRaf = null;
+function stopSnake() {
+  if (snakeRaf) { cancelAnimationFrame(snakeRaf); snakeRaf = null; }
+  const old = document.querySelector(".snake-overlay");
+  if (old) old.remove();
+}
+function slitherSnake() {
+  const card = $("screen-game");
+  if (!card) return;
+  if (prefersReducedMotion()) { addDoodle("snake", "corner-br", 84, 60); return; }
+  stopSnake();
+
+  const W = card.clientWidth || 520;
+  const H = card.clientHeight || 800;
+  const NS = "http://www.w3.org/2000/svg";
+
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("class", "snake-overlay");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.setAttribute("preserveAspectRatio", "none");
+  svg.setAttribute("aria-hidden", "true");
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="snBody" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#1f1d1a"/>
+        <stop offset="0.45" stop-color="#3b3733"/>
+        <stop offset="0.8" stop-color="#6c655d"/>
+        <stop offset="1" stop-color="#8a8178"/>
+      </linearGradient>
+      <pattern id="snScales" width="15" height="13" patternUnits="userSpaceOnUse">
+        <path d="M7.5 1 L14 6.5 L7.5 12 L1 6.5 Z" fill="#100f0c" opacity="0.20"/>
+        <path d="M0 6.5 L1 6.5 M14 6.5 L15 6.5" stroke="#100f0c" stroke-width="0.6" opacity="0.12"/>
+      </pattern>
+      <clipPath id="snClip"><path id="snClipPath" d="M0 0"/></clipPath>
+    </defs>
+    <path id="snFill" d="M0 0" fill="url(#snBody)" stroke="#100e0b" stroke-width="1.1" stroke-linejoin="round"/>
+    <rect id="snScalesRect" x="-40" y="0" width="${W + 80}" height="${H}" fill="url(#snScales)" clip-path="url(#snClip)"/>
+    <path id="snSheen" d="M0 0" fill="none" stroke="rgba(255,246,228,0.16)" stroke-width="2.6" stroke-linecap="round"/>
+    <g id="snHead"></g>
+  `;
+  card.appendChild(svg);
+
+  const fill = svg.querySelector("#snFill");
+  const clip = svg.querySelector("#snClipPath");
+  const sheen = svg.querySelector("#snSheen");
+  const head = svg.querySelector("#snHead");
+  const scalePat = svg.querySelector("#snScales");
+
+  const M = 30;                                   // spine nodes (head .. tail)
+  const seg = Math.max(9, (W * 0.6) / M);         // arc spacing between nodes
+  const baseY = H * 0.52;
+  const amp = Math.min(H * 0.07, 64);
+  const k = (Math.PI * 2) / (W * 0.5);            // wave number (≈2 humps across)
+  const bodyLen = M * seg;
+  // head must travel its own length in, across W, then its length out again
+  const speed = (W + 2 * bodyLen + 90) / 3500;    // px/ms → crosses in ~3.5s
+  const yAtX = (x) => baseY + amp * Math.sin(k * x);
+
+  let headX = -bodyLen - 30;                      // start fully off the left edge
+  const trail = [];                               // index 0 = newest head point
+  for (let x = headX; x > headX - bodyLen - seg * 6; x -= seg / 4) {
+    trail.push({ x, y: yAtX(x) });
+  }
+
+  const widthAt = (j) => {
+    const t = j / (M - 1);
+    const headW = 12, tailW = 0.8;
+    return tailW + (headW - tailW) * Math.pow(1 - t, 1.35);
+  };
+
+  let last = performance.now(), start = last;
+  function frame(now) {
+    const dt = Math.min(42, now - last); last = now;
+    const t = now - start;
+    headX += speed * dt;
+    trail.unshift({ x: headX, y: yAtX(headX) });
+    if (trail.length > 1200) trail.length = 1200;
+
+    // resample the trail at even arc-length to get the spine nodes
+    const nodes = [{ x: trail[0].x, y: trail[0].y }];
+    let ti = 0, acc = 0;
+    for (let j = 1; j < M; j++) {
+      const target = j * seg;
+      while (ti < trail.length - 1 && acc < target) {
+        const a = trail[ti], b = trail[ti + 1];
+        acc += Math.hypot(b.x - a.x, b.y - a.y);
+        ti++;
+      }
+      nodes.push({ x: trail[ti].x, y: trail[ti].y });
+    }
+
+    // offset the spine by a tapering half-width to build the body outline
+    const left = [], right = [];
+    for (let j = 0; j < M; j++) {
+      const p = nodes[j];
+      const a = nodes[Math.max(0, j - 1)], b = nodes[Math.min(M - 1, j + 1)];
+      let tx = b.x - a.x, ty = b.y - a.y;
+      const len = Math.hypot(tx, ty) || 1; tx /= len; ty /= len;
+      const nx = -ty, ny = tx, w = widthAt(j);
+      left.push([p.x + nx * w, p.y + ny * w]);
+      right.push([p.x - nx * w, p.y - ny * w]);
+    }
+    let d = "M" + left[0][0].toFixed(1) + " " + left[0][1].toFixed(1);
+    for (let j = 1; j < M; j++) d += "L" + left[j][0].toFixed(1) + " " + left[j][1].toFixed(1);
+    d += "L" + nodes[M - 1].x.toFixed(1) + " " + nodes[M - 1].y.toFixed(1);
+    for (let j = M - 1; j >= 0; j--) d += "L" + right[j][0].toFixed(1) + " " + right[j][1].toFixed(1);
+    d += "Z";
+    fill.setAttribute("d", d);
+    clip.setAttribute("d", d);
+
+    // a soft sheen running along the back, fading out before the tail
+    let sd = "M" + nodes[0].x.toFixed(1) + " " + nodes[0].y.toFixed(1);
+    const sheenN = Math.floor(M * 0.7);
+    for (let j = 1; j < sheenN; j++) sd += "L" + nodes[j].x.toFixed(1) + " " + nodes[j].y.toFixed(1);
+    sheen.setAttribute("d", sd);
+
+    // scales travel with the body
+    scalePat.setAttribute("patternTransform", `translate(${headX.toFixed(1)} 0)`);
+
+    // head: oriented along the heading, with amber slit-eyes and a flicking tongue
+    const hx = nodes[0].x, hy = nodes[0].y;
+    let hdx = nodes[0].x - nodes[1].x, hdy = nodes[0].y - nodes[1].y;
+    const hl = Math.hypot(hdx, hdy) || 1; hdx /= hl; hdy /= hl;
+    const ang = Math.atan2(hdy, hdx) * 180 / Math.PI;
+    const flick = Math.floor(t / 240) % 3 === 0;
+    const tongue = flick
+      ? `<path d="M13 0 L24 0 M24 0 L28 -3.4 M24 0 L28 3.4" stroke="#9b2226" stroke-width="1.5" fill="none" stroke-linecap="round"/>`
+      : `<path d="M13 0 L19 0 M19 0 L21.6 -1.6 M19 0 L21.6 1.6" stroke="#9b2226" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.85"/>`;
+    head.setAttribute("transform", `translate(${hx.toFixed(1)} ${hy.toFixed(1)}) rotate(${ang.toFixed(1)})`);
+    head.innerHTML =
+      `<ellipse cx="3" cy="0" rx="12.5" ry="9" fill="url(#snBody)" stroke="#100e0b" stroke-width="1.1"/>` +
+      tongue +
+      `<g><circle cx="3.5" cy="-5" r="2.7" fill="#c89b3c"/><circle cx="3.5" cy="-5" r="2.7" fill="none" stroke="#100e0b" stroke-width="0.7"/><rect x="2.8" y="-6.7" width="1.4" height="3.4" rx="0.6" fill="#100e0b"/></g>` +
+      `<g><circle cx="3.5" cy="5" r="2.7" fill="#c89b3c"/><circle cx="3.5" cy="5" r="2.7" fill="none" stroke="#100e0b" stroke-width="0.7"/><rect x="2.8" y="3.3" width="1.4" height="3.4" rx="0.6" fill="#100e0b"/></g>` +
+      `<circle cx="12" cy="-2" r="0.8" fill="#100e0b"/><circle cx="12" cy="2" r="0.8" fill="#100e0b"/>`;
+
+    if (nodes[M - 1].x > W + 36) {           // tail has cleared the right edge
+      svg.classList.add("leaving");
+      snakeRaf = null;
+      setTimeout(() => svg.remove(), 720);
+      return;
+    }
+    snakeRaf = requestAnimationFrame(frame);
+  }
+  snakeRaf = requestAnimationFrame(frame);
 }
 
 // A burst of sparkles on a correct answer — the longer the streak, the
