@@ -224,7 +224,8 @@ function renderPodium(el, list, youName) {
 let justEarnedIndex = -1; // bead that just became a charm, for the swing-in
 
 function renderBracelet() {
-  $("bracelet").innerHTML = buildBraceletSVG(roundResults, round, justEarnedIndex, roundAlbums);
+  const opts = gameType === "infinite" ? { total: Math.max(round, 1), letterBead: false } : undefined;
+  $("bracelet").innerHTML = buildBraceletSVG(roundResults, round, justEarnedIndex, roundAlbums, opts);
   $("charmCount").textContent = roundResults.filter(Boolean).length;
   $("pageNum").textContent = gameType === "infinite"
     ? Math.max(round, 1)
@@ -707,7 +708,10 @@ function endGame() {
   if (roundResults.includes(false) && trailingStreak >= 5) unlock("long-story-short", false);
 
   showScreen("results");
-  $("resultBracelet").innerHTML = buildBraceletSVG(roundResults, 0, -1, roundAlbums);
+  const keepsakeOpts = gameType === "infinite"
+    ? { total: Math.max(roundResults.length, 1), letterBead: false }
+    : undefined;
+  $("resultBracelet").innerHTML = buildBraceletSVG(roundResults, 0, -1, roundAlbums, keepsakeOpts);
   $("finalScore").textContent = score;
   $("finalSub").textContent = "out of " + TOTAL_ROUNDS;
   renderResultRecap();
