@@ -48,7 +48,7 @@
     background-color: #cdb389;
     display: flex;
     justify-content: center;
-    padding: 40px 18px 64px;
+    padding: 20px 18px 64px;
   }
 
   .app { width: 100%; max-width: 600px; position: relative; z-index: 1; perspective: 1700px; perspective-origin: 50% 0%; }
