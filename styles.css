@@ -761,8 +761,15 @@
   .input-area[data-pen]::before { content: none; }
   .pen-glyph { position: absolute; left: -2px; bottom: 5px; z-index: 1; width: 22px; height: 22px; pointer-events: none; color: var(--ink-soft); }
   .pen-glyph svg { width: 100%; height: 100%; overflow: visible; }
-  .pen-glyph .ink { fill: none; stroke: var(--ink-soft); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-  .pen-glyph .ink-fill { fill: var(--ink-soft); stroke: none; }
+  .pen-glyph .barrel { fill: var(--paper); stroke: var(--ink-soft); stroke-width: 1.2; stroke-linejoin: round; }
+  .pen-glyph .vane { fill: var(--paper); stroke: var(--ink-soft); stroke-width: 1.2; stroke-linejoin: round; }
+  .pen-glyph .nib, .pen-glyph .tip { fill: var(--ink-soft); stroke: none; }
+  .pen-glyph .spine { fill: none; stroke: var(--ink-soft); stroke-width: 1.1; stroke-linecap: round; }
+  .pen-glyph .barb { fill: none; stroke: var(--ink-soft); stroke-width: 0.7; stroke-linecap: round; opacity: 0.75; }
+  .pen-glyph .slit { fill: none; stroke: var(--paper); stroke-width: 0.7; stroke-linecap: round; }
+  .pen-glyph .hole { fill: var(--paper); stroke: none; }
+  .pen-glyph .band { fill: var(--ink-accent); stroke: none; }
+  .pen-glyph .grip { fill: var(--ink-accent); stroke: none; opacity: 0.85; }
   .pen-glyph .glitter-spark { fill: var(--bead); stroke: none; }
   .pen-label {
     position: absolute; left: 24px; bottom: -17px; z-index: 1;

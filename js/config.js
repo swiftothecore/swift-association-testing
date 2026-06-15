@@ -177,9 +177,12 @@ export const ACH_BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));
 
 /* ---------- Easter-egg art ---------- */
 export const PEN_SVG = {
-  quill: `<svg viewBox="0 0 24 24"><g class="ink"><path d="M4.5 19.5 C9 12.5 14 6.5 21 2.5 C19.2 10.8 15 16.8 8 19.8 Z"/><path d="M18.5 5 L7.5 16.5"/><path d="M15.5 6.5 l-3.6 -1 M13.5 8.5 l-3.6 -1 M11.5 10.5 l-3.6 -1 M9.5 12.5 l-3.6 -1"/></g></svg>`,
-  fountain: `<svg viewBox="0 0 24 24"><g class="ink"><path d="M19.5 2.8 L8.5 13.8"/><path d="M8.5 13.8 L6 16.3"/></g><path class="ink-fill" d="M6 16.3 L3.2 21 L8 18.6 Z"/><path class="ink" stroke-width="1" d="M5 18.6 L6.8 16.8"/></svg>`,
-  glitter: `<svg viewBox="0 0 24 24"><g class="ink"><path d="M18.5 3.5 L8 14"/><path d="M8 14 L5 17"/></g><path class="ink-fill" d="M5 17 L2.6 21.4 L7 19 Z"/><g class="glitter-spark"><path d="M18.5 11 l1 2.2 2.2 1 -2.2 1 -1 2.2 -1 -2.2 -2.2 -1 2.2 -1 z"/><circle cx="21.2" cy="6.8" r="1"/><circle cx="13" cy="18.4" r="0.9"/></g></svg>`,
+  // A feather quill: a barbed plume, a bare curved rachis, and a sharpened cut nib.
+  quill: `<svg viewBox="0 0 24 24"><g transform="rotate(-45 12 12)"><path class="vane" d="M8.4 12 Q14 4.6 21 6.9 Q15.2 9.9 9.6 12.7 Z"/><g class="barb"><path d="M10.6 11.2 L12.1 8.4"/><path d="M12.8 10.6 L14.4 7.6"/><path d="M15 9.9 L16.6 7.2"/><path d="M17.4 9.2 L18.9 7"/></g><path class="spine" d="M2.7 12.7 Q9 12.2 21 6.9"/><path class="tip" d="M2.1 13 L4.5 12.05 L4.7 13.25 Z"/><path class="slit" d="M2.9 12.85 L4 12.45"/></g></svg>`,
+  // A fountain pen: barrel, gold trim band, leaf-shaped nib with slit + breather hole, pocket clip.
+  fountain: `<svg viewBox="0 0 24 24"><g transform="rotate(-45 12 12)"><path class="barrel" d="M8 10.2 H20 Q21.6 10.2 21.6 12 Q21.6 13.8 20 13.8 H8 Z"/><path class="barrel" d="M8 10.5 L6.4 11.1 L6.4 12.9 L8 13.5 Z"/><path class="nib" d="M2.3 12 Q4.2 10.7 6.3 10.7 L6.3 13.3 Q4.2 13.3 2.3 12 Z"/><path class="slit" d="M2.9 12 H5.5"/><circle class="hole" cx="5.5" cy="12" r="0.55"/><rect class="band" x="7.5" y="10.2" width="1.1" height="3.6" rx="0.3"/><path class="barrel" d="M16.4 10.3 Q18.4 9.2 19.2 10 Q19.6 10.6 18.6 11.1 L17.4 11.1 Z"/></g></svg>`,
+  // A sleek gel pen: barrel, conical metal tip, gold grip + end cap, with glints of glitter.
+  glitter: `<svg viewBox="0 0 24 24"><g transform="rotate(-45 12 12)"><path class="barrel" d="M8 10 H20 Q22 10 22 12 Q22 14 20 14 H8 Z"/><rect class="grip" x="6" y="10.2" width="2.4" height="3.6" rx="0.4"/><path class="tip" d="M6 10.4 L3 11.6 Q2.3 12 3 12.4 L6 13.6 Z"/><circle class="glitter-spark" cx="2.7" cy="12" r="0.6"/><rect class="band" x="19" y="10" width="1.6" height="4" rx="0.6"/></g><g class="glitter-spark"><path d="M5 6 l0.5 1.4 1.4 0.5 -1.4 0.5 -0.5 1.4 -0.5 -1.4 -1.4 -0.5 1.4 -0.5 z"/><path d="M18 17 l0.4 1.1 1.1 0.4 -1.1 0.4 -0.4 1.1 -0.4 -1.1 -1.1 -0.4 1.1 -0.4 z"/><circle cx="11" cy="5.5" r="0.7"/><circle cx="16" cy="19" r="0.6"/></g></svg>`,
 };
 
 export const STAR_SVG = `<svg viewBox="0 0 24 24"><path d="M12 2 L14.6 9 L22 9.3 L16 14 L18 21.5 L12 17 L6 21.5 L8 14 L2 9.3 L9.4 9 Z" fill="currentColor"/></svg>`;
