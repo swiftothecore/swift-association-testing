@@ -3,7 +3,8 @@
 // achievements map are passed in explicitly rather than closed over.
 import {
   HS_KEY, STATS_KEY, ACH_KEY, DIFF_KEY,
-  MODES, MODE_ORDER, DEFAULT_PODIUM,
+  DAILY_KEY, DAILY_BOARD_KEY,
+  MODES, MODE_ORDER, DEFAULT_PODIUM, DAILY_DEFAULT_PODIUM,
 } from "./config.js";
 
 const STREAK_THRESHOLD = 7; // score >= this counts toward a streak
@@ -83,4 +84,31 @@ export function loadMode() {
     if (id && MODES[id]) return MODES[id];
   } catch (e) { /* ignore */ }
   return MODES.medium;
+}
+
+/* ---------- Daily challenge ---------- */
+// Per-day played result. Key: swiftSongAssociation.daily.YYYY-MM-DD
+// Value: { score, roundResults: boolean[], roundAlbums: (string|null)[] }
+export function loadDailyResult(dateStr) {
+  try {
+    const raw = localStorage.getItem(DAILY_KEY + "." + dateStr);
+    if (raw) { const o = JSON.parse(raw); if (o && typeof o.score === "number") return o; }
+  } catch (e) { /* ignore */ }
+  return null;
+}
+export function saveDailyResult(dateStr, data) {
+  try { localStorage.setItem(DAILY_KEY + "." + dateStr, JSON.stringify(data)); } catch (e) { /* ignore */ }
+}
+
+// Per-day local leaderboard. Key: swiftSongAssociation.dailyBoard.YYYY-MM-DD
+// Value: { name, score }[] sorted descending, max 5.
+export function loadDailyBoard(dateStr) {
+  try {
+    const raw = localStorage.getItem(DAILY_BOARD_KEY + "." + dateStr);
+    if (raw) { const a = JSON.parse(raw); if (Array.isArray(a) && a.length) return a; }
+  } catch (e) { /* ignore */ }
+  return DAILY_DEFAULT_PODIUM.slice();
+}
+export function saveDailyBoard(list, dateStr) {
+  try { localStorage.setItem(DAILY_BOARD_KEY + "." + dateStr, JSON.stringify(list)); } catch (e) { /* ignore */ }
 }

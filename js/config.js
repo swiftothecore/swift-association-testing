@@ -9,6 +9,8 @@ export const HS_KEY = "swiftSongAssociation.highscores";
 export const STATS_KEY = "swiftSongAssociation.stats";
 export const ACH_KEY = "swiftSongAssociation.achievements";
 export const DIFF_KEY = "swiftSongAssociation.difficulty";
+export const DAILY_KEY = "swiftSongAssociation.daily";
+export const DAILY_BOARD_KEY = "swiftSongAssociation.dailyBoard";
 
 /* Difficulty modes — each just re-tunes existing levers (timer, dropdown,
    word-rarity pool, matching strictness, wrong-answer help). Gameplay code is
@@ -36,6 +38,12 @@ export const INFINITE_DEFAULT_PODIUM = [
   { name: "Taylor Swift", score: 22 },
   { name: "SwiftLover13", score: 16 },
   { name: "Sabrina Carpenter", score: 11 },
+];
+// Daily board resets every day — seed with fewer entries so it fills organically.
+export const DAILY_DEFAULT_PODIUM = [
+  { name: "Taylor Swift", score: 13 },
+  { name: "SwiftLover13", score: 11 },
+  { name: "Sabrina Carpenter", score: 9 },
 ];
 
 /* Era engine */

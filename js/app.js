@@ -1,5 +1,5 @@
 "use strict";
-import { $, escapeRegExp, escapeHtml, prefersReducedMotion, shuffle, chance, normalizeTitle, normalizeLyric, fuzzySubstringRatio } from "./util.js";
+import { $, escapeRegExp, escapeHtml, prefersReducedMotion, shuffle, chance, normalizeTitle, normalizeLyric, fuzzySubstringRatio, mulberry32, dailySeed } from "./util.js";
 import {
   TOTAL_ROUNDS, RECENT_WINDOW, DIFF_KEY,
   MODES, MODE_ORDER, INFINITE_DEFAULT_PODIUM,
@@ -14,6 +14,7 @@ import {
   loadStats, updateStats, totalPlayed,
   loadAchievements, saveAchievements,
   loadMode,
+  loadDailyResult, saveDailyResult, loadDailyBoard, saveDailyBoard,
 } from "./storage.js";
 
 /* ---------- Constants & state ---------- */
@@ -35,9 +36,10 @@ let round = 0;
 let usedWords = [];
 let roundResults = [];   // per-round true/false for the bracelet
 let roundAlbums = [];    // per-round album of the picked song (for the final bracelet)
-let gameType = "classic";       // "classic" (fixed 13) | "infinite" (until lives run out)
+let gameType = "classic";       // "classic" (fixed 13) | "infinite" (until lives run out) | "daily"
 let infiniteVariant = "3lives"; // "3lives" | "sudden"
 let lives = 0;                  // remaining lives in infinite mode
+let dailyRng = null;            // seeded PRNG, non-null only during a daily game
 let currentWord = "";
 let currentSongs = [];
 let dropdownItems = [];
@@ -64,12 +66,14 @@ function showScreen(name) {
 /* ---------- Era selection ---------- */
 function pickEra() {
   let pool;
-  // Round-5/round-13 biases only make sense for the fixed classic run.
-  if (gameType === "classic" && round === 5) pool = TENDER_ERAS;
-  else if (gameType === "classic" && round === TOTAL_ROUNDS) pool = FINALE_ERAS;
+  // Round-5/round-13 biases apply to any fixed 13-round run (classic + daily).
+  const fixedRun = gameType === "classic" || gameType === "daily";
+  if (fixedRun && round === 5) pool = TENDER_ERAS;
+  else if (fixedRun && round === TOTAL_ROUNDS) pool = FINALE_ERAS;
   else pool = ERAS.filter((e) => !recentEras.includes(e));
   if (!pool.length) pool = ERAS;
-  const era = pool[Math.floor(Math.random() * pool.length)];
+  const rng = dailyRng || Math.random;
+  const era = pool[Math.floor(rng() * pool.length)];
   recentEras.push(era);
   if (recentEras.length > 3) recentEras.shift();
   return era;
@@ -412,6 +416,9 @@ function renderVariantPicker() {
 // Render all three start-screen pickers + the board for the current selection.
 function renderStartPickers() {
   gameType = gameType === "infinite" ? "infinite" : "classic";
+  // A daily game forces currentMode to Normal without persisting; restore the
+  // player's saved preference so the difficulty picker reflects their choice.
+  currentMode = loadMode();
   renderTypePicker();
   renderVariantPicker();
   $("variantRow").style.display = gameType === "infinite" ? "" : "none";
@@ -433,17 +440,23 @@ function setVariant(v) {
 }
 
 /* ---------- Game flow ---------- */
-// The run is over when the classic 13 pages are filled, or (infinite) lives run out.
+// Today's date key, "YYYY-MM-DD" in UTC (same day-rollover tradeoff as Wordle).
+function todayKey() { return new Date().toISOString().slice(0, 10); }
+
+// The run is over when the fixed 13 pages are filled (classic + daily), or
+// (infinite) lives run out.
 function isGameOver() {
-  return gameType === "classic" ? round >= TOTAL_ROUNDS : lives <= 0;
+  if (gameType === "infinite") return lives <= 0;
+  return round >= TOTAL_ROUNDS;
 }
 
 // Storage token for the active board/stats: classic uses the bare difficulty id
-// (medium stays the legacy unsuffixed key); infinite tags variant + difficulty.
+// (medium stays the legacy unsuffixed key); infinite tags variant + difficulty;
+// daily has its own date-keyed board, so it returns null here.
 function boardMode() {
-  return gameType === "infinite"
-    ? "inf-" + infiniteVariant + "-" + currentMode.id
-    : currentMode.id;
+  if (gameType === "infinite") return "inf-" + infiniteVariant + "-" + currentMode.id;
+  if (gameType === "daily") return null;
+  return currentMode.id;
 }
 
 function resetRunState() {
@@ -457,6 +470,7 @@ function resetRunState() {
   recentEras = [];
   roundResults = [];
   roundAlbums = [];
+  dailyRng = null;
 }
 function applyInputHints() {
   const input = $("songInput");
@@ -499,6 +513,108 @@ function startInfinite(variant, opts) {
   else nextRound();
 }
 
+// Daily challenge: the same seeded 13 words + eras for everyone on a given date,
+// one play per day. Always Normal settings. If you've already played today, jump
+// straight to your saved result instead of replaying.
+function startDaily() {
+  const dateStr = todayKey();
+  const existing = loadDailyResult(dateStr);
+  if (existing) { showDailyResult(existing, dateStr); return; }
+  gameType = "daily";
+  currentMode = MODES.medium;   // daily is always Normal — override without persisting via DIFF_KEY
+  resetRunState();
+  dailyRng = mulberry32(dailySeed(dateStr));   // set AFTER resetRunState (which clears it)
+  applyInputHints();
+  updateTagline();
+  $("pageTotalWrap").style.display = "";
+  $("pageTotal").textContent = TOTAL_ROUNDS;
+  showScreen("game");
+  nextRound();
+}
+
+// Re-render the results screen from a previously saved daily result (the
+// already-played path). Reuses the regular results layout + daily board + share.
+function showDailyResult(data, dateStr) {
+  gameType = "daily";
+  currentMode = MODES.medium;
+  roundResults = data.roundResults;
+  roundAlbums = data.roundAlbums;
+  score = data.score;
+  showScreen("results");
+  $("resultBracelet").innerHTML = buildBraceletSVG(roundResults, 0, -1, roundAlbums);
+  $("finalScore").textContent = score;
+  $("finalSub").textContent = "out of " + TOTAL_ROUNDS;
+  $("keepGoingBtn").style.display = "none";
+  $("resultAchievements").style.display = "none";
+  $("namePrompt").style.display = "none";
+  renderPodium($("resultPodium"), sortHs(loadDailyBoard(dateStr)), null);
+  document.querySelector("#screen-results .podium-title").textContent = "Today's Board";
+  renderShareButton(dateStr);
+}
+
+// Wordle-style copyable summary built from the per-round results.
+function buildShareString(dateStr) {
+  const dateObj = new Date(dateStr + "T00:00:00Z");
+  const label = dateObj.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
+  const emoji = roundResults.map((r) => (r ? "⭐" : "⬜")).join("");
+  return `Swift Song Association 🎵\nDaily Challenge · ${label}\n${emoji}\n${score}/${TOTAL_ROUNDS}`;
+}
+
+function renderShareButton(dateStr) {
+  const existing = $("shareBtn");
+  if (existing) existing.remove();
+  const btn = document.createElement("button");
+  btn.id = "shareBtn";
+  btn.className = "btn-ghost daily-share-btn";
+  btn.textContent = "Copy result";
+  btn.addEventListener("click", async () => {
+    const text = buildShareString(dateStr);
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (e) {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.cssText = "position:fixed;top:-9999px;left:-9999px;opacity:0;";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); } catch (e2) { /* ignore */ }
+      ta.remove();
+    }
+    btn.textContent = "Copied!";
+    setTimeout(() => { btn.textContent = "Copy result"; }, 2000);
+  });
+  const braceletEl = $("resultBracelet");
+  braceletEl.parentNode.insertBefore(btn, braceletEl.nextSibling);
+}
+
+// The daily leaderboard, reusing the regular podium renderer + name-prompt flow.
+function renderDailyBoard(dateStr) {
+  const dailyList = loadDailyBoard(dateStr);
+  const lowest = dailyList.length >= 5 ? dailyList[dailyList.length - 1].score : -1;
+  const beats = dailyList.length < 5 || score > lowest;
+  const nameDiv = $("namePrompt");
+  const titleEl = document.querySelector("#screen-results .podium-title");
+  titleEl.textContent = "Today's Board";
+  if (beats && score > 0) {
+    nameDiv.style.display = "";
+    renderPodium($("resultPodium"), sortHs(dailyList), null);
+    const save = () => {
+      const name = ($("nameInput").value || "You").trim().slice(0, 20) || "You";
+      const updated = sortHs(dailyList.concat([{ name, score, __you: true }])).slice(0, 5);
+      saveDailyBoard(updated.map(({ name, score }) => ({ name, score })), dateStr);
+      nameDiv.style.display = "none";
+      renderPodium($("resultPodium"), updated, name);
+      titleEl.textContent = "Today's Board";
+    };
+    $("saveNameBtn").onclick = save;
+    $("nameInput").onkeydown = (e) => { if (e.key === "Enter") save(); };
+    setTimeout(() => $("nameInput").focus(), 50);
+  } else {
+    nameDiv.style.display = "none";
+    renderPodium($("resultPodium"), sortHs(dailyList), null);
+  }
+}
+
 function pickWord() {
   const bucket = wordBuckets[currentMode.pool] || playableWords;
   // No-repeat within a game: exclude every word already used this run. Buckets
@@ -506,7 +622,8 @@ function pickWord() {
   // only empties on a degenerate list — fall back to the full bucket if so.
   const pool = bucket.filter((w) => !usedWords.includes(w));
   const choices = pool.length ? pool : bucket;
-  const word = choices[Math.floor(Math.random() * choices.length)];
+  const rng = dailyRng || Math.random;
+  const word = choices[Math.floor(rng() * choices.length)];
   usedWords.push(word);
   return word;
 }
@@ -894,14 +1011,16 @@ function endGame() {
   applyEra(FINALE_ERAS[Math.floor(Math.random() * FINALE_ERAS.length)]);
 
   const isInfinite = gameType === "infinite";
+  const isDaily = gameType === "daily";
   const roundsSurvived = roundResults.length;
   const boardScore = isInfinite ? roundsSurvived : score;  // infinite ranks by how far you got
   const mode = boardMode();
 
-  updateStats(boardScore, mode);
-  const played = totalPlayed();   // classic modes only — infinite is tracked separately
+  // Daily plays don't touch any mode's stats board.
+  if (!isDaily) updateStats(boardScore, mode);
+  const played = totalPlayed();   // classic modes only — infinite/daily tracked separately
 
-  // end-of-game achievements (classic only for v1; infinite achievements deferred)
+  // end-of-game achievements (daily counts toward the game-quality ones; infinite deferred)
   if (!isInfinite) {
     if (score === TOTAL_ROUNDS) unlock("mastermind", false);
     if (gameTimeouts === 0) unlock("fearless", false);
@@ -918,9 +1037,24 @@ function endGame() {
   $("resultBracelet").innerHTML = buildBraceletSVG(roundResults, 0, -1, roundAlbums, keepsakeOpts);
   $("finalScore").textContent = boardScore;
   $("finalSub").textContent = isInfinite ? "rounds · " + score + " correct" : "out of " + TOTAL_ROUNDS;
-  $("keepGoingBtn").style.display = isInfinite ? "none" : "";
+  $("keepGoingBtn").style.display = (isInfinite || isDaily) ? "none" : "";
   renderResultRecap();
   if (!isInfinite && score === TOTAL_ROUNDS) celebratePerfect();
+
+  // Daily: persist the result, lock to one play/day, show the daily board + share.
+  if (isDaily) {
+    const dateStr = todayKey();
+    saveDailyResult(dateStr, { score, roundResults: roundResults.slice(), roundAlbums: roundAlbums.slice() });
+    dailyRng = null;   // back to Math.random() for any subsequent Classic game
+    renderDailyBoard(dateStr);
+    renderShareButton(dateStr);
+    return;
+  }
+
+  // Reset any daily-only chrome left over from a previous daily results view.
+  document.querySelector("#screen-results .podium-title").textContent = "Hall of Fame";
+  const staleShare = $("shareBtn");
+  if (staleShare) staleShare.remove();
 
   const fallback = isInfinite ? INFINITE_DEFAULT_PODIUM : undefined;
   const list = loadHighScores(mode, fallback);
@@ -1313,6 +1447,7 @@ async function init() {
     if (gameType === "infinite") startInfinite(infiniteVariant);
     else startGame();
   });
+  $("dailyBtn").addEventListener("click", startDaily);
   $("statsBtn").addEventListener("click", () => { statsBackTarget = "start"; renderStats(null); showScreen("stats"); });
   $("resultsStatsBtn").addEventListener("click", () => { statsBackTarget = "results"; renderStats(score); showScreen("stats"); });
   $("statsBackBtn").addEventListener("click", () => {
