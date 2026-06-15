@@ -3,7 +3,7 @@
 // achievements map are passed in explicitly rather than closed over.
 import {
   HS_KEY, STATS_KEY, ACH_KEY, DIFF_KEY,
-  DAILY_KEY, DAILY_BOARD_KEY, DAILY_STREAK_KEY, TYPES_KEY,
+  DAILY_KEY, DAILY_BOARD_KEY, DAILY_STREAK_KEY, TYPES_KEY, TALLY_KEY,
   MODES, MODE_ORDER, DEFAULT_PODIUM, DAILY_DEFAULT_PODIUM,
 } from "./config.js";
 
@@ -76,6 +76,47 @@ export function markTypePlayed(type) {
   o[type] = true;
   try { localStorage.setItem(TYPES_KEY, JSON.stringify(o)); } catch (e) { /* ignore */ }
   return o;
+}
+
+/* ---------- Lifetime per-song / per-word tally ---------- */
+// One record across every game type & difficulty. Powers Favourite Song,
+// Songs Discovered, Favourite Album, Nemesis Word — and later "I Hate It Here".
+// Key: swiftSongAssociation.songTally
+//   songs:  { [title]:  correctCount }  — times this song was a correct answer
+//   albums: { [album]:  correctCount }  — times a correct answer came from this album
+//   misses: { [word]:   missCount }     — times this prompt word was missed (wrong/timeout)
+export function loadSongTally() {
+  try {
+    const raw = localStorage.getItem(TALLY_KEY);
+    if (raw) {
+      const o = JSON.parse(raw);
+      if (o && typeof o === "object") {
+        return { songs: o.songs || {}, albums: o.albums || {}, misses: o.misses || {} };
+      }
+    }
+  } catch (e) { /* ignore */ }
+  return { songs: {}, albums: {}, misses: {} };
+}
+export function saveSongTally(t) {
+  try { localStorage.setItem(TALLY_KEY, JSON.stringify(t)); } catch (e) { /* ignore */ }
+}
+// Fold one finished game into the lifetime tally. `rounds` is an array of
+// { correct, title, album, word } — one entry per played round. A correct round
+// credits its song + album; a missed round blames its prompt word. Returns the
+// updated tally.
+export function recordGameTally(rounds) {
+  const t = loadSongTally();
+  for (const r of rounds) {
+    if (!r) continue;
+    if (r.correct) {
+      if (r.title) t.songs[r.title] = (t.songs[r.title] || 0) + 1;
+      if (r.album) t.albums[r.album] = (t.albums[r.album] || 0) + 1;
+    } else if (r.word) {
+      t.misses[r.word] = (t.misses[r.word] || 0) + 1;
+    }
+  }
+  saveSongTally(t);
+  return t;
 }
 
 /* ---------- High scores (separate board per mode) ---------- */

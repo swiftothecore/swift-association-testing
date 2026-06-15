@@ -17,6 +17,7 @@ import {
   loadDailyResult, saveDailyResult, loadDailyBoard, saveDailyBoard,
   bumpDailyStreak, effectiveDailyStreak,
   markTypePlayed,
+  loadSongTally, recordGameTally,
 } from "./storage.js";
 
 /* ---------- Constants & state ---------- */
@@ -38,6 +39,8 @@ let round = 0;
 let usedWords = [];
 let roundResults = [];   // per-round true/false for the bracelet
 let roundAlbums = [];    // per-round album of the picked song (for the final bracelet)
+let roundWords = [];     // per-round prompt word (for the lifetime tally / Nemesis Word)
+let roundSongs = [];     // per-round answered song title, null on a miss (lifetime tally)
 let gameType = "classic";       // "classic" (fixed 13) | "infinite" (until lives run out) | "daily"
 let infiniteVariant = "3lives"; // "3lives" | "sudden"
 let lives = 0;                  // remaining lives in infinite mode
@@ -155,9 +158,43 @@ function renderStats(lastScore, viewMode = currentMode.id) {
       <div class="histogram">${bars}</div>`;
   }
 
-  el.innerHTML = tabs + body + dailyStatsHTML() + infiniteStatsHTML() + achievementsGridHTML();
+  el.innerHTML = tabs + body + lifetimeStatsHTML() + dailyStatsHTML() + infiniteStatsHTML() + achievementsGridHTML();
   el.querySelectorAll("[data-statmode]").forEach((b) =>
     b.addEventListener("click", () => renderStats(lastScore, b.dataset.statmode)));
+}
+
+// Highest-count entry of a {key: count} map (first one wins ties), or null if empty.
+function topTallyEntry(obj) {
+  let bestK = null, bestV = 0;
+  for (const k in obj) if (obj[k] > bestV) { bestV = obj[k]; bestK = k; }
+  return bestK === null ? null : { key: bestK, count: bestV };
+}
+function favRow(label, value, note) {
+  return `<div class="fav-row"><span class="fav-lbl">${escapeHtml(label)}</span>` +
+    `<span class="fav-val">${escapeHtml(value)}` +
+    (note ? ` <span class="fav-note">${escapeHtml(note)}</span>` : "") + `</span></div>`;
+}
+
+// Lifetime catalog stats — global (not per-mode), drawn from the per-song/per-word
+// tally written in endGame. Shows under every Stats tab, like the daily streak.
+function lifetimeStatsHTML() {
+  const t = loadSongTally();
+  const discovered = Object.keys(t.songs).length;
+  const total = allSongs.length;
+  const favSong = topTallyEntry(t.songs);
+  const favAlbum = topTallyEntry(t.albums);
+  const nemesis = topTallyEntry(t.misses);
+  const header = `<p class="histogram-label" style="margin-top:24px;">your catalog</p>`;
+  if (!discovered && !nemesis) {
+    return header + `<p class="stats-empty">no answers logged yet — play a game to start your catalog!</p>`;
+  }
+  const rows = [
+    favRow("Favourite song", favSong ? favSong.key : "—", favSong ? `×${favSong.count}` : ""),
+    favRow("Favourite album", favAlbum ? favAlbum.key : "—", favAlbum ? `×${favAlbum.count}` : ""),
+    favRow("Nemesis word", nemesis ? `"${nemesis.key}"` : "—", nemesis ? `missed ×${nemesis.count}` : ""),
+    favRow("Songs discovered", `${discovered} / ${total}`, ""),
+  ];
+  return header + `<div class="fav-list">${rows.join("")}</div>`;
 }
 
 // Daily-challenge streak — global (not per-mode), so it shows under every tab.
@@ -493,6 +530,8 @@ function resetRunState() {
   recentEras = [];
   roundResults = [];
   roundAlbums = [];
+  roundWords = [];
+  roundSongs = [];
   dailyRng = null;
 }
 function applyInputHints() {
@@ -916,6 +955,8 @@ function submitAnswer(song, isTimeout) {
   const correct = !!song && currentSongs.some((s) => s.title === song.title);
   roundResults[round - 1] = correct;
   roundAlbums[round - 1] = song ? (song.album || null) : null;
+  roundWords[round - 1] = currentWord;                 // prompt word — for Nemesis Word
+  roundSongs[round - 1] = correct && song ? song.title : null;  // credited song — for the lifetime tally
   justEarnedIndex = correct ? round - 1 : -1;
   if (correct) score++;
   correctStreak = correct ? correctStreak + 1 : 0;
@@ -1044,6 +1085,16 @@ function endGame() {
 
   // Daily plays don't touch any mode's stats board.
   if (!isDaily) updateStats(boardScore, mode);
+
+  // Lifetime per-song / per-word tally (every game type counts — it's a catalog
+  // record, not a per-mode board). Powers Favourite Song, Songs Discovered,
+  // Favourite Album, Nemesis Word.
+  recordGameTally(roundResults.map((correct, i) => ({
+    correct,
+    title: roundSongs[i] || null,
+    album: roundAlbums[i] || null,
+    word: roundWords[i] || null,
+  })));
   const played = totalPlayed();   // classic modes only — infinite/daily tracked separately
 
   // Record this game type; "Hits Different" needs all three (classic + infinite + daily).

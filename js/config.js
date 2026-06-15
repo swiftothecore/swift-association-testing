@@ -13,6 +13,7 @@ export const DAILY_KEY = "swiftSongAssociation.daily";
 export const DAILY_BOARD_KEY = "swiftSongAssociation.dailyBoard";
 export const DAILY_STREAK_KEY = "swiftSongAssociation.dailyStreak";
 export const TYPES_KEY = "swiftSongAssociation.typesPlayed";   // {classic,infinite,daily} — for "Hits Different"
+export const TALLY_KEY = "swiftSongAssociation.songTally";     // lifetime per-song/per-word tally — Favourite Song, Songs Discovered, Nemesis Word, I Hate It Here
 
 /* Difficulty modes — each just re-tunes existing levers (timer, dropdown,
    word-rarity pool, matching strictness, wrong-answer help). Gameplay code is

@@ -651,6 +651,28 @@
     font-family: var(--hand); font-size: 20px; color: var(--ink-soft);
     text-align: center; padding: 24px 0 8px; font-style: italic;
   }
+  /* lifetime catalog stats (Favourite song/album, Nemesis word, Songs discovered) */
+  .fav-list {
+    border: 1.5px solid rgba(43,39,34,0.12);
+    border-radius: 2px; margin-bottom: 22px;
+  }
+  .fav-row {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+    padding: 9px 12px; border-bottom: 1.5px solid rgba(43,39,34,0.12);
+  }
+  .fav-row:last-child { border-bottom: none; }
+  .fav-lbl {
+    font-family: var(--type); font-size: 10px; letter-spacing: 1px;
+    color: var(--ink-soft); text-transform: uppercase; flex-shrink: 0;
+  }
+  .fav-val {
+    font-family: var(--hand); font-size: 22px; font-weight: 700;
+    color: var(--ink); text-align: right; line-height: 1.1;
+  }
+  .fav-note {
+    font-family: var(--type); font-size: 10px; font-weight: 400;
+    color: var(--ink-soft); letter-spacing: 0.5px;
+  }
   /* infinite-mode summary table */
   .inf-stats {
     width: 100%; border-collapse: collapse; margin-bottom: 4px;
