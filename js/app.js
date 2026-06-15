@@ -318,6 +318,34 @@ function distinctStudioAlbumsHit(results, albums) {
   return set.size;
 }
 
+// Misses followed immediately by a correct answer — a "bounce back" (Shake It Off).
+function recoveryCount(results) {
+  let n = 0;
+  for (let i = 1; i < results.length; i++) if (results[i] && !results[i - 1]) n++;
+  return n;
+}
+
+// All three "Folklore love triangle" songs answered correctly this game (The Triangle).
+function hasTriangle(songs) {
+  return ["cardigan", "betty", "august"].every((t) => songs.includes(t));
+}
+
+// Longest run of consecutive correct answers whose titles start with B (My Mind Is Alive).
+function longestBTitleRun(results, songs) {
+  let best = 0, run = 0;
+  for (let i = 0; i < results.length; i++) {
+    if (results[i] && songs[i] && /^b/i.test(songs[i])) { run++; best = Math.max(best, run); }
+    else run = 0;
+  }
+  return best;
+}
+
+// Lifetime missed rounds across the whole catalog tally (Death By A Thousand Cuts).
+function totalLifetimeMisses() {
+  const misses = loadSongTally().misses || {};
+  return Object.values(misses).reduce((a, b) => a + b, 0);
+}
+
 function unlock(id) {
   if (!ACH_BY_ID[id] || earnedAchievements[id]) return;
   earnedAchievements[id] = new Date().toISOString().slice(0, 10);
@@ -598,6 +626,8 @@ function resetRunState() {
   gameTimeouts = 0;
   gameMaxStreak = 0;
   lyricLineAnswers = 0;
+  gameTimeSum = 0;
+  gameHitRedZone = false;
   newlyUnlocked = [];
   usedWords = [];
   recentEras = [];
@@ -1041,6 +1071,8 @@ function submitAnswer(song, isTimeout) {
   // achievements: timing + streak signals (mid-game unlocks toast immediately)
   const elapsed = (performance.now() - timerStart) / 1000;
   const remaining = currentMode.seconds - elapsed;
+  gameTimeSum += Math.min(elapsed, currentMode.seconds);   // for Perfect Storm
+  if (remaining <= 3) gameHitRedZone = true;               // for Peace (timeouts count too)
   if (isTimeout) gameTimeouts++;
   if (correct) {
     if (elapsed < 2) unlock("speak-now");
@@ -1192,13 +1224,23 @@ function endGame() {
     if (score === TOTAL_ROUNDS && (currentMode.id === "hard" || currentMode.id === "ultra")) unlock("long-live");
     if (longestAlbumRun(roundResults, roundAlbums) >= 3) unlock("branch-out");
     if (distinctStudioAlbumsHit(roundResults, roundAlbums) >= STUDIO_ALBUMS.length - 1) unlock("eras-tour");
+    if (!gameHitRedZone) unlock("peace");
+    if (gameTimeSum / TOTAL_ROUNDS < 3) unlock("perfect-storm");
+    if (gameTimeouts === TOTAL_ROUNDS) unlock("i-cant-see-you");
   }
   if (isInfinite) {
     if (roundsSurvived >= 20) unlock("out-of-the-woods");
     if (roundsSurvived === 22) unlock("twenty-two");
+    if (roundResults.length >= 13 && roundResults.slice(0, 13).every(Boolean)) unlock("holy-ground");
+    if (infiniteVariant === "3lives" && lives <= 0 && roundsSurvived <= 4) unlock("cruel-summer");
   }
-  // Lyric-line recall counts in any game type.
+  // Game-type-agnostic signals (classic / infinite / daily all count).
   if (lyricLineAnswers >= 5) unlock("you-knew-the-line");
+  if (recoveryCount(roundResults) >= 3) unlock("shake-it-off");
+  if (hasTriangle(roundSongs)) unlock("the-triangle");
+  if (longestBTitleRun(roundResults, roundSongs) >= 3) unlock("my-mind-is-alive");
+  if (totalLifetimeMisses() >= 1000) unlock("thousand-cuts");
+  if (new Date().getHours() === 0) unlock("midnights");   // played in the midnight hour
 
   showScreen("results");
   const keepsakeOpts = isInfinite
@@ -1265,6 +1307,8 @@ let correctStreak = 0;           // consecutive correct answers this game
 let gameTimeouts = 0;            // timeouts this game (for Fearless)
 let gameMaxStreak = 0;           // best streak reached this game
 let lyricLineAnswers = 0;        // lyric-line answers this game (for You Knew The Line)
+let gameTimeSum = 0;             // total answer time this game, secs (for Perfect Storm)
+let gameHitRedZone = false;      // any round answered with ≤3s left this game (for Peace)
 
 const PEN_LABELS = { quill: "quill pen", fountain: "fountain pen", glitter: "glitter gel pen" };
 

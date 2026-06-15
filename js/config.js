@@ -120,6 +120,16 @@ export const ACH_ICONS = {
   branch:  `<svg viewBox="0 0 24 24"><path class="ink" stroke-width="1.8" stroke-linecap="round" fill="none" d="M5 21 C7 14 9 9 16 4"/><path class="ink-fill" d="M9 11 C7 9 7 6 9.5 5 C10.5 7.5 11.5 9 9 11 Z"/><path class="ink-fill" d="M12 8 C10 6 10 3 12.5 2 C13.5 4.5 14.5 6 12 8 Z"/><path class="ink-fill" d="M8 15 C6 14 5 11 7 9.5 C8.5 11.5 9.5 13 8 15 Z"/></svg>`,
   ticket:  `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M3 7 H21 V10 a2 2 0 0 0 0 4 V17 H3 V14 a2 2 0 0 0 0 -4 Z"/><path d="M14 7 V17" stroke="var(--paper)" stroke-width="1.2" stroke-dasharray="1.5 1.5"/><circle cx="8.5" cy="12" r="1.3" fill="var(--paper)"/></svg>`,
   cycle:   `<svg viewBox="0 0 24 24"><g class="ink" stroke-width="2" fill="none"><path d="M19 9 A8 8 0 0 0 5.5 6.5"/><path d="M5 15 A8 8 0 0 0 18.5 17.5"/></g><path class="ink-fill" d="M4 3 L6.5 7 L2 7.2 Z"/><path class="ink-fill" d="M20 21 L17.5 17 L22 16.8 Z"/></svg>`,
+  moon:    `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M20 14.5 A9 9 0 1 1 11 3 A7 7 0 0 0 20 14.5 Z"/></svg>`,
+  shake:   `<svg viewBox="0 0 24 24"><circle class="ink-fill" cx="12" cy="12" r="4"/><g class="ink" stroke-width="1.8" stroke-linecap="round" fill="none"><path d="M5 7 q-2 5 0 10"/><path d="M3 9 q-1.2 3 0 6"/><path d="M19 7 q2 5 0 10"/><path d="M21 9 q1.2 3 0 6"/></g></svg>`,
+  peace:   `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" class="ink" fill="none" stroke-width="2"/><g class="ink" stroke-width="2"><path d="M12 2.5 V21.5"/><path d="M12 12 L5 19"/><path d="M12 12 L19 19"/></g></svg>`,
+  storm:   `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M7 14 a4 4 0 0 1 0.4 -8 a5 5 0 0 1 9.4 1 a3.5 3.5 0 0 1 -0.8 7 Z"/><path class="ink-fill" d="M11 13 L8 19 H11 L10 23 L15 16 H12 Z"/></svg>`,
+  triangle:`<svg viewBox="0 0 24 24"><path class="ink" fill="none" stroke-width="2" stroke-linejoin="round" d="M12 4 L20.5 19 H3.5 Z"/><circle cx="12" cy="4" r="2.2" class="ink-fill"/><circle cx="20.5" cy="19" r="2.2" class="ink-fill"/><circle cx="3.5" cy="19" r="2.2" class="ink-fill"/></svg>`,
+  brain:   `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M9 3 a3 3 0 0 0 -3 3 a3 3 0 0 0 -2 4 a3 3 0 0 0 1 4 a3 3 0 0 0 3 3 a2.5 2.5 0 0 0 3 0 V4 a2 2 0 0 0 -2 -1 Z"/><path class="ink-fill" d="M15 3 a3 3 0 0 1 3 3 a3 3 0 0 1 2 4 a3 3 0 0 1 -1 4 a3 3 0 0 1 -3 3 a2.5 2.5 0 0 1 -3 0 V4 a2 2 0 0 1 2 -1 Z"/><path d="M12 4 V20" stroke="var(--paper)" stroke-width="1"/></svg>`,
+  thermometer:`<svg viewBox="0 0 24 24"><rect class="ink-fill" x="9.5" y="2" width="5" height="13" rx="2.5"/><circle class="ink-fill" cx="12" cy="18" r="4"/><rect x="11" y="6" width="2" height="9" fill="var(--paper)"/><circle cx="12" cy="18" r="2" fill="var(--paper)"/><g class="ink" stroke-width="1.4" stroke-linecap="round"><path d="M16 5 h3"/><path d="M16 9 h2"/></g></svg>`,
+  eyeoff:  `<svg viewBox="0 0 24 24"><path class="ink" fill="none" stroke-width="1.8" d="M2.5 12 C6 6 18 6 21.5 12 C18 18 6 18 2.5 12 Z"/><circle class="ink-fill" cx="12" cy="12" r="3"/><path class="ink" stroke-width="2.2" stroke-linecap="round" d="M4 4 L20 20"/></svg>`,
+  scissors:`<svg viewBox="0 0 24 24"><g class="ink" stroke-width="1.8" fill="none"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.5 7.5 L20 18"/><path d="M8.5 16.5 L20 6"/></g><circle class="ink-fill" cx="12" cy="12" r="1.3"/></svg>`,
+  mountain:`<svg viewBox="0 0 24 24"><path class="ink-fill" d="M2 20 L9 7 L13 14 L16 9 L22 20 Z"/><path d="M7 11 L9 7 L11 11 Z" fill="var(--paper)"/><path d="M14.5 11.5 L16 9 L17.5 11.5 Z" fill="var(--paper)"/></svg>`,
 };
 export const ACHIEVEMENTS = [
   { id: "enchanted",        name: "Enchanted",        desc: "Finish your first game",              secret: false, icon: "sparkle" },
@@ -150,6 +160,16 @@ export const ACHIEVEMENTS = [
   { id: "story-of-us",      name: "The Story Of Us",  desc: "Keep a 7-day Daily streak",           secret: false, icon: "book" },
   { id: "evermore",         name: "Evermore",         desc: "Reach a 30-day Daily streak",         secret: true,  icon: "feather" },
   { id: "karma",            name: "Karma",            desc: "Earn 13 achievements",                secret: false, icon: "cycle" },
+  { id: "midnights",        name: "Midnights",        desc: "Play between 12 and 1am",             secret: true,  icon: "moon" },
+  { id: "shake-it-off",     name: "Shake It Off",     desc: "Bounce back from a miss 3× in one game", secret: false, icon: "shake" },
+  { id: "peace",            name: "Peace",            desc: "Finish a game without the timer hitting the red",  secret: true, icon: "peace" },
+  { id: "perfect-storm",    name: "Perfect Storm",    desc: "Average under 3s per answer in a game", secret: true, icon: "storm" },
+  { id: "the-triangle",     name: "The Triangle",     desc: "Answer cardigan, betty and august in one game", secret: true, icon: "triangle" },
+  { id: "my-mind-is-alive", name: "My Mind Is Alive", desc: "3 correct in a row — titles starting with B", secret: true, icon: "brain" },
+  { id: "cruel-summer",     name: "Cruel Summer",     desc: "Lose all 3 lives in the first 4 rounds", secret: true, icon: "thermometer" },
+  { id: "i-cant-see-you",   name: "I Can't See You",  desc: "Finish a game without answering once", secret: true, icon: "eyeoff" },
+  { id: "thousand-cuts",    name: "Death By A Thousand Cuts", desc: "1,000 lifetime missed rounds", secret: true, icon: "scissors" },
+  { id: "holy-ground",      name: "Holy Ground",      desc: "Reach round 13 from scratch in Infinite", secret: true, icon: "mountain" },
 ];
 export const ACH_BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));
 
