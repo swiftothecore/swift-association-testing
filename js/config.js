@@ -18,8 +18,11 @@ export const MODES = {
   medium: { id: "medium", label: "Normal", seconds: 10, dropdown: true,  pool: "all",   strict: false, noTitle: false, examples: 3, blurb: "10s · hints on · all words" },
   hard:   { id: "hard",   label: "Hard",   seconds: 7,  dropdown: false, pool: "hard",  strict: false, noTitle: true,  examples: 3, blurb: "7s · no hints · rarer words · not in the title" },
   ultra:  { id: "ultra",  label: "Ultra",  seconds: 5,  dropdown: false, pool: "ultra", strict: true,  noTitle: true,  examples: 0, blurb: "5s · no hints · rarest · exact · not in the title" },
+  // Lyric-only: no title input (lyricOnly), longer clock. You answer by typing a lyric
+  // line (a few words around the prompt word are enough — the matcher is fuzzy).
+  lyricist: { id: "lyricist", label: "Lyricist", seconds: 20, dropdown: false, pool: "all", strict: false, noTitle: false, examples: 3, lyricOnly: true, blurb: "20s · type a lyric line, not the title" },
 };
-export const MODE_ORDER = ["easy", "medium", "hard", "ultra"];
+export const MODE_ORDER = ["easy", "medium", "hard", "ultra", "lyricist"];
 
 export const DEFAULT_PODIUM = [
   { name: "Sabrina Carpenter", score: 13 },

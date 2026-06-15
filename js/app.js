@@ -459,8 +459,15 @@ function resetRunState() {
   roundAlbums = [];
 }
 function applyInputHints() {
-  $("songInput").placeholder = currentMode.dropdown ? "a title… or sing me a line" : "the full title… or a lyric line";
-  $("gameHint").textContent = currentMode.dropdown ? "Enter accepts the top match — or type a lyric line" : "no hints — type the full title or a real lyric line, then Enter";
+  const input = $("songInput");
+  const hint = $("gameHint");
+  if (currentMode.lyricOnly) {
+    input.placeholder = "type the lyric line…";
+    hint.textContent = "type a few words around the word — Enter to answer";
+    return;
+  }
+  input.placeholder = currentMode.dropdown ? "a title… or sing me a line" : "the full title… or a lyric line";
+  hint.textContent = currentMode.dropdown ? "Enter accepts the top match — or type a lyric line" : "no hints — type the full title or a real lyric line, then Enter";
 }
 
 function startGame() {
@@ -742,7 +749,10 @@ function submitAnswer(song, isTimeout) {
 
   let lyricMatch = null;
   if (!song && !isTimeout) {
-    if (dropdownItems.length) {
+    if (currentMode.lyricOnly) {           // Lyricist mode: lyric line is the only path
+      lyricMatch = matchLyricLine($("songInput").value);
+      if (lyricMatch) song = lyricMatch.song;
+    } else if (dropdownItems.length) {
       song = dropdownItems[activeIndex >= 0 ? activeIndex : 0];
     } else {
       const raw = $("songInput").value;
