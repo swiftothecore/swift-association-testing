@@ -11,6 +11,7 @@ import {
 import { buildBraceletSVG } from "./bracelet.js";
 import {
   loadRecords, insertRecord, migrateRecordsFromStats, getPlayerName, setPlayerName,
+  loadHistory, appendHistory,
   loadStats, updateStats, totalPlayed,
   loadAchievements, saveAchievements,
   loadMode,
@@ -106,6 +107,7 @@ const screens = {
   game: $("screen-game"),
   results: $("screen-results"),
   stats: $("screen-stats"),
+  records: $("screen-records"),
 };
 function showScreen(name) {
   Object.values(screens).forEach((s) => s.classList.remove("active"));
@@ -441,35 +443,137 @@ function achievementsGridHTML() {
 }
 
 /* ---------- Personal records (your own best runs, per mode) ---------- */
-// Renders { score, date } rows. The signed notebook name (opts.name) labels each run;
-// rank-1 gets a "★ best" tag; the just-played run (entry.__this) is underlined and
-// tagged "new!" (a fresh #1) or "this run". An empty list shows a target line.
 function recordDateLabel(date) {
   return date
     ? new Date(date + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
     : "—";
 }
-function renderRecords(el, list, opts = {}) {
-  el.innerHTML = "";
-  if (!list.length) {
-    el.innerHTML = `<li class="rec-empty">no runs yet — your best lands here ★</li>`;
+// Human label for a board-mode token: "medium" → "Normal", "inf-3lives-easy" →
+// "3 lives · Easy", "daily" → "Daily".
+function modeLabel(token) {
+  if (token === "daily") return "Daily";
+  if (token && token.startsWith("inf-")) {
+    const parts = token.split("-");   // ["inf", variant, mode]
+    return (VARIANT_LABELS[parts[1]] || parts[1]) + " · " + (MODES[parts[2]] ? MODES[parts[2]].label : parts[2]);
+  }
+  return MODES[token] ? MODES[token].label : (token || "—");
+}
+const isInfiniteToken = (token) => !!token && token.startsWith("inf-");
+// Compact "your best" line for a single mode (start screen + results). Shows the
+// mode's top personal record, or a target line if you've never finished a run in it.
+function renderBestLine(el, mode) {
+  const rec = loadRecords(mode)[0];
+  if (!rec) {
+    el.innerHTML = `<div class="best-empty">no runs yet — set your first record ★</div>`;
     return;
   }
-  const name = opts.name || "your run";
-  list.forEach((entry, i) => {
-    const li = document.createElement("li");
-    li.classList.add("rank-" + (i + 1));
-    if (entry.__this) li.classList.add("this-run");
-    const num = String(i + 1).padStart(2, "0");
-    const best = i === 0 ? `<span class="leader-tag">★ best</span>` : "";
-    const tag = entry.__this ? `<span class="you-tag">${opts.isNewBest && i === 0 ? "new!" : "this run"}</span>` : "";
-    li.innerHTML =
-      `<span class="rank-num">${num}</span>` +
-      `<span class="name">${escapeHtml(name)} ${best}${tag}</span>` +
-      `<span class="rec-date">${recordDateLabel(entry.date)}</span>` +
-      `<span class="pts">${entry.score}</span>`;
-    el.appendChild(li);
+  const unit = isInfiniteToken(mode) ? " rounds" : " / " + TOTAL_ROUNDS;
+  el.innerHTML =
+    `<div class="best-line"><span class="best-num">${rec.score}<span class="best-unit">${unit}</span></span>` +
+    `<span class="best-meta">★ best · ${escapeHtml(modeLabel(mode))}${rec.date ? " · " + recordDateLabel(rec.date) : ""}</span></div>`;
+}
+
+/* ---------- Records page (personal-best tiles + run history) ---------- */
+const HISTORY_PAGE = 20;          // history rows revealed per "load more"
+let historyShown = 0;             // rows currently rendered
+let recordsBackTarget = "start";  // where ← back returns to
+let _pbByMode = {};               // per-mode best, for crowning history rows
+
+// Best daily score ever (daily runs don't live in the per-mode records store).
+function dailyBest() {
+  let best = 0;
+  for (const h of loadHistory()) if (h.t === "daily" && h.s > best) best = h.s;
+  return best;
+}
+function pbTile(mode, opts = {}) {
+  const rec = opts.score != null ? { score: opts.score, date: null } : loadRecords(mode)[0];
+  const empty = !rec || rec.score == null;
+  const unit = isInfiniteToken(mode) ? "" : "/" + TOTAL_ROUNDS;
+  const sub = opts.sub || (rec ? (rec.date ? recordDateLabel(rec.date) : "—") : "no runs yet");
+  return `<div class="pb-tile${empty ? " pb-empty" : ""}">` +
+    `<span class="pb-mode">${escapeHtml(opts.label || modeLabel(mode))}</span>` +
+    `<span class="pb-score">${empty ? "—" : rec.score + (unit ? `<span class="pb-unit">${unit}</span>` : "")}</span>` +
+    `<span class="pb-sub">${escapeHtml(sub)}</span></div>`;
+}
+function accLabel(h) { return h.n ? Math.round((h.c / h.n) * 100) + "%" : "—"; }
+function histDateLabel(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", { day: "numeric", month: "short" }) + " · " +
+         d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+function appendHistoryRows(hist) {
+  const rowsEl = $("histRows");
+  if (!rowsEl) return;
+  const next = hist.slice(historyShown, historyShown + HISTORY_PAGE);
+  rowsEl.insertAdjacentHTML("beforeend", next.map((h) => {
+    const unit = isInfiniteToken(h.m) ? "" : "/" + TOTAL_ROUNDS;
+    const isPB = h.s > 0 && h.s === _pbByMode[h.m];
+    return `<div class="hist-row${isPB ? " hist-pb" : ""}">` +
+      `<span class="hist-score">${isPB ? "♛ " : ""}${h.s}${unit ? `<span class="hist-unit">${unit}</span>` : ""}</span>` +
+      `<span class="hist-acc">${accLabel(h)}</span>` +
+      `<span class="hist-mode">${escapeHtml(modeLabel(h.m))}</span>` +
+      `<span class="hist-date">${histDateLabel(h.d)}</span></div>`;
+  }).join(""));
+  historyShown += next.length;
+  const more = $("histMore");
+  if (more && historyShown >= hist.length) more.style.display = "none";
+}
+function renderRecordsPage() {
+  const name = getPlayerName();
+  const sig = name
+    ? `<span class="rec-sig-name">${escapeHtml(name)}</span><span class="rec-sig-sub">your notebook · best scores &amp; history</span>`
+    : `<div class="rec-sign-row"><input id="recSignInput" class="set-text" maxlength="20" placeholder="sign your notebook" /><button id="recSignSave" class="btn-ghost">sign</button></div>`;
+
+  // Personal bests — classic difficulties always shown; infinite/daily only if played.
+  const classicTiles = MODE_ORDER.map((m) => pbTile(m)).join("");
+  const infTokens = [];
+  for (const v of ["3lives", "sudden"]) for (const m of MODE_ORDER) {
+    const tok = "inf-" + v + "-" + m;
+    if (loadRecords(tok).length) infTokens.push(tok);
+  }
+  const infBlock = infTokens.length
+    ? `<p class="rec-group-label">infinite — rounds survived</p><div class="pb-grid">${infTokens.map((t) => pbTile(t)).join("")}</div>`
+    : "";
+  const db = dailyBest();
+  const streak = effectiveDailyStreak(todayKey());
+  const dailyBlock = (db > 0 || streak.best > 0)
+    ? `<p class="rec-group-label">daily</p><div class="pb-grid">` +
+        pbTile("daily", { label: "Daily best", score: db, sub: `🔥 ${streak.current} day streak · best ${streak.best}` }) +
+      `</div>`
+    : "";
+
+  const hist = loadHistory();
+  _pbByMode = {};
+  for (const h of hist) if (!(h.m in _pbByMode)) _pbByMode[h.m] = h.m === "daily" ? db : (loadRecords(h.m)[0] ? loadRecords(h.m)[0].score : -1);
+  const histBlock = hist.length
+    ? `<p class="rec-group-label">history — ${hist.length} run${hist.length === 1 ? "" : "s"}</p>` +
+      `<div class="hist-head"><span>score</span><span>acc.</span><span>mode</span><span>date</span></div>` +
+      `<div id="histRows" class="hist-rows"></div>` +
+      (hist.length > HISTORY_PAGE ? `<button id="histMore" class="btn-ghost">load more</button>` : "")
+    : `<p class="rec-group-label">history</p><p class="stats-empty">no runs yet — finish a game to start your log.</p>`;
+
+  $("recordsBody").innerHTML =
+    `<div class="rec-sig">${sig}</div>` +
+    `<p class="rec-group-label">personal bests</p><div class="pb-grid">${classicTiles}</div>` +
+    infBlock + dailyBlock + histBlock;
+
+  const saveBtn = $("recSignSave");
+  if (saveBtn) saveBtn.addEventListener("click", () => {
+    const v = ($("recSignInput").value || "").trim().slice(0, 20);
+    if (v) { settings.playerName = setPlayerName(v); refreshStartBoard(); renderRecordsPage(); }
   });
+  const signInput = $("recSignInput");
+  if (signInput) signInput.addEventListener("keydown", (e) => { if (e.key === "Enter") saveBtn.click(); });
+
+  historyShown = 0;
+  if (hist.length) appendHistoryRows(hist);
+  const more = $("histMore");
+  if (more) more.addEventListener("click", () => appendHistoryRows(hist));
+}
+function openRecords(from) {
+  recordsBackTarget = from;
+  renderRecordsPage();
+  showScreen("records");
 }
 
 /* ---------- Bracelet (hand-strung SVG) ---------- */
@@ -575,14 +679,11 @@ function setMode(id) {
 const GAMETYPE_LABELS = { classic: "Classic", infinite: "Infinite" };
 const VARIANT_LABELS = { "3lives": "3 lives", sudden: "Sudden death" };
 
-// The start-screen records board follows the selected mode (+ infinite variant).
+// The start-screen "your best" line follows the selected mode (+ infinite variant).
 function refreshStartBoard() {
   const t = $("startPodiumTitle");
-  const label = gameType === "infinite"
-    ? VARIANT_LABELS[infiniteVariant] + " · " + currentMode.label
-    : currentMode.label;
-  if (t) t.textContent = "Your Records · " + label;
-  renderRecords($("startPodium"), loadRecords(boardMode()), { name: getPlayerName() });
+  if (t) t.textContent = "Your best";
+  renderBestLine($("startBest"), boardMode());
 }
 function updateBlurb() {
   const b = $("modeBlurb");
@@ -1347,6 +1448,13 @@ function endGame() {
   const boardScore = isInfinite ? roundsSurvived : score;  // infinite ranks by how far you got
   const mode = boardMode();
 
+  // Log every finished run to the chronological history (classic / infinite / daily).
+  appendHistory({
+    s: boardScore, c: score, n: roundsSurvived,
+    m: isDaily ? "daily" : mode, t: gameType,
+    d: new Date().toISOString(),
+  });
+
   // Daily plays don't touch any mode's stats board.
   if (!isDaily) updateStats(boardScore, mode);
 
@@ -1435,22 +1543,22 @@ function endGame() {
   }
 
   // Reset any daily-only chrome left over from a previous daily results view.
-  document.querySelector("#screen-results .podium-title").textContent = "Your Records";
+  document.querySelector("#screen-results .podium-title").textContent = "Your best";
   const staleShare = $("shareBtn");
   if (staleShare) staleShare.remove();
   $("namePrompt").style.display = "none";
   hideNewBestBanner();
 
-  // Every positive run is logged to your personal records; a 0 isn't (the empty-state
-  // target reads better than "your best: 0", and a 0 never survives the top 5 anyway).
+  // Every positive run folds into your personal records (best-per-mode); a 0 doesn't
+  // (it would never be a best). The full run is always in the history log either way.
   if (boardScore > 0) {
-    const { list, isBest } = insertRecord(mode, boardScore, todayKey());
-    const draw = () => renderRecords($("resultPodium"), list, { name: getPlayerName(), isNewBest: isBest });
+    const { isBest } = insertRecord(mode, boardScore, todayKey());
+    const draw = () => renderBestLine($("resultPodium"), mode);
     if (!getPlayerName()) promptSignOnce(draw);   // first record ever → sign once, reuse silently after
     else draw();
     if (isBest) showNewBestBanner();
   } else {
-    renderRecords($("resultPodium"), loadRecords(mode), { name: getPlayerName() });
+    renderBestLine($("resultPodium"), mode);
   }
 }
 
@@ -1952,6 +2060,7 @@ function wireSettingsBody() {
     settings.playerName = nameField.value.trim().slice(0, 20);
     saveSettings(settings);
     refreshStartBoard();   // re-sign the start-screen records live
+    if (screens.records.classList.contains("active")) renderRecordsPage();
   });
   body.querySelectorAll("[data-action]").forEach((b) => b.addEventListener("click", () => {
     if (b.dataset.action === "export") exportBackup();
@@ -2048,6 +2157,13 @@ async function init() {
   $("resultsStatsBtn").addEventListener("click", () => { statsBackTarget = "results"; renderStats(score); showScreen("stats"); });
   $("statsBackBtn").addEventListener("click", () => {
     const prev = statsBackTarget;
+    showScreen(prev);
+    if (prev === "start") { $("startContent").style.display = ""; }
+  });
+  $("recordsBtn").addEventListener("click", () => openRecords("start"));
+  $("viewRecordsBtn").addEventListener("click", () => openRecords("results"));
+  $("recordsBackBtn").addEventListener("click", () => {
+    const prev = recordsBackTarget;
     showScreen(prev);
     if (prev === "start") { $("startContent").style.display = ""; }
   });

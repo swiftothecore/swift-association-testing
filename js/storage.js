@@ -2,11 +2,13 @@
 // All functions are pure of app state — the active mode and the earned-
 // achievements map are passed in explicitly rather than closed over.
 import {
-  HS_KEY, RECORDS_KEY, STATS_KEY, ACH_KEY, DIFF_KEY,
+  HS_KEY, RECORDS_KEY, HISTORY_KEY, STATS_KEY, ACH_KEY, DIFF_KEY,
   DAILY_KEY, DAILY_BOARD_KEY, DAILY_STREAK_KEY, TYPES_KEY, TALLY_KEY,
   SETTINGS_KEY, APP_PREFIX, DEFAULT_SETTINGS,
   MODES, MODE_ORDER,
 } from "./config.js";
+
+const HISTORY_CAP = 1000;   // keep the most recent N runs; older ones drop off
 
 const STREAK_THRESHOLD = 7; // score >= this counts toward a streak
 
@@ -167,6 +169,25 @@ export function insertRecord(mode, score, date) {
   return { list: top, rank, isBest: rank === 0 };
 }
 
+/* ---------- Run history (chronological log of every finished run) ---------- */
+// One flat, newest-first array across all modes/game types. Entry:
+//   { s, c, n, m, t, d }  → score (headline number), correct, rounds played,
+//   mode token, game type, ISO datetime. Capped to the most recent HISTORY_CAP.
+export function loadHistory() {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    if (raw) { const a = JSON.parse(raw); if (Array.isArray(a)) return a; }
+  } catch (e) { /* ignore */ }
+  return [];
+}
+export function appendHistory(entry) {
+  const list = loadHistory();
+  list.unshift(entry);                       // newest first
+  if (list.length > HISTORY_CAP) list.length = HISTORY_CAP;
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(list)); } catch (e) { /* ignore */ }
+  return list;
+}
+
 /* ---------- Notebook signature (set once, reused on every record) ---------- */
 export function getPlayerName() { return (loadSettings().playerName || "").trim(); }
 export function setPlayerName(name) {
@@ -290,8 +311,12 @@ export function importData(obj) {
 }
 
 // Per-category resets (the danger zone). Each clears one family of keys.
-// Sweeps both the live records and the dormant legacy fake-celebrity board.
-export function resetRecords() { removeByPrefix(RECORDS_KEY); removeByPrefix(HS_KEY); }
+// Sweeps the records, the run history, and the dormant legacy fake-celebrity board.
+export function resetRecords() {
+  removeByPrefix(RECORDS_KEY);
+  try { localStorage.removeItem(HISTORY_KEY); } catch (e) { /* ignore */ }
+  removeByPrefix(HS_KEY);
+}
 export function resetStatsAll()   { removeByPrefix(STATS_KEY); }
 export function resetAchievements() { try { localStorage.removeItem(ACH_KEY); localStorage.removeItem(TYPES_KEY); } catch (e) { /* ignore */ } }
 export function resetTally()      { try { localStorage.removeItem(TALLY_KEY); } catch (e) { /* ignore */ } }

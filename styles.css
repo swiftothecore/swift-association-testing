@@ -270,28 +270,8 @@
   }
   /* the tab row reused on the stats page */
   .stats-tabs { margin-bottom: 16px; }
+  /* #resultPodium holds the compact best line (classic/infinite) or the daily streak panel */
   .podium { list-style: none; margin: 0 0 4px; padding: 0; }
-  .podium li {
-    display: flex; align-items: baseline; gap: 12px;
-    padding: 4px 0; min-height: var(--line);
-    font-family: var(--hand); font-size: 23px; color: var(--ink);
-  }
-  .podium li .rank-num { width: 28px; color: var(--ink-soft); font-family: var(--type); font-size: 13px; }
-  .podium li.rank-1 .rank-num { color: var(--ink-accent); }
-  .podium li .name { flex: 1; }
-  .podium li .rec-date { font-family: var(--type); font-size: 11px; color: var(--ink-soft); flex: 0 0 auto; }
-  .podium li .pts { font-family: var(--type); font-size: 16px; color: var(--ink-accent); }
-  .podium li .leader-tag, .podium li .you-tag {
-    font-family: var(--type); font-size: 10px; letter-spacing: 1px;
-    border: 1px solid var(--ink); padding: 1px 5px; color: var(--ink);
-    transform: rotate(-2deg);
-  }
-  .podium li.this-run .name { text-decoration: underline wavy var(--ink-accent); text-underline-offset: 4px; }
-  /* empty state — a target line when you've no runs in this mode yet */
-  .podium .rec-empty {
-    display: block; font-family: var(--hand); font-size: 20px;
-    color: var(--ink-soft); padding: 10px 0; opacity: 0.85;
-  }
 
   /* "new personal best" banner above the records list */
   .new-best-banner {
@@ -305,6 +285,56 @@
     60%  { transform: rotate(-0.6deg) scale(1.12); opacity: 1; }
     100% { transform: rotate(-0.6deg) scale(1); opacity: 1; }
   }
+
+  /* ---------- "Your best" compact line (start + results) ---------- */
+  .best-line { display: flex; flex-direction: column; gap: 1px; padding: 2px 0 6px; }
+  .best-num { font-family: var(--hand); font-weight: 700; font-size: 40px; line-height: 1; color: var(--ink-accent); }
+  .best-unit { font-size: 21px; color: var(--ink-soft); }
+  .best-meta { font-family: var(--type); font-size: 11px; letter-spacing: 0.5px; color: var(--ink-soft); }
+  .best-empty { font-family: var(--hand); font-size: 20px; color: var(--ink-soft); opacity: 0.85; padding: 4px 0 8px; }
+
+  /* ---------- Records page (personal bests + history) ---------- */
+  .rec-sig { margin: 2px 0 16px; padding-bottom: 12px; border-bottom: 1px dashed rgba(43,39,34,0.16); }
+  .rec-sig-name { font-family: var(--hand); font-weight: 700; font-size: 30px; color: var(--ink); display: block; line-height: 1.05; transform: rotate(-0.6deg); }
+  .rec-sig-sub { font-family: var(--type); font-size: 11px; letter-spacing: 0.5px; color: var(--ink-soft); display: block; margin-top: 5px; }
+  .rec-sign-row { display: flex; align-items: center; gap: 8px; }
+  .rec-sign-row .set-text { text-align: left; width: 190px; }
+  .rec-sign-row .btn-ghost { width: auto; margin: 0; padding: 4px 16px; }
+
+  .rec-group-label {
+    font-family: var(--type); font-size: 10px; letter-spacing: 1px;
+    color: var(--ink-soft); text-transform: uppercase; margin: 24px 0 10px;
+  }
+
+  .pb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(134px, 1fr)); gap: 10px; }
+  .pb-tile {
+    border: 1.5px solid rgba(43,39,34,0.14); border-radius: 8px;
+    padding: 9px 12px 11px; background: rgba(255,255,255,0.16);
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .pb-tile.pb-empty { opacity: 0.55; }
+  .pb-mode { font-family: var(--type); font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase; color: var(--ink-soft); }
+  .pb-score { font-family: var(--hand); font-weight: 700; font-size: 33px; line-height: 1; color: var(--ink-accent); }
+  .pb-empty .pb-score { color: var(--ink-soft); }
+  .pb-unit { font-size: 16px; color: var(--ink-soft); }
+  .pb-sub { font-family: var(--type); font-size: 10px; color: var(--ink-soft); }
+
+  .hist-head, .hist-row {
+    display: grid; grid-template-columns: 1.1fr 0.7fr 1.5fr 1.3fr;
+    align-items: baseline; gap: 10px;
+  }
+  .hist-head {
+    font-family: var(--type); font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--ink-soft); padding: 0 7px 6px; border-bottom: 1px solid rgba(43,39,34,0.12);
+  }
+  .hist-rows { margin-top: 2px; }
+  .hist-row { padding: 7px; border-bottom: 1px solid rgba(43,39,34,0.07); }
+  .hist-row.hist-pb { background: var(--highlighter); border-radius: 4px; border-bottom-color: transparent; }
+  .hist-score { font-family: var(--hand); font-size: 22px; color: var(--ink); line-height: 1; }
+  .hist-unit { font-family: var(--type); font-size: 11px; color: var(--ink-soft); }
+  .hist-acc, .hist-mode { font-family: var(--type); font-size: 13px; color: var(--ink-soft); }
+  .hist-date { font-family: var(--type); font-size: 11px; color: var(--ink-soft); }
+  #histMore { margin-top: 12px; }
 
   /* ---------- Bracelet (round progress + score) ---------- */
   .bracelet-wrap { margin-bottom: 26px; }

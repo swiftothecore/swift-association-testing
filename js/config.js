@@ -7,6 +7,7 @@ export const RECENT_WINDOW = 5;
 /* ---------- localStorage keys ---------- */
 export const HS_KEY = "swiftSongAssociation.highscores";        // legacy fake-celebrity board (dormant; kept for old backups)
 export const RECORDS_KEY = "swiftSongAssociation.records";      // personal best runs per mode — { score, date }[]
+export const HISTORY_KEY = "swiftSongAssociation.history";      // chronological log of every finished run (capped)
 export const STATS_KEY = "swiftSongAssociation.stats";
 export const ACH_KEY = "swiftSongAssociation.achievements";
 export const DIFF_KEY = "swiftSongAssociation.difficulty";
