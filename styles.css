@@ -1015,7 +1015,7 @@
   .set-actions .btn-ghost { width: auto; flex: 1 1 0; margin-top: 0; }
 
   /* danger zone — set apart with a torn red border */
-  .set-danger { margin: 24px 0 36px; border: 1.5px dashed var(--margin); border-radius: 3px; padding: 14px 16px 16px; }
+  .set-danger { margin: 22px 0; border: 1.5px dashed var(--margin); border-radius: 3px; padding: 14px 16px 16px; }
   .set-danger .set-section-title { color: var(--margin); }
   .set-danger-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .danger-btn {
