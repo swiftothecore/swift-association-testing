@@ -1078,11 +1078,34 @@ function matchLyricLine(phrase) {
   return best ? { song: best.song, line: best.line } : null;
 }
 
-// Recover the original lyric line (for display) that holds the matched phrase.
+// Recover the original lyric text (for display) that holds the matched phrase.
+// The phrase was found in the song's flat blob (_normLyrics, newlines folded to
+// spaces), so it can straddle several lines. Map the blob hit back to the span of
+// source lines it covers, rather than assuming one line holds the whole phrase
+// (which would mis-fall-back to the song's first line for a cross-line phrase).
 function recoverLyricLine(song, normPhrase) {
-  const lines = song.lyrics.split("\n");
-  const hit = lines.find((l) => normalizeLyric(l).includes(normPhrase));
-  return (hit || lines[0] || "").trim();
+  const rawLines = song.lyrics.split("\n");
+  // Single-line hit — the common case.
+  const single = rawLines.find((l) => normalizeLyric(l).includes(normPhrase));
+  if (single) return single.trim();
+  // Cross-line phrase: rebuild each non-empty line's char span within the blob
+  // (lines join with one space, matching how _normLyrics was normalized).
+  const segs = [];
+  let pos = 0;
+  for (let i = 0; i < rawLines.length; i++) {
+    const norm = normalizeLyric(rawLines[i]);
+    if (!norm) continue;
+    segs.push({ i, start: pos, end: pos + norm.length });   // end exclusive
+    pos += norm.length + 1;                                  // + joining space
+  }
+  const at = song._normLyrics.indexOf(normPhrase);
+  if (at < 0) return (rawLines.find(Boolean) || "").trim();
+  const endAt = at + normPhrase.length - 1;
+  const startSeg = segs.find((s) => at >= s.start && at < s.end);
+  const endSeg = segs.find((s) => endAt >= s.start && endAt < s.end);
+  if (!startSeg || !endSeg) return (rawLines.find(Boolean) || "").trim();
+  return rawLines.slice(startSeg.i, endSeg.i + 1)
+    .map((l) => l.trim()).filter(Boolean).join(" ");
 }
 
 /* ---------- Submit & feedback ---------- */
