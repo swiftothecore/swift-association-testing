@@ -1,5 +1,5 @@
 "use strict";
-import { $, escapeRegExp, escapeHtml, prefersReducedMotion, shuffle, chance, normalizeTitle, normalizeLyric, fuzzySubstringRatio, mulberry32, dailySeed } from "./util.js";
+import { $, escapeRegExp, escapeHtml, prefersReducedMotion, shuffle, chance, normalizeTitle, normalizeLyric, fuzzySubstringRatio, levenshtein, mulberry32, dailySeed } from "./util.js";
 import {
   TOTAL_ROUNDS, RECENT_WINDOW, DIFF_KEY,
   MODES, MODE_ORDER, INFINITE_DEFAULT_PODIUM,
@@ -1055,9 +1055,12 @@ function matchLyricLine(phrase) {
   const normPhrase = normalizeLyric(phrase);
   if (!normPhrase) return null;
   if (normPhrase.split(" ").length < MIN_LYRIC_WORDS) return null;
-  // The typed phrase must hold the prompt word (stem-lenient by default; exact in
-  // Ultra via currentMode.strict — so a stem-only line like "golden" for "gold" fails).
-  if (!wordRegex(currentWord).test(phrase)) return null;
+  // NOTE: we deliberately do NOT require the prompt word to appear in the typed phrase.
+  // Matching is already restricted to currentSongs (every one of which contains the
+  // word — they're the round's valid answers), so any real lyric chunk that matches is
+  // a correct answer regardless of which specific lines the player recalled. This makes
+  // multi-line recall "just work" when the word lives in a line they didn't type. The
+  // bare-word / word+filler cheat is still blocked by MIN_LYRIC_WORDS + a real-line match.
 
   // Fast path: a verbatim contiguous run anywhere in the lyrics (incl. across lines).
   for (const s of currentSongs) {
@@ -1067,23 +1070,52 @@ function matchLyricLine(phrase) {
     }
   }
 
-  // Fuzzy path: best-matching word-bearing line per song; keep the best overall.
-  const rx = wordRegex(currentWord);
+  // Fuzzy path: best whole-song substring match. We match against the song's flat
+  // _normLyrics blob (newlines folded to spaces), so a phrase that spans SEVERAL
+  // lines is matched as one window — typos / line-break differences and all. This is
+  // what lets a player type a multi-line chunk and have it "just work" even when it's
+  // not verbatim. fuzzySubstringRatio aligns the typed phrase to its best window and
+  // leaves trailing lyric free, so longer songs aren't penalised.
   let best = null;
   for (const s of currentSongs) {
-    const lines = s.lyrics.split("\n");
-    for (const raw of lines) {
-      if (!rx.test(raw)) continue;
-      const ratio = fuzzySubstringRatio(normPhrase, normalizeLyric(raw));
-      if (ratio < FUZZY_THRESHOLD) continue;
-      if (!best || ratio > best.ratio ||
-          (ratio === best.ratio && (s.lyrics.length < best.song.lyrics.length ||
-            (s.lyrics.length === best.song.lyrics.length && s.title < best.song.title)))) {
-        best = { song: s, line: raw.trim(), ratio };
-      }
+    const ratio = fuzzySubstringRatio(normPhrase, s._normLyrics);
+    if (ratio < FUZZY_THRESHOLD) continue;
+    if (!best || ratio > best.ratio ||
+        (ratio === best.ratio && (s.lyrics.length < best.song.lyrics.length ||
+          (s.lyrics.length === best.song.lyrics.length && s.title < best.song.title)))) {
+      best = { song: s, ratio };
     }
   }
-  return best ? { song: best.song, line: best.line, ...gradeLyricRecall(normPhrase, best.line) } : null;
+  if (!best) return null;
+  const line = recoverFuzzyLine(best.song, normPhrase);
+  return { song: best.song, line, ...gradeLyricRecall(normPhrase, line) };
+}
+
+// Recover a display line for a FUZZY (non-verbatim) match: scan the song's contiguous
+// line windows for the one whose normalized text best matches the typed phrase, and
+// return that raw span. Mirrors recoverLyricLine's job for the inexact case, so the
+// feedback card shows the actual lines the player was recalling (incl. cross-line).
+function recoverFuzzyLine(song, normPhrase) {
+  const rawLines = song.lyrics.split("\n").map((l) => l.trim()).filter(Boolean);
+  let best = null;
+  for (let i = 0; i < rawLines.length; i++) {
+    const windowRaw = [];
+    let windowNorm = "";
+    for (let j = i; j < rawLines.length; j++) {
+      const norm = normalizeLyric(rawLines[j]);
+      if (!norm) continue;
+      windowRaw.push(rawLines[j]);
+      windowNorm = windowNorm ? windowNorm + " " + norm : norm;
+      // Use a SYMMETRIC similarity (penalises the window being longer OR shorter than
+      // the phrase) so we recover the span the player actually typed — not just any
+      // window that happens to contain it (fuzzySubstringRatio leaves trailing lyric
+      // free, which would let an over-long window tie and win).
+      const sim = 1 - levenshtein(normPhrase, windowNorm) / Math.max(normPhrase.length, windowNorm.length);
+      if (!best || sim > best.sim) best = { sim, text: windowRaw.join(" ") };
+      if (windowNorm.length > normPhrase.length * 2) break;   // don't over-grow the window
+    }
+  }
+  return best ? best.text : (rawLines[0] || "");
 }
 
 // Recover the original lyric text (for display) that holds the matched phrase.
