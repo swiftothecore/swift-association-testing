@@ -2,10 +2,10 @@
 // All functions are pure of app state — the active mode and the earned-
 // achievements map are passed in explicitly rather than closed over.
 import {
-  HS_KEY, STATS_KEY, ACH_KEY, DIFF_KEY,
+  HS_KEY, RECORDS_KEY, STATS_KEY, ACH_KEY, DIFF_KEY,
   DAILY_KEY, DAILY_BOARD_KEY, DAILY_STREAK_KEY, TYPES_KEY, TALLY_KEY,
   SETTINGS_KEY, APP_PREFIX, DEFAULT_SETTINGS,
-  MODES, MODE_ORDER, DEFAULT_PODIUM, DAILY_DEFAULT_PODIUM,
+  MODES, MODE_ORDER,
 } from "./config.js";
 
 const STREAK_THRESHOLD = 7; // score >= this counts toward a streak
@@ -120,21 +120,60 @@ export function recordGameTally(rounds) {
   return t;
 }
 
-/* ---------- High scores (separate board per mode) ---------- */
-// Medium keeps the legacy key for back-compat; other modes get a suffix.
-export function hsKey(mode) { return mode === "medium" ? HS_KEY : HS_KEY + "." + mode; }
-export function loadHighScores(mode, fallback = DEFAULT_PODIUM) {
+// The old fake-celebrity "Hall of Fame" (HS_KEY) is fully retired — no reader or
+// writer remains. Any stale highscores.* keys from older versions are swept by
+// resetRecords() and still round-trip through export/import (they're under APP_PREFIX).
+
+/* ---------- Personal records (your own best runs, per mode) ---------- */
+// Same mode-token scheme as stats/high-scores: medium = unsuffixed legacy-style key,
+// every other mode (incl. infinite "inf-<variant>-<mode>" tokens) gets a suffix.
+// Entry shape: { score, date } where date is a "YYYY-MM-DD" string (or null for the
+// migrated "best so far" seed). For infinite, score holds rounds survived.
+export function recordsKey(mode) { return mode === "medium" ? RECORDS_KEY : RECORDS_KEY + "." + mode; }
+export function loadRecords(mode) {
   try {
-    const raw = localStorage.getItem(hsKey(mode));
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length) return parsed;
-    }
+    const raw = localStorage.getItem(recordsKey(mode));
+    if (raw) { const a = JSON.parse(raw); if (Array.isArray(a)) return a; }
   } catch (e) { /* ignore */ }
-  return fallback.slice();
+  return [];
 }
-export function saveHighScores(list, mode) {
-  try { localStorage.setItem(hsKey(mode), JSON.stringify(list)); } catch (e) { /* ignore */ }
+// One-time migration: seed each mode's records from the player's *pre-existing* best
+// (their stats), so returning players keep their real achievement as a dateless "best
+// so far" entry — no fake celebrity names. Run once at startup, BEFORE any game folds a
+// new score into stats, so the seed reflects history rather than the run in progress.
+// Idempotent: only seeds a mode that has a best but no records yet.
+export function migrateRecordsFromStats() {
+  const tokens = MODE_ORDER.slice();
+  for (const v of ["3lives", "sudden"]) for (const m of MODE_ORDER) tokens.push("inf-" + v + "-" + m);
+  for (const mode of tokens) {
+    if (localStorage.getItem(recordsKey(mode)) != null) continue;   // already has records
+    const best = loadStats(mode).best;
+    if (best > 0) saveRecords([{ score: best, date: null }], mode);
+  }
+}
+export function saveRecords(list, mode) {
+  try { localStorage.setItem(recordsKey(mode), JSON.stringify(list)); } catch (e) { /* ignore */ }
+}
+// Insert a finished run; keep the top 5 by score (tie-break: earliest date first, so the
+// run that *first* reached a score outranks a later tie). Returns { list, rank, isBest }
+// where rank is the just-played run's 0-based index (or -1 if it fell off the top 5).
+export function insertRecord(mode, score, date) {
+  const entry = { score, date, __this: true };
+  const top = loadRecords(mode).concat([entry]).sort((a, b) =>
+    b.score - a.score || ((a.date || "") < (b.date || "") ? -1 : (a.date || "") > (b.date || "") ? 1 : 0)
+  ).slice(0, 5);
+  const rank = top.indexOf(entry);
+  saveRecords(top.map(({ score, date }) => ({ score, date })), mode);   // strip the transient __this
+  return { list: top, rank, isBest: rank === 0 };
+}
+
+/* ---------- Notebook signature (set once, reused on every record) ---------- */
+export function getPlayerName() { return (loadSettings().playerName || "").trim(); }
+export function setPlayerName(name) {
+  const s = loadSettings();
+  s.playerName = (name || "").trim().slice(0, 20);
+  saveSettings(s);
+  return s.playerName;
 }
 
 /* ---------- Difficulty ---------- */
@@ -160,18 +199,8 @@ export function saveDailyResult(dateStr, data) {
   try { localStorage.setItem(DAILY_KEY + "." + dateStr, JSON.stringify(data)); } catch (e) { /* ignore */ }
 }
 
-// Per-day local leaderboard. Key: swiftSongAssociation.dailyBoard.YYYY-MM-DD
-// Value: { name, score }[] sorted descending, max 5.
-export function loadDailyBoard(dateStr) {
-  try {
-    const raw = localStorage.getItem(DAILY_BOARD_KEY + "." + dateStr);
-    if (raw) { const a = JSON.parse(raw); if (Array.isArray(a) && a.length) return a; }
-  } catch (e) { /* ignore */ }
-  return DAILY_DEFAULT_PODIUM.slice();
-}
-export function saveDailyBoard(list, dateStr) {
-  try { localStorage.setItem(DAILY_BOARD_KEY + "." + dateStr, JSON.stringify(list)); } catch (e) { /* ignore */ }
-}
+// The per-day daily fake board (DAILY_BOARD_KEY) is retired — daily now shows a
+// personal result + streak + share. Stale dailyBoard.* keys are swept by resetDaily().
 
 /* ---------- Daily streak (consecutive calendar days played) ---------- */
 // Key: swiftSongAssociation.dailyStreak  Value: { current, best, lastPlayed }
@@ -261,7 +290,8 @@ export function importData(obj) {
 }
 
 // Per-category resets (the danger zone). Each clears one family of keys.
-export function resetHallOfFame() { removeByPrefix(HS_KEY); }
+// Sweeps both the live records and the dormant legacy fake-celebrity board.
+export function resetRecords() { removeByPrefix(RECORDS_KEY); removeByPrefix(HS_KEY); }
 export function resetStatsAll()   { removeByPrefix(STATS_KEY); }
 export function resetAchievements() { try { localStorage.removeItem(ACH_KEY); localStorage.removeItem(TYPES_KEY); } catch (e) { /* ignore */ } }
 export function resetTally()      { try { localStorage.removeItem(TALLY_KEY); } catch (e) { /* ignore */ } }

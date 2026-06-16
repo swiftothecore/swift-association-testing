@@ -2,7 +2,7 @@
 import { $, escapeRegExp, escapeHtml, prefersReducedMotion, shuffle, chance, normalizeTitle, normalizeLyric, fuzzySubstringRatio, levenshtein, mulberry32, dailySeed } from "./util.js";
 import {
   TOTAL_ROUNDS, RECENT_WINDOW, DIFF_KEY,
-  MODES, MODE_ORDER, INFINITE_DEFAULT_PODIUM,
+  MODES, MODE_ORDER,
   ERAS, TENDER_ERAS, FINALE_ERAS,
   ALBUM_COLORS, CB_ALBUM_COLORS, STUDIO_ALBUMS, TITLE_ALIASES,
   ACHIEVEMENTS, ACH_ICONS, ACH_BY_ID,
@@ -10,17 +10,17 @@ import {
 } from "./config.js";
 import { buildBraceletSVG } from "./bracelet.js";
 import {
-  loadHighScores, saveHighScores,
+  loadRecords, insertRecord, migrateRecordsFromStats, getPlayerName, setPlayerName,
   loadStats, updateStats, totalPlayed,
   loadAchievements, saveAchievements,
   loadMode,
-  loadDailyResult, saveDailyResult, loadDailyBoard, saveDailyBoard,
+  loadDailyResult, saveDailyResult,
   bumpDailyStreak, effectiveDailyStreak,
   markTypePlayed,
   loadSongTally, recordGameTally,
   loadSettings, saveSettings,
   exportData, importData,
-  resetHallOfFame, resetStatsAll, resetAchievements, resetTally, resetDaily, clearAllData,
+  resetRecords, resetStatsAll, resetAchievements, resetTally, resetDaily, clearAllData,
 } from "./storage.js";
 
 /* ---------- Constants & state ---------- */
@@ -440,19 +440,33 @@ function achievementsGridHTML() {
   return `<p class="histogram-label" style="margin-top:24px;">achievements · ${earnedCount}/${ACHIEVEMENTS.length}</p><div class="ach-grid">${items}</div>`;
 }
 
-/* ---------- High scores (separate board per mode) ---------- */
-function renderPodium(el, list, youName) {
+/* ---------- Personal records (your own best runs, per mode) ---------- */
+// Renders { score, date } rows. The signed notebook name (opts.name) labels each run;
+// rank-1 gets a "★ best" tag; the just-played run (entry.__this) is underlined and
+// tagged "new!" (a fresh #1) or "this run". An empty list shows a target line.
+function recordDateLabel(date) {
+  return date
+    ? new Date(date + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
+    : "—";
+}
+function renderRecords(el, list, opts = {}) {
   el.innerHTML = "";
+  if (!list.length) {
+    el.innerHTML = `<li class="rec-empty">no runs yet — your best lands here ★</li>`;
+    return;
+  }
+  const name = opts.name || "your run";
   list.forEach((entry, i) => {
     const li = document.createElement("li");
     li.classList.add("rank-" + (i + 1));
-    if (youName && entry.name === youName && entry.__you) li.classList.add("you");
+    if (entry.__this) li.classList.add("this-run");
     const num = String(i + 1).padStart(2, "0");
-    const leader = i === 0 ? `<span class="leader-tag">★ leader</span>` : "";
-    const tag = li.classList.contains("you") ? `<span class="you-tag">you</span>` : "";
+    const best = i === 0 ? `<span class="leader-tag">★ best</span>` : "";
+    const tag = entry.__this ? `<span class="you-tag">${opts.isNewBest && i === 0 ? "new!" : "this run"}</span>` : "";
     li.innerHTML =
       `<span class="rank-num">${num}</span>` +
-      `<span class="name">${escapeHtml(entry.name)} ${leader}${tag}</span>` +
+      `<span class="name">${escapeHtml(name)} ${best}${tag}</span>` +
+      `<span class="rec-date">${recordDateLabel(entry.date)}</span>` +
       `<span class="pts">${entry.score}</span>`;
     el.appendChild(li);
   });
@@ -561,15 +575,14 @@ function setMode(id) {
 const GAMETYPE_LABELS = { classic: "Classic", infinite: "Infinite" };
 const VARIANT_LABELS = { "3lives": "3 lives", sudden: "Sudden death" };
 
-// The start-screen Hall of Fame follows the selected mode (+ infinite variant).
+// The start-screen records board follows the selected mode (+ infinite variant).
 function refreshStartBoard() {
   const t = $("startPodiumTitle");
   const label = gameType === "infinite"
     ? VARIANT_LABELS[infiniteVariant] + " · " + currentMode.label
     : currentMode.label;
-  if (t) t.textContent = "Hall of Fame · " + label;
-  const fallback = gameType === "infinite" ? INFINITE_DEFAULT_PODIUM : undefined;
-  renderPodium($("startPodium"), sortHs(loadHighScores(boardMode(), fallback)), null);
+  if (t) t.textContent = "Your Records · " + label;
+  renderRecords($("startPodium"), loadRecords(boardMode()), { name: getPlayerName() });
 }
 function updateBlurb() {
   const b = $("modeBlurb");
@@ -764,9 +777,24 @@ function showDailyResult(data, dateStr) {
   $("keepGoingBtn").style.display = "none";
   $("resultAchievements").style.display = "none";
   $("namePrompt").style.display = "none";
-  renderPodium($("resultPodium"), sortHs(loadDailyBoard(dateStr)), null);
-  document.querySelector("#screen-results .podium-title").textContent = "Today's Board";
+  hideNewBestBanner();
+  document.querySelector("#screen-results .podium-title").textContent = "Today's Result";
+  renderDailyResultPanel();
   renderShareButton(dateStr, settings.hideDailyScore);
+}
+
+// The daily results panel: streak summary in place of a leaderboard (daily is one
+// play per day, so there's nothing to rank — your streak is the throughline).
+function renderDailyResultPanel() {
+  const d = effectiveDailyStreak(todayKey());
+  const note = d.playedToday
+    ? `<p class="daily-streak-note">✓ played today's challenge</p>`
+    : `<p class="daily-streak-note">come back tomorrow to keep the streak</p>`;
+  $("resultPodium").innerHTML =
+    `<div class="streak-row">` +
+    `<div class="streak-cell"><span class="stat-val">🔥 ${d.current}</span><span class="stat-lbl">day streak</span></div>` +
+    `<div class="streak-cell"><span class="stat-val">${d.best}</span><span class="stat-lbl">best streak</span></div>` +
+    `</div>` + note;
 }
 
 // Wordle-style copyable summary built from the per-round results.
@@ -804,34 +832,6 @@ function renderShareButton(dateStr, hidden) {
   });
   const braceletEl = $("resultBracelet");
   braceletEl.parentNode.insertBefore(btn, braceletEl.nextSibling);
-}
-
-// The daily leaderboard, reusing the regular podium renderer + name-prompt flow.
-function renderDailyBoard(dateStr) {
-  const dailyList = loadDailyBoard(dateStr);
-  const lowest = dailyList.length >= 5 ? dailyList[dailyList.length - 1].score : -1;
-  const beats = dailyList.length < 5 || score > lowest;
-  const nameDiv = $("namePrompt");
-  const titleEl = document.querySelector("#screen-results .podium-title");
-  titleEl.textContent = "Today's Board";
-  if (beats && score > 0) {
-    nameDiv.style.display = "";
-    renderPodium($("resultPodium"), sortHs(dailyList), null);
-    const save = () => {
-      const name = ($("nameInput").value || "You").trim().slice(0, 20) || "You";
-      const updated = sortHs(dailyList.concat([{ name, score, __you: true }])).slice(0, 5);
-      saveDailyBoard(updated.map(({ name, score }) => ({ name, score })), dateStr);
-      nameDiv.style.display = "none";
-      renderPodium($("resultPodium"), updated, name);
-      titleEl.textContent = "Today's Board";
-    };
-    $("saveNameBtn").onclick = save;
-    $("nameInput").onkeydown = (e) => { if (e.key === "Enter") save(); };
-    setTimeout(() => $("nameInput").focus(), 50);
-  } else {
-    nameDiv.style.display = "none";
-    renderPodium($("resultPodium"), sortHs(dailyList), null);
-  }
 }
 
 function pickWord() {
@@ -1415,7 +1415,7 @@ function endGame() {
   renderResultRecap();
   if (!isInfinite && score === TOTAL_ROUNDS) celebratePerfect();
 
-  // Daily: persist the result, lock to one play/day, show the daily board + share.
+  // Daily: persist the result, lock to one play/day, show streak + share (no board).
   if (isDaily) {
     const dateStr = todayKey();
     saveDailyResult(dateStr, { score, roundResults: roundResults.slice(), roundAlbums: roundAlbums.slice() });
@@ -1426,41 +1426,65 @@ function endGame() {
     if (streak.current >= 30) unlock("evermore");
     dailyRng = null;   // back to Math.random() for any subsequent Classic game
     if (settings.hideDailyScore) $("finalScore").textContent = "?";
-    renderDailyBoard(dateStr);
+    $("namePrompt").style.display = "none";
+    hideNewBestBanner();
+    document.querySelector("#screen-results .podium-title").textContent = "Today's Result";
+    renderDailyResultPanel();
     renderShareButton(dateStr, settings.hideDailyScore);
     return;
   }
 
   // Reset any daily-only chrome left over from a previous daily results view.
-  document.querySelector("#screen-results .podium-title").textContent = "Hall of Fame";
+  document.querySelector("#screen-results .podium-title").textContent = "Your Records";
   const staleShare = $("shareBtn");
   if (staleShare) staleShare.remove();
+  $("namePrompt").style.display = "none";
+  hideNewBestBanner();
 
-  const fallback = isInfinite ? INFINITE_DEFAULT_PODIUM : undefined;
-  const list = loadHighScores(mode, fallback);
-  const lowest = list.length >= 5 ? list[list.length - 1].score : -1;
-  const beats = list.length < 5 || boardScore > lowest;
-
-  const nameDiv = $("namePrompt");
-  if (beats && boardScore > 0) {
-    nameDiv.style.display = "";
-    renderPodium($("resultPodium"), sortHs(list), null);
-    const save = () => {
-      const name = ($("nameInput").value || "You").trim().slice(0, 20) || "You";
-      const updated = sortHs(list.concat([{ name, score: boardScore, __you: true }])).slice(0, 5);
-      saveHighScores(updated.map(({ name, score }) => ({ name, score })), mode);
-      nameDiv.style.display = "none";
-      renderPodium($("resultPodium"), updated, name);
-    };
-    $("saveNameBtn").onclick = save;
-    $("nameInput").onkeydown = (e) => { if (e.key === "Enter") save(); };
-    setTimeout(() => $("nameInput").focus(), 50);
+  // Every positive run is logged to your personal records; a 0 isn't (the empty-state
+  // target reads better than "your best: 0", and a 0 never survives the top 5 anyway).
+  if (boardScore > 0) {
+    const { list, isBest } = insertRecord(mode, boardScore, todayKey());
+    const draw = () => renderRecords($("resultPodium"), list, { name: getPlayerName(), isNewBest: isBest });
+    if (!getPlayerName()) promptSignOnce(draw);   // first record ever → sign once, reuse silently after
+    else draw();
+    if (isBest) showNewBestBanner();
   } else {
-    nameDiv.style.display = "none";
-    renderPodium($("resultPodium"), sortHs(list), null);
+    renderRecords($("resultPodium"), loadRecords(mode), { name: getPlayerName() });
   }
 }
-function sortHs(list) { return list.slice().sort((a, b) => b.score - a.score); }
+
+// First personal record with no signature yet → ask for a name once, store it globally,
+// and reuse it on every future record (no prompt thereafter). Reuses the #namePrompt markup.
+function promptSignOnce(after) {
+  const nameDiv = $("namePrompt");
+  const p = nameDiv.querySelector("p");
+  if (p) p.textContent = "sign your notebook — we'll remember it";
+  nameDiv.style.display = "";
+  const save = () => {
+    const v = ($("nameInput").value || "").trim().slice(0, 20);
+    if (v) settings.playerName = setPlayerName(v);   // keep the in-memory settings in sync (Settings panel reads it)
+    nameDiv.style.display = "none";
+    after();
+  };
+  $("saveNameBtn").onclick = save;
+  $("nameInput").onkeydown = (e) => { if (e.key === "Enter") save(); };
+  setTimeout(() => $("nameInput").focus(), 50);
+}
+
+// "New personal best" banner above the records — a brief pop, static under reduced motion.
+function showNewBestBanner() {
+  const el = $("newBestBanner");
+  if (!el) return;
+  el.textContent = "a new personal best ★";
+  el.style.display = "";
+  el.classList.remove("pop");
+  if (!motionReduced()) { void el.offsetWidth; el.classList.add("pop"); }   // restart the animation
+}
+function hideNewBestBanner() {
+  const el = $("newBestBanner");
+  if (el) { el.style.display = "none"; el.classList.remove("pop"); }
+}
 
 /* ---------- Easter eggs (Phase 8) ---------- */
 let titleTaps = 0;
@@ -1842,12 +1866,21 @@ function setSliderHTML() {
     `<div class="set-control set-slider-row"><input type="range" id="countdownSlider" class="set-slider" min="3" max="8" step="1" value="${settings.countdownSecs}">` +
     `<span class="set-slider-val" id="countdownVal">${settings.countdownSecs}s</span></div></div>`;
 }
+function setTextHTML(key, name, desc, placeholder) {
+  return `<div class="set-row"><div class="set-label"><span class="set-name">${name}</span>` +
+    (desc ? `<span class="set-desc">${desc}</span>` : "") + `</div>` +
+    `<div class="set-control"><input type="text" class="set-text" id="set-${key}" maxlength="20" ` +
+    `value="${escapeHtml(settings[key] || "")}" placeholder="${placeholder}"></div></div>`;
+}
 function setSection(title, inner) { return `<div class="set-section"><p class="set-section-title">${title}</p>${inner}</div>`; }
 
 function renderSettingsBody() {
   const diffOpts = [{ val: "last", label: "Last" }].concat(MODE_ORDER.map((m) => ({ val: m, label: MODES[m].label })));
   const body = $("settingsBody");
   body.innerHTML =
+    setSection("Notebook",
+      setTextHTML("playerName", "Your name", "signed on every personal record", "your name")
+    ) +
     setSection("Motion &amp; animation",
       setChoiceHTML("reduceMotion", "Reduce motion", "Auto follows your system", [{ val: "auto", label: "Auto" }, { val: "on", label: "On" }, { val: "off", label: "Off" }]) +
       setChoiceHTML("animSpeed", "Animation speed", "", [{ val: "normal", label: "Normal" }, { val: "fast", label: "Fast" }, { val: "instant", label: "Instant" }]) +
@@ -1881,7 +1914,7 @@ function renderSettingsBody() {
     ) +
     `<div class="set-danger"><p class="set-section-title">danger zone — these can’t be undone</p>` +
       `<div class="set-danger-grid">` +
-        `<button class="danger-btn" data-danger="hof">Reset Hall of Fame</button>` +
+        `<button class="danger-btn" data-danger="hof">Reset records</button>` +
         `<button class="danger-btn" data-danger="stats">Reset stats &amp; streaks</button>` +
         `<button class="danger-btn" data-danger="ach">Reset achievements</button>` +
         `<button class="danger-btn" data-danger="tally">Reset catalogue</button>` +
@@ -1914,6 +1947,12 @@ function wireSettingsBody() {
     slider.addEventListener("input", () => { $("countdownVal").textContent = slider.value + "s"; });
     slider.addEventListener("change", () => { settings.countdownSecs = parseInt(slider.value, 10) || 5; saveSettings(settings); });
   }
+  const nameField = $("set-playerName");
+  if (nameField) nameField.addEventListener("change", () => {
+    settings.playerName = nameField.value.trim().slice(0, 20);
+    saveSettings(settings);
+    refreshStartBoard();   // re-sign the start-screen records live
+  });
   body.querySelectorAll("[data-action]").forEach((b) => b.addEventListener("click", () => {
     if (b.dataset.action === "export") exportBackup();
     else if (b.dataset.action === "import") $("importFile").click();
@@ -1932,7 +1971,7 @@ function armDanger(btn) {
 }
 function performDanger(which) {
   if (which === "all") { clearAllData(); location.reload(); return; }
-  if (which === "hof") resetHallOfFame();
+  if (which === "hof") resetRecords();
   else if (which === "stats") resetStatsAll();
   else if (which === "ach") { resetAchievements(); earnedAchievements = loadAchievements(); }
   else if (which === "tally") resetTally();
@@ -1988,6 +2027,7 @@ async function init() {
   earnedAchievements = loadAchievements();
   settings = loadSettings();
   applySettings();
+  migrateRecordsFromStats();   // seed records from pre-existing stats once, before any game runs
   console.log("%c♡ written in the margins · 13 pages of you ♡", "font-size:14px;color:#a9791f;font-family:cursive;");
   currentMode = loadMode();
   // Default game type on launch (or restore the last one played).

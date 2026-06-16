@@ -5,7 +5,8 @@ export const ROUND_SECONDS = 10;
 export const RECENT_WINDOW = 5;
 
 /* ---------- localStorage keys ---------- */
-export const HS_KEY = "swiftSongAssociation.highscores";
+export const HS_KEY = "swiftSongAssociation.highscores";        // legacy fake-celebrity board (dormant; kept for old backups)
+export const RECORDS_KEY = "swiftSongAssociation.records";      // personal best runs per mode — { score, date }[]
 export const STATS_KEY = "swiftSongAssociation.stats";
 export const ACH_KEY = "swiftSongAssociation.achievements";
 export const DIFF_KEY = "swiftSongAssociation.difficulty";
@@ -47,6 +48,7 @@ export const DEFAULT_SETTINGS = {
   // meta
   sound: false,             // placeholder — no audio wired yet
   lastGameType: "classic",  // runtime memory backing defaultGameType: "last" (not shown in UI)
+  playerName: "",           // notebook signature — set once, reused on every personal record
 };
 
 /* Difficulty modes — each just re-tunes existing levers (timer, dropdown,
@@ -65,26 +67,6 @@ export const MODES = {
   relaxed: { id: "relaxed", label: "Relaxed", seconds: 0, dropdown: true, pool: "all", strict: false, noTitle: false, examples: 3, blurb: "no timer · hints on · all words" },
 };
 export const MODE_ORDER = ["easy", "medium", "hard", "ultra", "lyricist", "relaxed"];
-
-export const DEFAULT_PODIUM = [
-  { name: "Sabrina Carpenter", score: 13 },
-  { name: "Taylor Swift", score: 12 },
-  { name: "Olivia Rodrigo", score: 10 },
-  { name: "SwiftLover13", score: 8 },
-  { name: "Selena Gomez", score: 4 },
-];
-// Infinite boards seed with rounds-survived numbers, not the 13-capped classic ones.
-export const INFINITE_DEFAULT_PODIUM = [
-  { name: "Taylor Swift", score: 22 },
-  { name: "SwiftLover13", score: 16 },
-  { name: "Sabrina Carpenter", score: 11 },
-];
-// Daily board resets every day — seed with fewer entries so it fills organically.
-export const DAILY_DEFAULT_PODIUM = [
-  { name: "Taylor Swift", score: 13 },
-  { name: "SwiftLover13", score: 11 },
-  { name: "Sabrina Carpenter", score: 9 },
-];
 
 /* Era engine */
 export const ERAS = ["gold", "lavender", "red", "denim", "graphite", "midnight"];

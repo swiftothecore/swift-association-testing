@@ -279,13 +279,32 @@
   .podium li .rank-num { width: 28px; color: var(--ink-soft); font-family: var(--type); font-size: 13px; }
   .podium li.rank-1 .rank-num { color: var(--ink-accent); }
   .podium li .name { flex: 1; }
+  .podium li .rec-date { font-family: var(--type); font-size: 11px; color: var(--ink-soft); flex: 0 0 auto; }
   .podium li .pts { font-family: var(--type); font-size: 16px; color: var(--ink-accent); }
   .podium li .leader-tag, .podium li .you-tag {
     font-family: var(--type); font-size: 10px; letter-spacing: 1px;
     border: 1px solid var(--ink); padding: 1px 5px; color: var(--ink);
     transform: rotate(-2deg);
   }
-  .podium li.you .name { text-decoration: underline wavy var(--ink-accent); text-underline-offset: 4px; }
+  .podium li.this-run .name { text-decoration: underline wavy var(--ink-accent); text-underline-offset: 4px; }
+  /* empty state — a target line when you've no runs in this mode yet */
+  .podium .rec-empty {
+    display: block; font-family: var(--hand); font-size: 20px;
+    color: var(--ink-soft); padding: 10px 0; opacity: 0.85;
+  }
+
+  /* "new personal best" banner above the records list */
+  .new-best-banner {
+    font-family: var(--hand); font-weight: 700; font-size: 22px;
+    color: var(--ink-accent); text-align: center; margin: 6px 0 2px;
+    transform: rotate(-0.6deg);
+  }
+  .new-best-banner.pop { animation: newBestPop 0.6s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes newBestPop {
+    0%   { transform: rotate(-0.6deg) scale(0.6); opacity: 0; }
+    60%  { transform: rotate(-0.6deg) scale(1.12); opacity: 1; }
+    100% { transform: rotate(-0.6deg) scale(1); opacity: 1; }
+  }
 
   /* ---------- Bracelet (round progress + score) ---------- */
   .bracelet-wrap { margin-bottom: 26px; }
@@ -1017,6 +1036,15 @@
   .set-choice .mode-tab { font-size: 16px; padding: 4px 9px 5px; border-bottom: 1.5px solid rgba(43,39,34,0.18); border-radius: 5px; transform: none; }
   .set-choice .mode-tab:nth-child(even) { transform: none; }
   .set-choice .mode-tab.active { transform: none; }
+
+  /* notebook-name text field */
+  .set-text {
+    font-family: var(--hand); font-size: 18px; width: 150px; text-align: right;
+    border: none; border-bottom: 1.5px solid var(--ink-soft); background: transparent;
+    color: var(--ink); outline: none; padding: 2px 2px 3px;
+  }
+  .set-text:focus { border-bottom-color: var(--ink-accent); }
+  .set-text::placeholder { color: var(--ink-soft); opacity: 0.7; }
 
   /* countdown slider */
   .set-slider-row { display: flex; align-items: center; gap: 10px; }
