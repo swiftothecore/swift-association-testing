@@ -42,6 +42,7 @@ export const DEFAULT_SETTINGS = {
   showExamples: true,       // show example songs after a wrong answer
   defaultGameType: "last",  // "last" | "classic" | "infinite"
   defaultDifficulty: "last",// "last" | a MODES id
+  defaultStatsTab: "all",   // which Stats tab opens first: "all" | "last" | a MODES id
   // display & accessibility
   highContrast: false,
   colorBlindAlbums: false,  // swap ALBUM_COLORS for a colour-blind-friendly palette
@@ -67,7 +68,7 @@ export const MODES = {
   // forgiving levers as Normal; the only difference is the clock never runs.
   relaxed: { id: "relaxed", label: "Relaxed", seconds: 0, dropdown: true, pool: "all", strict: false, noTitle: false, examples: 3, blurb: "no timer · hints on · all words" },
 };
-export const MODE_ORDER = ["easy", "medium", "hard", "ultra", "lyricist", "relaxed"];
+export const MODE_ORDER = ["relaxed", "easy", "medium", "hard", "ultra", "lyricist"];
 
 /* Era engine */
 export const ERAS = ["gold", "lavender", "red", "denim", "graphite", "midnight"];
@@ -168,6 +169,10 @@ export const ACH_ICONS = {
   scissors:`<svg viewBox="0 0 24 24"><g class="ink" stroke-width="1.8" fill="none"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.5 7.5 L20 18"/><path d="M8.5 16.5 L20 6"/></g><circle class="ink-fill" cx="12" cy="12" r="1.3"/></svg>`,
   mountain:`<svg viewBox="0 0 24 24"><path class="ink-fill" d="M2 20 L9 7 L13 14 L16 9 L22 20 Z"/><path d="M7 11 L9 7 L11 11 Z" fill="var(--paper)"/><path d="M14.5 11.5 L16 9 L17.5 11.5 Z" fill="var(--paper)"/></svg>`,
   clapper: `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M3 8 L20.5 5 L21 8.5 L3.5 11.5 Z"/><g stroke="var(--paper)" stroke-width="1.3"><path d="M6.5 7.4 L7.8 5.3 M10.5 6.7 L11.8 4.7 M14.5 6 L15.8 4 M18.5 5.3 L19.8 3.4"/></g><rect class="ink-fill" x="3.5" y="11" width="17" height="9" rx="1"/></svg>`,
+  window:  `<svg viewBox="0 0 24 24"><rect class="ink-fill" x="3.5" y="3.5" width="17" height="17" rx="1.5"/><g stroke="var(--paper)" stroke-width="1.4"><path d="M12 4 V20"/><path d="M4 12 H20"/></g></svg>`,
+  snake:   `<svg viewBox="0 0 24 24"><path class="ink" fill="none" stroke-width="2.3" stroke-linecap="round" d="M5 19 C10 19 10 13 6 13 C2 13 2 7 7 7 C13 7 13 12 18 12 C21 12 21 8 18.5 7"/><circle class="ink-fill" cx="18.5" cy="6.5" r="1.6"/><path class="ink" stroke-width="1" stroke-linecap="round" d="M19.6 5.6 L21 4.6 M19.6 7.4 L21 8.4"/></svg>`,
+  house:   `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M12 2.5 L21.5 11 H18 V21 H6 V11 H2.5 Z"/><rect x="9.5" y="14" width="5" height="7" fill="var(--paper)"/></svg>`,
+  target:  `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" class="ink" fill="none" stroke-width="2"/><circle cx="12" cy="12" r="5.5" class="ink" fill="none" stroke-width="2"/><circle cx="12" cy="12" r="1.8" class="ink-fill"/></svg>`,
 };
 export const ACHIEVEMENTS = [
   { id: "enchanted",        name: "Enchanted",        desc: "Finish your first game",              secret: false, icon: "sparkle" },
@@ -210,6 +215,10 @@ export const ACHIEVEMENTS = [
   { id: "holy-ground",      name: "Holy Ground",      desc: "Reach round 13 from scratch in Infinite", secret: true, icon: "mountain" },
   { id: "spicy-drama",      name: "Spicy Drama",      desc: "Answer a round with \"If This Was A Movie\"", secret: true, icon: "clapper" },
   { id: "word-for-word",    name: "Word For Word",    desc: "Recall a lyric line word-perfect",     secret: true,  icon: "note" },
+  { id: "i-look-in-windows", name: "I Look In People's Windows", desc: "Open the settings menu",      secret: true,  icon: "window" },
+  { id: "look-what-you-made-me-do", name: "Look What You Made Me Do", desc: "Make the snake appear",  secret: true,  icon: "snake" },
+  { id: "safe-and-sound",   name: "Safe & Sound",     desc: "Play Easy three times in a row",       secret: false, icon: "house" },
+  { id: "revenge",          name: "R-E-V-E-N-G-E",    desc: "Beat your own best score on any board", secret: false, icon: "target" },
 ];
 export const ACH_BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));
 

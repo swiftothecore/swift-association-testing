@@ -135,12 +135,29 @@ function applyEra(era) { document.body.setAttribute("data-era", era); }
 // Prefix-stem match: the word as the start of a token, plus any trailing letters,
 // so "gold" matches "golden", "dream" matches "dreamer". The leading \b keeps it
 // safe (e.g. "love" won't match "glove"/"clover"; "rain" won't match "train").
-// Lenient (default) matches derived forms via the [a-z']* tail (gold→golden);
-// strict (Ultra) requires the exact word. Defaults to the active mode.
+// The plain [a-z']* tail only catches forms that ADD letters (love→lover/loved/loves,
+// gold→golden). These are the common inflections that CHANGE the stem first and so
+// slip past it: silent-e drop (love→loving), consonant+y→i (city→cities), and
+// final-consonant doubling (run→running). Each mutated stem is followed by a BOUNDED
+// inflectional suffix set (not [a-z']*), so time→timing matches but "timber" never does.
+// Bare "in" (not "in'") so it still matches before a trailing apostrophe — \bin'\b
+// can't (the apostrophe is non-word, killing the closing boundary), but \bin\b
+// backtracks onto the "n" inside "lovin'". Covers g-dropped forms either way.
+const INFLECT = "(?:ing|in|ings|ed|er|ers|es|y|ies|ied|ier|iest|able)";
+function wordVariants(word) {
+  const w = word.toLowerCase();
+  const alts = [escapeRegExp(w) + "[a-z']*"];   // base: word + any added tail (unchanged behaviour)
+  if (w.length >= 4 && w.endsWith("e")) alts.push(escapeRegExp(w.slice(0, -1)) + INFLECT);
+  if (w.length >= 3 && /[^aeiou]y$/.test(w)) alts.push(escapeRegExp(w.slice(0, -1) + "i") + INFLECT);
+  if (w.length >= 3 && /[^aeiou][aeiou][^aeiouwxy]$/.test(w)) alts.push(escapeRegExp(w + w.slice(-1)) + INFLECT);
+  return alts;
+}
+// Lenient (default) also matches the inflected forms above; strict (Ultra) requires
+// the exact word. Defaults to the active mode.
 function wordRegex(word, strict) {
   if (strict === undefined) strict = currentMode.strict;
-  const tail = strict ? "" : "[a-z']*";
-  return new RegExp("\\b" + escapeRegExp(word) + tail + "\\b", "i");
+  if (strict) return new RegExp("\\b" + escapeRegExp(word) + "\\b", "i");
+  return new RegExp("\\b(?:" + wordVariants(word).join("|") + ")\\b", "i");
 }
 function songsContainingWord(word, strict) {
   const rx = wordRegex(word, strict);
@@ -184,28 +201,55 @@ function extractLineWithWord(lyrics, word, strict) {
 }
 function highlightWord(line, word, strict) {
   if (strict === undefined) strict = currentMode.strict;
-  const tail = strict ? "" : "[a-z']*";
-  const rx = new RegExp("\\b(" + escapeRegExp(word) + tail + ")\\b", "ig");
+  const body = strict ? escapeRegExp(word) : wordVariants(word).join("|");
+  const rx = new RegExp("\\b(" + body + ")\\b", "ig");
   return escapeHtml(line).replace(rx, "<mark>$1</mark>");
 }
 
 /* ---------- Stats ---------- */
-function renderStats(lastScore, viewMode = currentMode.id) {
-  const s = loadStats(viewMode);
+// Collated view across every difficulty: summed plays / score distribution, the best
+// score and longest streak of any mode. (Per-mode current streak doesn't aggregate, so
+// the "All" tab shows perfect-game count beside best streak instead.)
+function aggregateStats() {
+  const agg = { played: 0, totalScore: 0, best: 0, maxStreak: 0, scoreCounts: [] };
+  for (const m of MODE_ORDER) {
+    const s = loadStats(m);
+    agg.played += s.played;
+    agg.totalScore += s.totalScore;
+    agg.best = Math.max(agg.best, s.best);
+    agg.maxStreak = Math.max(agg.maxStreak, s.maxStreak);
+    s.scoreCounts.forEach((c, i) => { agg.scoreCounts[i] = (agg.scoreCounts[i] || 0) + c; });
+  }
+  return agg;
+}
+// Resolve the Stats tab to open first from the saved preference: "all", "last"
+// (the active difficulty), or a specific mode id.
+function defaultStatsView() {
+  const d = settings.defaultStatsTab;
+  if (d === "all") return "all";
+  if (d && d !== "last" && MODES[d]) return d;
+  return currentMode.id;
+}
+function renderStats(lastScore, viewMode = defaultStatsView()) {
   const el = $("statsBody");
-  // mode tabs — browse each difficulty's separate stats
-  const tabs = `<div class="mode-tabs stats-tabs">` + MODE_ORDER.map((m) =>
-    `<button type="button" class="mode-tab${m === viewMode ? " active" : ""}" data-statmode="${m}">${MODES[m].label}</button>`
+  const isAll = viewMode === "all";
+  // mode tabs — an "All" collated tab plus each difficulty's separate stats
+  const tabDefs = [{ m: "all", label: "All" }].concat(MODE_ORDER.map((m) => ({ m, label: MODES[m].label })));
+  const tabs = `<div class="mode-tabs stats-tabs">` + tabDefs.map((t) =>
+    `<button type="button" class="mode-tab${t.m === viewMode ? " active" : ""}" data-statmode="${t.m}">${t.label}</button>`
   ).join("") + `</div>`;
 
+  const s = isAll ? aggregateStats() : loadStats(viewMode);
   let body;
   if (s.played === 0) {
-    body = `<p class="stats-empty">no games yet in ${MODES[viewMode].label} — start writing!</p>`;
+    body = isAll
+      ? `<p class="stats-empty">no games yet — start writing!</p>`
+      : `<p class="stats-empty">no games yet in ${MODES[viewMode].label} — start writing!</p>`;
   } else {
     const avg = (s.totalScore / s.played).toFixed(1);
     const maxCount = Math.max(...s.scoreCounts, 1);
-    // highlight the just-played bar only on the mode that was actually played
-    const youScore = (viewMode === currentMode.id) ? lastScore : null;
+    // highlight the just-played bar on the mode that was played (and always in the All view)
+    const youScore = (isAll || viewMode === currentMode.id) ? lastScore : null;
     const bars = s.scoreCounts.map((count, score) => {
       const h = Math.round((count / maxCount) * 56);
       const isYou = (score === youScore);
@@ -214,16 +258,22 @@ function renderStats(lastScore, viewMode = currentMode.id) {
         <div class="histogram-score">${score}</div>
       </div>`;
     }).join("");
+    const streakRow = isAll
+      ? `<div class="streak-row">
+        <div class="streak-cell"><span class="stat-val">${s.maxStreak}</span><span class="stat-lbl">Best streak</span></div>
+        <div class="streak-cell"><span class="stat-val">${s.scoreCounts[TOTAL_ROUNDS] || 0}</span><span class="stat-lbl">Perfect games</span></div>
+      </div>`
+      : `<div class="streak-row">
+        <div class="streak-cell"><span class="stat-val">${s.currentStreak}</span><span class="stat-lbl">Current streak</span></div>
+        <div class="streak-cell"><span class="stat-val">${s.maxStreak}</span><span class="stat-lbl">Best streak</span></div>
+      </div>`;
     body = `
       <div class="stats-grid">
         <div class="stat-cell"><span class="stat-val">${s.played}</span><span class="stat-lbl">Played</span></div>
         <div class="stat-cell"><span class="stat-val">${s.best}</span><span class="stat-lbl">Best</span></div>
         <div class="stat-cell"><span class="stat-val">${avg}</span><span class="stat-lbl">Average</span></div>
       </div>
-      <div class="streak-row">
-        <div class="streak-cell"><span class="stat-val">${s.currentStreak}</span><span class="stat-lbl">Current streak</span></div>
-        <div class="streak-cell"><span class="stat-val">${s.maxStreak}</span><span class="stat-lbl">Best streak</span></div>
-      </div>
+      ${streakRow}
       <p class="histogram-label">score distribution</p>
       <div class="histogram">${bars}</div>`;
   }
@@ -1604,6 +1654,9 @@ function endGame() {
   if (longestBTitleRun(roundResults, roundSongs) >= 3) unlock("my-mind-is-alive");
   if (totalLifetimeMisses() >= 1000) unlock("thousand-cuts");
   if (new Date().getHours() === 0) unlock("midnights");   // played in the midnight hour
+  // Safe & Sound — the three most recent finished runs were all classic Easy.
+  const recent = loadHistory();
+  if (recent.length >= 3 && recent.slice(0, 3).every((h) => h.m === "easy")) unlock("safe-and-sound");
 
   showScreen("results");
   const keepsakeOpts = isInfinite
@@ -1659,6 +1712,8 @@ function endGame() {
       const improvedScore = !prevBest || boardScore > prevBest.score;
       showNewBestBanner((improvedScore ? "a new personal best ★" : "a new best time ★") +
         (recTime != null ? " · " + fmtTime(recTime) : ""));
+      // R-E-V-E-N-G-E — actually beat a previous high score (not just shaved time).
+      if (prevBest && improvedScore) unlock("revenge");
     }
   } else {
     renderBestLine($("resultPodium"), mode);
@@ -1814,6 +1869,7 @@ function stopSnake() {
 function slitherSnake() {
   const card = $("screen-game");
   if (!card) return;
+  unlock("look-what-you-made-me-do");
   if (motionReduced()) { addDoodle("snake", "corner-br", 84, 60); return; }
   stopSnake();
 
@@ -2087,6 +2143,7 @@ function setSection(title, inner) { return `<div class="set-section"><p class="s
 
 function renderSettingsBody() {
   const diffOpts = [{ val: "last", label: "Last" }].concat(MODE_ORDER.map((m) => ({ val: m, label: MODES[m].label })));
+  const statsOpts = [{ val: "all", label: "All" }, { val: "last", label: "Last" }].concat(MODE_ORDER.map((m) => ({ val: m, label: MODES[m].label })));
   const body = $("settingsBody");
   body.innerHTML =
     setSection("Notebook",
@@ -2108,7 +2165,8 @@ function renderSettingsBody() {
       setToggleHTML("enterOnMiss", "Enter advances on a miss", "press Enter to leave the answer screen") +
       setToggleHTML("showExamples", "Show example songs after a miss", "") +
       setChoiceHTML("defaultGameType", "Default game type", "on launch", [{ val: "last", label: "Last" }, { val: "classic", label: "Classic" }, { val: "infinite", label: "Infinite" }]) +
-      setChoiceHTML("defaultDifficulty", "Default difficulty", "on launch", diffOpts)
+      setChoiceHTML("defaultDifficulty", "Default difficulty", "on launch", diffOpts) +
+      setChoiceHTML("defaultStatsTab", "Default stats tab", "which tab opens first", statsOpts)
     ) +
     setSection("Display &amp; accessibility",
       setToggleHTML("highContrast", "High contrast", "darker ink, whiter paper") +
@@ -2218,6 +2276,7 @@ function resumeFromSettings() {
   if (screens.game.classList.contains("active") && !roundLocked && currentMode.seconds > 0) startTimer(r);
 }
 function openSettings() {
+  unlock("i-look-in-windows");
   pauseForSettings();
   renderSettingsBody();
   const m = $("settingsModal");
