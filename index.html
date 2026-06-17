@@ -206,8 +206,6 @@
     <p class="word-label">write a song with</p>
     <div class="word-wrap"><span id="wordDisplay" class="word">—</span><span id="rarityStamp" class="rarity-stamp" aria-hidden="true"></span></div>
 
-    <p id="excludedNote" class="excluded-note" aria-live="polite" style="display:none;"></p>
-
     <div class="timer-wrap">
       <div class="timer-track"><div id="timerFill" class="timer-fill"></div></div>
       <div class="timer-label"><span id="timerLabel">10.0</span>s</div>
@@ -217,9 +215,11 @@
       <div class="input-area">
         <input id="songInput" type="text" autocomplete="off" spellcheck="false"
                placeholder="write the line…" />
+        <div id="rejectFlash" class="reject-flash" aria-live="assertive"></div>
         <div id="dropdown" class="dropdown"></div>
       </div>
       <p id="gameHint" class="hint">Enter accepts the top match</p>
+      <p id="excludedNote" class="excluded-note" aria-live="polite" style="display:none;"></p>
     </div>
 
     <div id="feedback" class="feedback"></div>

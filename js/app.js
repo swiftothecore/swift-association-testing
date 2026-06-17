@@ -158,12 +158,14 @@ function titleSongsForWord(word, strict) {
   const rx = wordRegex(word, strict);
   return allSongs.filter((s) => rx.test(s.title));
 }
-// Marginalia warning: in noTitle modes (Hard/Ultra), list the songs whose title
-// holds the word so the player knows e.g. "All Too Well" won't be accepted.
+// Marginalia warning: in dropdown-less noTitle modes (Hard/Ultra), list the songs
+// whose title holds the word so the player knows e.g. "All Too Well" won't be
+// accepted. Modes WITH a dropdown (Normal) skip this — there the off-limits titles
+// are greyed out in the dropdown and a reject-flash explains a blocked pick.
 function renderExcludedNote() {
   const el = $("excludedNote");
   if (!el) return;
-  if (!currentMode.noTitle) { el.style.display = "none"; el.innerHTML = ""; return; }
+  if (!currentMode.noTitle || currentMode.dropdown) { el.style.display = "none"; el.innerHTML = ""; return; }
   const titles = titleSongsForWord(currentWord, currentMode.strict).map((s) => s.title);
   if (!titles.length) { el.style.display = "none"; el.innerHTML = ""; return; }
   const SHOWN = 3;
@@ -1066,6 +1068,9 @@ function advanceRound() {
   const input = $("songInput");
   input.value = "";
   input.disabled = false;
+  input.classList.remove("reject-pulse");
+  clearTimeout(rejectFlashTimer);
+  $("rejectFlash").classList.remove("show");
   hideDropdown();
   input.focus();
 
@@ -1174,17 +1179,47 @@ function renderDropdown() {
   dd.innerHTML = "";
   dropdownItems.forEach((song, i) => {
     const div = document.createElement("div");
-    div.className = "item" + (i === activeIndex ? " active" : "");
-    div.innerHTML = `${escapeHtml(song.title)}`;
+    const off = isOffLimitsPick(song);
+    div.className = "item" + (i === activeIndex ? " active" : "") + (off ? " off-limits" : "");
+    div.innerHTML = `${escapeHtml(song.title)}` + (off ? `<span class="dd-tag">in the title</span>` : "");
     div.addEventListener("mousedown", (e) => {
       e.preventDefault();
-      submitAnswer(song, false);
+      submitAnswer(song, false);   // off-limits picks route through the soft-reject in submitAnswer
     });
     dd.appendChild(div);
   });
   dd.classList.add("show");
 }
 function hideDropdown() { $("dropdown").classList.remove("show"); }
+
+// A pick is off-limits when the active mode bars title songs and the word sits in
+// this song's title — the exact condition validSongs() uses to exclude it.
+function isOffLimitsPick(song) {
+  return !!song && currentMode.noTitle && wordRegex(currentWord, currentMode.strict).test(song.title);
+}
+// Soft rejection: don't consume the round. Flash a red note, wipe the line, and
+// keep the clock running so the player can answer the same word with a valid song.
+let rejectFlashTimer = null;
+function rejectOffLimits(song) {
+  const input = $("songInput");
+  input.value = "";
+  dropdownItems = []; activeIndex = -1;
+  hideDropdown();
+  const el = $("rejectFlash");
+  el.innerHTML = `<b>“${escapeHtml(song.title)}”</b> is in the title — try another`;
+  el.classList.remove("show");
+  void el.offsetWidth;                 // restart the pop-in animation
+  el.classList.add("show");
+  input.classList.remove("reject-pulse");
+  void input.offsetWidth;
+  input.classList.add("reject-pulse");
+  clearTimeout(rejectFlashTimer);
+  rejectFlashTimer = setTimeout(() => {
+    el.classList.remove("show");
+    input.classList.remove("reject-pulse");
+  }, 1700);
+  input.focus();
+}
 
 /* ---------- Lyric-line answering ---------- */
 // A player can answer by typing a LYRIC LINE instead of the title. There is no lyric
@@ -1325,6 +1360,12 @@ function submitAnswer(song, isTimeout) {
     }
     if (!song) return;
   }
+
+  // Off-limits pick (covers every path: dropdown click, Enter, exact-title). In a
+  // noTitle mode where the word is in this song's title, don't burn the round —
+  // flash, wipe the line, and let them keep typing the same word. A timeout still
+  // counts as a miss; lyric answers resolve only to valid songs, so they're exempt.
+  if (song && !isTimeout && !lyricMatch && isOffLimitsPick(song)) { rejectOffLimits(song); return; }
 
   roundLocked = true;
   clearTimer();
