@@ -930,8 +930,27 @@
   .ach.locked .charm .ink-fill { fill: var(--ink-soft); }
   .ach.secret .charm-q { font-family: var(--hand); font-weight: 700; font-size: 22px; color: var(--ink-soft); width: 30px; text-align: center; flex: none; }
 
-  /* Daily Challenge button on the start screen — a dashed "today only" treatment. */
-  .daily-btn { margin-top: 8px; border-style: dashed; font-size: 14px; }
+  /* Daily Challenge — a pinned "second card" action: solid, denim-washed, lightly skewed
+     so it reads as a sibling of the gold primary button without competing with it. */
+  .daily-btn {
+    display: block; width: 100%; margin-top: 12px; padding: 12px;
+    font-family: var(--type); font-size: 14px; letter-spacing: 1px; font-weight: 700;
+    color: var(--ink); background: rgba(91, 135, 184, 0.28);
+    border: 2px solid var(--ink); border-radius: 2px;
+    box-shadow: 2px 2px 0 rgba(43, 39, 34, 0.16);
+    transform: rotate(0.5deg);
+  }
+  .daily-btn:hover { background: rgba(91, 135, 184, 0.42); }
+
+  /* records & history + stats & streaks — quiet "see also" pair, not boxed actions. */
+  .see-also { display: flex; justify-content: center; gap: 22px; margin-top: 16px; }
+  .link-btn {
+    width: auto; margin: 0; padding: 2px 0;
+    font-family: var(--type); font-size: 12px; letter-spacing: 1px;
+    color: var(--ink-soft); background: transparent; border: none; border-radius: 0;
+    border-bottom: 1.5px dotted var(--ink-soft);
+  }
+  .link-btn:hover { color: var(--ink); border-bottom-color: var(--ink); }
 
   /* Daily-streak status line under the streak numbers on the Stats page. */
   .daily-streak-note { font-family: var(--type); font-size: 11px; letter-spacing: 0.5px; color: var(--ink-soft); text-align: center; margin-top: 8px; }
