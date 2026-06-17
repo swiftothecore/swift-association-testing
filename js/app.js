@@ -394,25 +394,41 @@ function dailyStatsHTML() {
 // Infinite runs aren't comparable to the 13-round game (scores can exceed 13 and
 // the 0–13 histogram is meaningless), so they get their own compact summary:
 // best rounds survived + games played per variant × difficulty.
+// Each played variant×difficulty is a keepsake card (matching the catalogue's
+// vocabulary): a bead motif for the lives mode, the best run as a hero number over a
+// relative-to-the-leader strand meter, and the games-played count. Colour-coded by
+// variant — gold for the forgiving 3-lives, danger-red for sudden death.
+const INF_VARIANT_STYLE = {
+  "3lives": { color: "#c08a2e", beads: 3 },
+  sudden:   { color: "#b23a3a", beads: 1 },
+};
 function infiniteStatsHTML() {
-  const rows = [];
+  const entries = [];
   for (const variant of ["3lives", "sudden"]) {
     for (const m of MODE_ORDER) {
       const st = loadStats("inf-" + variant + "-" + m);
-      if (st.played > 0) {
-        rows.push(`<tr><td>${VARIANT_LABELS[variant]}</td><td>${MODES[m].label}</td>` +
-          `<td class="num">${st.best}</td><td class="num">${st.played}</td></tr>`);
-      }
+      if (st.played > 0) entries.push({ variant, mode: m, best: st.best, played: st.played });
     }
   }
-  if (!rows.length) {
+  if (!entries.length) {
     return `<p class="histogram-label" style="margin-top:24px;">infinite</p>` +
       `<p class="stats-empty">no infinite runs yet — try Infinite mode!</p>`;
   }
+  const maxBest = Math.max(...entries.map((e) => e.best), 1);
+  const cards = entries.map((e) => {
+    const sty = INF_VARIANT_STYLE[e.variant];
+    const beads = Array.from({ length: sty.beads }, () => `<i></i>`).join("");
+    const pct = Math.round((e.best / maxBest) * 100);
+    return `
+      <div class="inf-card" style="--spine:${sty.color}">
+        <div class="inf-card-head"><span class="inf-beads">${beads}</span>${VARIANT_LABELS[e.variant]} · ${MODES[e.mode].label}</div>
+        <div class="inf-card-main"><b>${e.best}</b><span>rounds survived</span></div>
+        <div class="inf-card-meter"><div style="width:${pct}%"></div></div>
+        <div class="inf-card-foot">${e.played} game${e.played === 1 ? "" : "s"} played</div>
+      </div>`;
+  }).join("");
   return `<p class="histogram-label" style="margin-top:24px;">infinite · best rounds survived</p>` +
-    `<table class="inf-stats"><thead><tr><th>lives</th><th>difficulty</th>` +
-    `<th class="num">best</th><th class="num">played</th></tr></thead>` +
-    `<tbody>${rows.join("")}</tbody></table>`;
+    `<div class="inf-grid">${cards}</div>`;
 }
 
 /* ---------- Achievements ---------- */
