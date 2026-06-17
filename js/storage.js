@@ -156,16 +156,31 @@ export function migrateRecordsFromStats() {
 export function saveRecords(list, mode) {
   try { localStorage.setItem(recordsKey(mode), JSON.stringify(list)); } catch (e) { /* ignore */ }
 }
-// Insert a finished run; keep the top 5 by score (tie-break: earliest date first, so the
-// run that *first* reached a score outranks a later tie). Returns { list, rank, isBest }
-// where rank is the just-played run's 0-based index (or -1 if it fell off the top 5).
-export function insertRecord(mode, score, date) {
+// Ranking for a mode's records: higher score first, then — at an equal score — the
+// FASTER completion time (a run with a recorded time outranks one without, so a real
+// timed run supersedes the dateless migration seed), then earliest date first.
+function cmpRecords(a, b) {
+  if (b.score !== a.score) return b.score - a.score;
+  const at = a.time, bt = b.time;
+  if (at != null && bt != null && at !== bt) return at - bt;   // faster wins
+  if (at != null && bt == null) return -1;
+  if (at == null && bt != null) return 1;
+  const ad = a.date || "", bd = b.date || "";
+  return ad < bd ? -1 : ad > bd ? 1 : 0;
+}
+// Insert a finished run; keep the top 5 per cmpRecords. `time` (completion seconds) is
+// optional — only timed classic modes pass it; relaxed/infinite omit it (no speed tie-break).
+// Returns { list, rank, isBest }; rank is the just-played run's 0-based index (-1 if off-board).
+export function insertRecord(mode, score, date, time = null) {
   const entry = { score, date, __this: true };
-  const top = loadRecords(mode).concat([entry]).sort((a, b) =>
-    b.score - a.score || ((a.date || "") < (b.date || "") ? -1 : (a.date || "") > (b.date || "") ? 1 : 0)
-  ).slice(0, 5);
+  if (time != null) entry.time = time;
+  const top = loadRecords(mode).concat([entry]).sort(cmpRecords).slice(0, 5);
   const rank = top.indexOf(entry);
-  saveRecords(top.map(({ score, date }) => ({ score, date })), mode);   // strip the transient __this
+  saveRecords(top.map((e) => {                                  // strip the transient __this
+    const o = { score: e.score, date: e.date };
+    if (e.time != null) o.time = e.time;
+    return o;
+  }), mode);
   return { list: top, rank, isBest: rank === 0 };
 }
 

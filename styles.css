@@ -320,7 +320,7 @@
   .pb-sub { font-family: var(--type); font-size: 10px; color: var(--ink-soft); }
 
   .hist-head, .hist-row {
-    display: grid; grid-template-columns: 1.1fr 0.7fr 1.5fr 1.3fr;
+    display: grid; grid-template-columns: 1fr 0.7fr 0.8fr 1.4fr 1.2fr;
     align-items: baseline; gap: 10px;
   }
   .hist-head {
@@ -332,7 +332,7 @@
   .hist-row.hist-pb { background: var(--highlighter); border-radius: 4px; border-bottom-color: transparent; }
   .hist-score { font-family: var(--hand); font-size: 22px; color: var(--ink); line-height: 1; }
   .hist-unit { font-family: var(--type); font-size: 11px; color: var(--ink-soft); }
-  .hist-acc, .hist-mode { font-family: var(--type); font-size: 13px; color: var(--ink-soft); }
+  .hist-acc, .hist-mode, .hist-time { font-family: var(--type); font-size: 13px; color: var(--ink-soft); }
   .hist-date { font-family: var(--type); font-size: 11px; color: var(--ink-soft); }
   #histMore { margin-top: 12px; }
 

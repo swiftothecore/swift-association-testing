@@ -448,6 +448,12 @@ function recordDateLabel(date) {
     ? new Date(date + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
     : "—";
 }
+// Completion time (seconds) → "m:ss". null when the mode has no clock.
+function fmtTime(sec) {
+  if (sec == null) return null;
+  const s = Math.round(sec);
+  return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+}
 // Human label for a board-mode token: "medium" → "Normal", "inf-3lives-easy" →
 // "3 lives · Easy", "daily" → "Daily".
 function modeLabel(token) {
@@ -468,9 +474,10 @@ function renderBestLine(el, mode) {
     return;
   }
   const unit = isInfiniteToken(mode) ? " rounds" : " / " + TOTAL_ROUNDS;
+  const timePart = rec.time != null ? " · " + fmtTime(rec.time) : "";
   el.innerHTML =
     `<div class="best-line"><span class="best-num">${rec.score}<span class="best-unit">${unit}</span></span>` +
-    `<span class="best-meta">★ best · ${escapeHtml(modeLabel(mode))}${rec.date ? " · " + recordDateLabel(rec.date) : ""}</span></div>`;
+    `<span class="best-meta">★ best · ${escapeHtml(modeLabel(mode))}${timePart}${rec.date ? " · " + recordDateLabel(rec.date) : ""}</span></div>`;
 }
 
 /* ---------- Records page (personal-best tiles + run history) ---------- */
@@ -489,7 +496,16 @@ function pbTile(mode, opts = {}) {
   const rec = opts.score != null ? { score: opts.score, date: null } : loadRecords(mode)[0];
   const empty = !rec || rec.score == null;
   const unit = isInfiniteToken(mode) ? "" : "/" + TOTAL_ROUNDS;
-  const sub = opts.sub || (rec ? (rec.date ? recordDateLabel(rec.date) : "—") : "no runs yet");
+  let sub = opts.sub;
+  if (!sub) {
+    if (!rec) sub = "no runs yet";
+    else {
+      const parts = [];
+      if (rec.time != null) parts.push(fmtTime(rec.time));
+      if (rec.date) parts.push(recordDateLabel(rec.date));
+      sub = parts.length ? parts.join(" · ") : "—";
+    }
+  }
   return `<div class="pb-tile${empty ? " pb-empty" : ""}">` +
     `<span class="pb-mode">${escapeHtml(opts.label || modeLabel(mode))}</span>` +
     `<span class="pb-score">${empty ? "—" : rec.score + (unit ? `<span class="pb-unit">${unit}</span>` : "")}</span>` +
@@ -511,6 +527,7 @@ function appendHistoryRows(hist) {
     return `<div class="hist-row${isPB ? " hist-pb" : ""}">` +
       `<span class="hist-score">${isPB ? "♛ " : ""}${h.s}${unit ? `<span class="hist-unit">${unit}</span>` : ""}</span>` +
       `<span class="hist-acc">${accLabel(h)}</span>` +
+      `<span class="hist-time">${h.tm != null ? fmtTime(h.tm) : "—"}</span>` +
       `<span class="hist-mode">${escapeHtml(modeLabel(h.m))}</span>` +
       `<span class="hist-date">${histDateLabel(h.d)}</span></div>`;
   }).join(""));
@@ -547,7 +564,7 @@ function renderRecordsPage() {
   for (const h of hist) if (!(h.m in _pbByMode)) _pbByMode[h.m] = h.m === "daily" ? db : (loadRecords(h.m)[0] ? loadRecords(h.m)[0].score : -1);
   const histBlock = hist.length
     ? `<p class="rec-group-label">history — ${hist.length} run${hist.length === 1 ? "" : "s"}</p>` +
-      `<div class="hist-head"><span>score</span><span>acc.</span><span>mode</span><span>date</span></div>` +
+      `<div class="hist-head"><span>score</span><span>acc.</span><span>time</span><span>mode</span><span>date</span></div>` +
       `<div id="histRows" class="hist-rows"></div>` +
       (hist.length > HISTORY_PAGE ? `<button id="histMore" class="btn-ghost">load more</button>` : "")
     : `<p class="rec-group-label">history</p><p class="stats-empty">no runs yet — finish a game to start your log.</p>`;
@@ -1448,11 +1465,15 @@ function endGame() {
   const boardScore = isInfinite ? roundsSurvived : score;  // infinite ranks by how far you got
   const mode = boardMode();
 
+  // Completion time (sum of per-round answer seconds, capped per round). Only meaningful
+  // when there's a clock — Relaxed (seconds 0) has no time. Used as the records speed metric.
+  const runTime = currentMode.seconds > 0 ? gameTimeSum : null;
+
   // Log every finished run to the chronological history (classic / infinite / daily).
   appendHistory({
     s: boardScore, c: score, n: roundsSurvived,
     m: isDaily ? "daily" : mode, t: gameType,
-    d: new Date().toISOString(),
+    d: new Date().toISOString(), tm: runTime,
   });
 
   // Daily plays don't touch any mode's stats board.
@@ -1518,7 +1539,8 @@ function endGame() {
   // Verse bonus (fuller lyric recall) rides alongside the score, never folded into it.
   // Hidden on a held-back daily score — it would leak how well the round went.
   const bonusSuffix = (verseBonus > 0 && !(isDaily && settings.hideDailyScore)) ? " · +" + verseBonus + " verse bonus" : "";
-  $("finalSub").textContent = (isInfinite ? "rounds · " + score + " correct" : "out of " + TOTAL_ROUNDS) + bonusSuffix;
+  const timeSuffix = (runTime != null && !(isDaily && settings.hideDailyScore)) ? " · " + fmtTime(runTime) : "";
+  $("finalSub").textContent = (isInfinite ? "rounds · " + score + " correct" : "out of " + TOTAL_ROUNDS) + timeSuffix + bonusSuffix;
   $("keepGoingBtn").style.display = (isInfinite || isDaily) ? "none" : "";
   renderResultRecap();
   if (!isInfinite && score === TOTAL_ROUNDS) celebratePerfect();
@@ -1552,11 +1574,17 @@ function endGame() {
   // Every positive run folds into your personal records (best-per-mode); a 0 doesn't
   // (it would never be a best). The full run is always in the history log either way.
   if (boardScore > 0) {
-    const { isBest } = insertRecord(mode, boardScore, todayKey());
+    const recTime = isInfinite ? null : runTime;   // infinite ranks by rounds, not speed
+    const prevBest = loadRecords(mode)[0];
+    const { isBest } = insertRecord(mode, boardScore, todayKey(), recTime);
     const draw = () => renderBestLine($("resultPodium"), mode);
     if (!getPlayerName()) promptSignOnce(draw);   // first record ever → sign once, reuse silently after
     else draw();
-    if (isBest) showNewBestBanner();
+    if (isBest) {
+      const improvedScore = !prevBest || boardScore > prevBest.score;
+      showNewBestBanner((improvedScore ? "a new personal best ★" : "a new best time ★") +
+        (recTime != null ? " · " + fmtTime(recTime) : ""));
+    }
   } else {
     renderBestLine($("resultPodium"), mode);
   }
@@ -1581,10 +1609,10 @@ function promptSignOnce(after) {
 }
 
 // "New personal best" banner above the records — a brief pop, static under reduced motion.
-function showNewBestBanner() {
+function showNewBestBanner(text) {
   const el = $("newBestBanner");
   if (!el) return;
-  el.textContent = "a new personal best ★";
+  el.textContent = text || "a new personal best ★";
   el.style.display = "";
   el.classList.remove("pop");
   if (!motionReduced()) { void el.offsetWidth; el.classList.add("pop"); }   // restart the animation
