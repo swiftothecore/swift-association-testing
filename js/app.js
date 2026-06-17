@@ -168,10 +168,10 @@ function renderExcludedNote() {
   if (!titles.length) { el.style.display = "none"; el.innerHTML = ""; return; }
   const SHOWN = 3;
   const shown = titles.slice(0, SHOWN)
-    .map((t) => `<span class="ex-title">“${escapeHtml(t)}”</span>`);
+    .map((t) => `<span class="ex-title">${escapeHtml(t)}</span>`);
   if (titles.length > SHOWN) shown.push(`<span class="ex-more">+${titles.length - SHOWN} more</span>`);
-  const lead = titles.length === 1 ? "off-limits — it’s in the title:" : "off-limits — they’re in the title:";
-  el.innerHTML = `<span class="ex-lead">${lead}</span> ${shown.join(" ")}`;
+  const lead = titles.length === 1 ? "can’t be played — it’s in the title" : "can’t be played — they’re in the title";
+  el.innerHTML = `<span class="ex-lead">${lead}</span>${shown.join("")}`;
   el.style.display = "";
 }
 function extractLineWithWord(lyrics, word, strict) {

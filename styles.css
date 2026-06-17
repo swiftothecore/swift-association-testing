@@ -448,19 +448,20 @@
   }
 
   /* ---------- Off-limits note (Hard/Ultra "not in the title" rule) ---------- */
+  /* soft red-tinted pills — one per song whose title holds the prompt word */
   .excluded-note {
-    text-align: center; margin: -6px auto 14px; max-width: 340px;
-    line-height: 1.5; transform: rotate(-0.4deg);
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
+    gap: 8px; margin: -2px auto 14px; max-width: 360px;
   }
   .excluded-note .ex-lead {
-    font-family: var(--type); font-size: 11px; letter-spacing: 0.5px;
-    color: var(--margin); text-transform: uppercase;
+    flex-basis: 100%; text-align: center; margin-bottom: 2px;
+    font-family: var(--type); font-size: 10.5px; letter-spacing: 0.5px;
+    color: #9b2226; text-transform: uppercase;
   }
   .excluded-note .ex-title {
-    font-family: var(--hand); font-weight: 700; font-size: 19px;
-    color: var(--margin); text-decoration: line-through;
-    text-decoration-color: var(--margin); text-decoration-thickness: 2px;
-    white-space: nowrap; margin: 0 2px;
+    font-family: var(--hand); font-weight: 700; font-size: 18px; line-height: 1;
+    color: #9b2226; background: rgba(178,58,58,0.12);
+    padding: 3px 12px; border-radius: 13px; white-space: nowrap;
   }
   .excluded-note .ex-more {
     font-family: var(--type); font-size: 11px; color: var(--ink-soft);
