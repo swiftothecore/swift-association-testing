@@ -208,16 +208,15 @@ function highlightWord(line, word, strict) {
 
 /* ---------- Stats ---------- */
 // Collated view across every difficulty: summed plays / score distribution, the best
-// score and longest streak of any mode. (Per-mode current streak doesn't aggregate, so
-// the "All" tab shows perfect-game count beside best streak instead.)
+// score of any mode, and the best correct-in-a-row reached in any mode.
 function aggregateStats() {
-  const agg = { played: 0, totalScore: 0, best: 0, maxStreak: 0, scoreCounts: [] };
+  const agg = { played: 0, totalScore: 0, best: 0, bestInRow: 0, scoreCounts: [] };
   for (const m of MODE_ORDER) {
     const s = loadStats(m);
     agg.played += s.played;
     agg.totalScore += s.totalScore;
     agg.best = Math.max(agg.best, s.best);
-    agg.maxStreak = Math.max(agg.maxStreak, s.maxStreak);
+    agg.bestInRow = Math.max(agg.bestInRow, s.bestInRow || 0);
     s.scoreCounts.forEach((c, i) => { agg.scoreCounts[i] = (agg.scoreCounts[i] || 0) + c; });
   }
   return agg;
@@ -258,14 +257,11 @@ function renderStats(lastScore, viewMode = defaultStatsView()) {
         <div class="histogram-score">${score}</div>
       </div>`;
     }).join("");
-    const streakRow = isAll
-      ? `<div class="streak-row">
-        <div class="streak-cell"><span class="stat-val">${s.maxStreak}</span><span class="stat-lbl">Best streak</span></div>
+    // Best correct-in-a-row (lifetime, per mode; max across modes in the All view) +
+    // perfect-game count. Same two cells for every tab.
+    const streakRow = `<div class="streak-row">
+        <div class="streak-cell"><span class="stat-val">${s.bestInRow || 0}</span><span class="stat-lbl">Best in a row</span></div>
         <div class="streak-cell"><span class="stat-val">${s.scoreCounts[TOTAL_ROUNDS] || 0}</span><span class="stat-lbl">Perfect games</span></div>
-      </div>`
-      : `<div class="streak-row">
-        <div class="streak-cell"><span class="stat-val">${s.currentStreak}</span><span class="stat-lbl">Current streak</span></div>
-        <div class="streak-cell"><span class="stat-val">${s.maxStreak}</span><span class="stat-lbl">Best streak</span></div>
       </div>`;
     body = `
       <div class="stats-grid">
@@ -1602,7 +1598,7 @@ function endGame() {
   });
 
   // Daily plays don't touch any mode's stats board.
-  if (!isDaily) updateStats(boardScore, mode);
+  if (!isDaily) updateStats(boardScore, mode, gameMaxStreak);
 
   // Lifetime per-song / per-word tally (every game type counts — it's a catalog
   // record, not a per-mode board). Powers Favourite Song, Songs Discovered,

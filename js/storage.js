@@ -24,7 +24,7 @@ export function loadStats(mode) {
       if (s && typeof s.played === "number") return s;
     }
   } catch (e) { /* ignore */ }
-  return { played: 0, best: 0, totalScore: 0, scoreCounts: Array(14).fill(0), lastPlayed: null, currentStreak: 0, maxStreak: 0 };
+  return { played: 0, best: 0, totalScore: 0, scoreCounts: Array(14).fill(0), lastPlayed: null, currentStreak: 0, maxStreak: 0, bestInRow: 0 };
 }
 
 export function saveStats(s, mode) {
@@ -34,13 +34,16 @@ export function saveStats(s, mode) {
 // Total games across every mode — for the global "play N games" achievements.
 export function totalPlayed() { return MODE_ORDER.reduce((n, m) => n + loadStats(m).played, 0); }
 
-export function updateStats(gameScore, mode) {
+// bestRun = the game's longest correct-in-a-row (gameMaxStreak); we keep the
+// lifetime max per mode for the "Best in a row" stat.
+export function updateStats(gameScore, mode, bestRun) {
   const s = loadStats(mode);
   s.played += 1;
   s.best = Math.max(s.best, gameScore);
   s.totalScore += gameScore;
   s.scoreCounts[gameScore] = (s.scoreCounts[gameScore] || 0) + 1;
   s.lastPlayed = new Date().toISOString().slice(0, 10);
+  s.bestInRow = Math.max(s.bestInRow || 0, bestRun || 0);
   if (gameScore >= STREAK_THRESHOLD) {
     s.currentStreak += 1;
     s.maxStreak = Math.max(s.maxStreak, s.currentStreak);
