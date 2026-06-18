@@ -1072,7 +1072,16 @@
     border-style: dashed;
   }
   .daily-btn.undone:hover { background: rgba(224, 120, 48, 0.2); }
+  /* Played-today resting state: dimmed and desaturated (not disabled — it still
+     opens today's result), brightening back to full on hover. */
+  .daily-btn.done { opacity: 0.66; filter: saturate(0.9); }
+  .daily-btn.done:hover { opacity: 1; filter: none; }
   .daily-btn .daily-label { position: relative; z-index: 2; }
+  .daily-btn .daily-streak-inline {
+    display: block; position: relative; z-index: 2; margin-top: 3px;
+    font-family: var(--type); font-weight: 400; font-size: 11px; letter-spacing: 0.5px;
+    color: var(--ink-soft);
+  }
   .daily-btn .daily-star {
     position: absolute; z-index: 1; pointer-events: none;
     font-family: var(--hand); font-size: 15px; line-height: 1; color: #e07830;

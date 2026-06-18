@@ -928,6 +928,9 @@ function renderDailyButtonState() {
   if (!btn) return;
   const undone = !loadDailyResult(todayKey());
   btn.classList.toggle("undone", undone);
+  // Played today: a quieter, slightly muted "done" coat (it's still clickable to
+  // re-open today's result, so it dims rather than disabling).
+  btn.classList.toggle("done", !undone);
   // Wrap the label once so it always stacks above the decorative stars.
   let label = btn.querySelector(".daily-label");
   if (!label) {
@@ -938,15 +941,14 @@ function renderDailyButtonState() {
     label.textContent = text;
     btn.appendChild(label);
   }
+  // Sticky note: "today!" while unplayed, "✓ done" once today's puzzle is in.
   let tab = btn.querySelector(".daily-tab");
-  if (undone && !tab) {
+  if (!tab) {
     tab = document.createElement("span");
     tab.className = "daily-tab";
-    tab.textContent = "today!";
     btn.appendChild(tab);
-  } else if (!undone && tab) {
-    tab.remove();
   }
+  tab.textContent = undone ? "today!" : "✓ done";
   const hasStars = btn.querySelector(".daily-star");
   if (undone && !hasStars) {
     DAILY_STAR_SPOTS.forEach((p) => {
@@ -963,6 +965,20 @@ function renderDailyButtonState() {
     });
   } else if (!undone && hasStars) {
     btn.querySelectorAll(".daily-star").forEach((s) => s.remove());
+  }
+  // Inline streak under the label once played (matches the "🔥 N day streak" phrasing
+  // used on the Stats and Records pages).
+  let streak = btn.querySelector(".daily-streak-inline");
+  const d = !undone ? effectiveDailyStreak(todayKey()) : null;
+  if (d && d.current > 0) {
+    if (!streak) {
+      streak = document.createElement("span");
+      streak.className = "daily-streak-inline";
+      label.insertAdjacentElement("afterend", streak);
+    }
+    streak.textContent = `🔥 ${d.current}-day streak`;
+  } else if (streak) {
+    streak.remove();
   }
 }
 function setGameType(g) {
