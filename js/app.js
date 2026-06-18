@@ -43,6 +43,7 @@ let recentEras = [];
 
 let allSongs = [];
 let titleIndex = new Map();   // normalizeTitle(title|alias) -> song, built in loadData
+let spacelessIndex = new Map(); // titleIndex key with spaces removed -> song (space-error fallback)
 let playableWords = [];
 let score = 0;
 let round = 0;
@@ -760,6 +761,19 @@ async function loadData() {
       titleIndex.set(key, song);
     }
   }
+  // Spaceless fallback: forgive misplaced spaces ("all to owell" -> "all too well") by
+  // indexing each title/alias with its spaces stripped. Only kept when unambiguous — if
+  // two distinct songs collapse to the same spaceless key, we drop it rather than guess.
+  spacelessIndex = new Map();
+  const spaceClash = new Set();
+  for (const [key, song] of titleIndex) {
+    const sp = key.replace(/ /g, "");
+    if (!sp || sp === key) continue;          // no spaces -> the normal index already covers it
+    const existing = spacelessIndex.get(sp);
+    if (existing && existing !== song) { spaceClash.add(sp); continue; }
+    spacelessIndex.set(sp, song);
+  }
+  for (const sp of spaceClash) spacelessIndex.delete(sp);
   // Lenient playability (Easy/Medium/Hard use derived forms).
   playableWords = words.filter((w) => songsContainingWord(w, false).length >= 1);
   if (!playableWords.length) throw new Error("No playable words found in data");
@@ -1484,6 +1498,7 @@ function submitAnswer(song, isTimeout) {
       const raw = $("songInput").value;
       const key = normalizeTitle(raw);
       song = key ? (titleIndex.get(key) || null) : null;
+      if (!song && key) song = spacelessIndex.get(key.replace(/ /g, "")) || null;  // forgive misplaced spaces
       if (!song) {                         // not a title — try it as a lyric line
         lyricMatch = matchLyricLine(raw);
         if (lyricMatch) song = lyricMatch.song;
