@@ -1145,6 +1145,7 @@
   .set-row {
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
     padding: 7px 0; min-height: 30px; border-bottom: 1px solid var(--rule);
+    flex-wrap: wrap;
   }
   .set-row:last-child { border-bottom: none; }
   .set-label { display: flex; flex-direction: column; gap: 1px; }
