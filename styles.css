@@ -1028,11 +1028,12 @@
   }
   .daily-btn:hover { background: rgba(91, 135, 184, 0.42); }
 
-  /* "Not done today" state: a warm Lover coral-pink wash with a pinned sticky note,
-     so an unplayed daily is unmistakable next to the gold primary. Resets to denim
-     (rules above) once played. */
-  .daily-btn.undone { background: rgba(196, 100, 154, 0.30); }
-  .daily-btn.undone:hover { background: rgba(196, 100, 154, 0.44); }
+  /* "Not done today" state: a warm Showgirl-orange wash (a touch brighter than the
+     album hue, so it reads as a deliberate accent) with a pinned sticky note, so an
+     unplayed daily is unmistakable next to the gold primary. Resets to denim (rules
+     above) once played. */
+  .daily-btn.undone { background: rgba(245, 140, 52, 0.32); }
+  .daily-btn.undone:hover { background: rgba(245, 140, 52, 0.46); }
   .daily-btn .daily-tab {
     position: absolute; top: -14px; right: -8px;
     font-family: var(--hand); font-weight: 700; font-size: 15px; letter-spacing: 0;
