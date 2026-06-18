@@ -1032,8 +1032,8 @@
      album hue, so it reads as a deliberate accent) with a pinned sticky note, so an
      unplayed daily is unmistakable next to the gold primary. Resets to denim (rules
      above) once played. */
-  .daily-btn.undone { background: rgba(245, 140, 52, 0.32); }
-  .daily-btn.undone:hover { background: rgba(245, 140, 52, 0.46); }
+  .daily-btn.undone { background: rgba(244, 126, 28, 0.92); }
+  .daily-btn.undone:hover { background: rgb(244, 126, 28); }
   .daily-btn .daily-tab {
     position: absolute; top: -14px; right: -8px;
     font-family: var(--hand); font-weight: 700; font-size: 15px; letter-spacing: 0;
