@@ -96,6 +96,10 @@ export const ALBUM_COLORS = {
   "Midnights":                        "#3d4f8a",
   "The Tortured Poets Department":    "#b39a7c",
   "The Life of a Showgirl":          "#e07830",
+  "Holiday Collection":               "#bcdcec",  // snow blue
+  "Songs From Movies":                "#2f6b4f",  // pine green
+  "Written for Others":               "#7e7634",  // olive
+  "Collaborations":                   "#7a2f4a",  // wine
 };
 // A colour-blind-friendly alternative (Okabe-Ito / Paul-Tol hues + spread lightness)
 // so the 12 albums stay distinguishable for deutan/protan/tritan vision. Same keys
@@ -113,6 +117,10 @@ export const CB_ALBUM_COLORS = {
   "Midnights":                        "#332288",  // indigo
   "The Tortured Poets Department":    "#44aa99",  // teal
   "The Life of a Showgirl":           "#ddcc77",  // sand
+  "Holiday Collection":               "#aad4e6",  // pale cyan
+  "Songs From Movies":                "#117733",  // green
+  "Written for Others":               "#999933",  // olive
+  "Collaborations":                   "#882255",  // maroon
 };
 
 // Extra accepted spellings for titles whose forgiving forms normalizeTitle can't
@@ -125,6 +133,12 @@ export const TITLE_ALIASES = {
     "all ten well", "all 10 well",
     "all too well 10", "all too well ten",
   ],
+  // Remix features people know by the bare title (the "(remix)" form still
+  // matches via normalizeTitle); the alias makes the plain name work too.
+  "Gasoline (Remix)": ["gasoline"],
+  "The Joker And The Queen (Remix)": ["the joker and the queen"],
+  // "I Heart ?" reads aloud as "I Heart Question Mark".
+  "I Heart ?": ["i heart question mark"],
 };
 
 /* ---------- Achievements ---------- */
