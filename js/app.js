@@ -2190,6 +2190,7 @@ function renderSettingsBody() {
       `<p class="set-note">no sounds yet — this just saves your preference.</p>`
     ) +
     setSection("Data",
+      `<p class="set-note">Your stats, achievements, and records live in this browser’s storage. That’s safe day-to-day, but not fool-proof — clearing your browser data, switching devices, or some private-browsing modes can wipe it. If you’d hate to lose your progress, export a backup now and then.</p>` +
       `<div class="set-actions"><button class="btn-ghost" data-action="export">Export backup</button>` +
       `<button class="btn-ghost" data-action="import">Import backup</button></div>`
     ) +
