@@ -1272,12 +1272,16 @@
   .set-text:focus { border-bottom-color: var(--ink-accent); }
   .set-text::placeholder { color: var(--ink-soft); opacity: 0.7; }
 
-  /* timezone select — typewriter-styled to match the notebook's functional layer */
+  /* timezone select — typewriter-styled to match the notebook's functional layer.
+     padding-right reserves room for the native arrow so it never overlaps the label,
+     and the long zone names clip with an ellipsis instead of spilling. */
   .set-select {
-    font-family: var(--type); font-size: 13px; max-width: 200px;
+    font-family: var(--type); font-size: 13px;
+    max-width: 230px; width: 100%;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     color: var(--ink); background: var(--page-wash, #efe7d2);
     border: 1.5px solid var(--ink-soft); border-radius: 2px;
-    padding: 4px 6px; outline: none; cursor: pointer;
+    padding: 4px 30px 4px 8px; outline: none; cursor: pointer;
   }
   .set-select:focus { border-color: var(--ink-accent); }
 
