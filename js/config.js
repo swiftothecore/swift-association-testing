@@ -49,6 +49,7 @@ export const DEFAULT_SETTINGS = {
   highContrast: false,
   colorBlindAlbums: false,  // swap ALBUM_COLORS for a colour-blind-friendly palette
   hideDailyScore: false,    // hide the daily score until "reveal & copy"
+  timezone: "auto",         // daily-reset zone: "auto" (detect) | an IANA id e.g. "America/New_York"
   // meta
   sound: false,             // placeholder — no audio wired yet
   lastGameType: "classic",  // runtime memory backing defaultGameType: "last" (not shown in UI)

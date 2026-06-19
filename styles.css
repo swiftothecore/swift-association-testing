@@ -1108,6 +1108,15 @@
     0%, 92%, 100% { transform: rotate(6deg); }
     96% { transform: rotate(2deg); }
   }
+  /* Left-side "next in …" reset countdown — a denim sticky note (distinct from the
+     yellow done note), mirrored to the left. Inherits the .done dimming + hover. */
+  .daily-btn .daily-countdown {
+    position: absolute; top: -14px; left: -8px; z-index: 3;
+    font-family: var(--hand); font-weight: 700; font-size: 15px; letter-spacing: 0;
+    color: #2e3f52; background: #cfe0ef;
+    padding: 5px 12px; transform: rotate(-6deg);
+    box-shadow: -1px 2px 4px rgba(43, 39, 34, 0.22);
+  }
 
   /* records & history + stats & streaks — quiet "see also" pair, not boxed actions. */
   .see-also { display: flex; justify-content: center; gap: 22px; margin-top: 16px; }
@@ -1262,6 +1271,15 @@
   }
   .set-text:focus { border-bottom-color: var(--ink-accent); }
   .set-text::placeholder { color: var(--ink-soft); opacity: 0.7; }
+
+  /* timezone select — typewriter-styled to match the notebook's functional layer */
+  .set-select {
+    font-family: var(--type); font-size: 13px; max-width: 200px;
+    color: var(--ink); background: var(--page-wash, #efe7d2);
+    border: 1.5px solid var(--ink-soft); border-radius: 2px;
+    padding: 4px 6px; outline: none; cursor: pointer;
+  }
+  .set-select:focus { border-color: var(--ink-accent); }
 
   /* countdown slider */
   .set-slider-row { display: flex; align-items: center; gap: 10px; }

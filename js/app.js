@@ -113,6 +113,9 @@ const screens = {
 function showScreen(name) {
   Object.values(screens).forEach((s) => s.classList.remove("active"));
   screens[name].classList.add("active");
+  // The daily reset countdown only lives on the start screen; don't let its interval
+  // outlive the view (renderDailyButtonState restarts it when start is shown again).
+  if (name !== "start") stopResetCountdown();
 }
 
 /* ---------- Era selection ---------- */
@@ -980,6 +983,36 @@ function renderDailyButtonState() {
   } else if (streak) {
     streak.remove();
   }
+  // Left sticky note: a live "next in …" countdown to the reset, shown only once
+  // today's puzzle is played (the right note answers "done?", this one "when's next?").
+  let cd = btn.querySelector(".daily-countdown");
+  if (!undone) {
+    if (!cd) {
+      cd = document.createElement("span");
+      cd.className = "daily-countdown";
+      btn.appendChild(cd);
+    }
+    startResetCountdown();
+  } else {
+    if (cd) cd.remove();
+    stopResetCountdown();
+  }
+}
+let dailyCountdownTimer = null;
+function startResetCountdown() {
+  stopResetCountdown();
+  const tick = () => {
+    const note = document.querySelector("#dailyBtn .daily-countdown");
+    if (!note) { stopResetCountdown(); return; }
+    const ms = msUntilDailyReset();
+    if (ms <= 1000) { renderDailyButtonState(); return; }   // rolled into a new local day → flip to undone
+    note.textContent = "next in " + formatResetCountdown(ms);
+  };
+  tick();
+  dailyCountdownTimer = setInterval(tick, 1000);
+}
+function stopResetCountdown() {
+  if (dailyCountdownTimer) { clearInterval(dailyCountdownTimer); dailyCountdownTimer = null; }
 }
 function setGameType(g) {
   gameType = g === "infinite" ? "infinite" : "classic";
@@ -996,8 +1029,38 @@ function setVariant(v) {
 }
 
 /* ---------- Game flow ---------- */
-// Today's date key, "YYYY-MM-DD" in UTC (same day-rollover tradeoff as Wordle).
-function todayKey() { return new Date().toISOString().slice(0, 10); }
+// The zone the daily resets in: the player's Settings override, else their detected
+// local zone. A bad stored id (e.g. after an Intl data change) falls back to auto.
+function activeTimeZone() {
+  const tz = settings.timezone;
+  try {
+    if (tz && tz !== "auto") { new Intl.DateTimeFormat("en-CA", { timeZone: tz }); return tz; }
+  } catch (e) { /* invalid stored zone — fall through to auto */ }
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+// Today's date key, "YYYY-MM-DD" in the active zone (en-CA renders ISO order). The
+// daily gate, puzzle seed, streak, share, and button state all route through this.
+function todayKey() {
+  try { return new Date().toLocaleDateString("en-CA", { timeZone: activeTimeZone() }); }
+  catch (e) { return new Date().toLocaleDateString("en-CA"); }
+}
+// ms until the next local midnight in the active zone (seconds-of-day from the wall
+// clock, subtracted from a full day). Good enough for a countdown — ignores the rare
+// DST-transition day where a day isn't exactly 86400s.
+function msUntilDailyReset() {
+  const p = new Intl.DateTimeFormat("en-GB", { timeZone: activeTimeZone(), hour12: false,
+    hour: "2-digit", minute: "2-digit", second: "2-digit" }).formatToParts(new Date());
+  const g = (t) => +(p.find((x) => x.type === t)?.value || 0);
+  const into = (g("hour") % 24) * 3600 + g("minute") * 60 + g("second");
+  return (86400 - into) * 1000;
+}
+// "7h 02m" when an hour or more remains, "42m 10s" under an hour.
+function formatResetCountdown(ms) {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  return h > 0 ? `${h}h ${String(m).padStart(2, "0")}m`
+              : `${m}m ${String(sec).padStart(2, "0")}s`;
+}
 
 // The run is over when the fixed 13 pages are filled (classic + daily), or
 // (infinite) lives run out.
@@ -2259,6 +2322,14 @@ function setChoiceHTML(key, name, desc, options) {
     (desc ? `<span class="set-desc">${desc}</span>` : "") + `</div>` +
     `<div class="set-control set-choice">${tabs}</div></div>`;
 }
+function setSelectHTML(key, name, desc, options) {
+  const opts = options.map((o) =>
+    `<option value="${escapeHtml(o.val)}"${o.val === settings[key] ? " selected" : ""}>${escapeHtml(o.label)}</option>`
+  ).join("");
+  return `<div class="set-row"><div class="set-label"><span class="set-name">${name}</span>` +
+    (desc ? `<span class="set-desc">${desc}</span>` : "") + `</div>` +
+    `<div class="set-control"><select class="set-select" id="set-${key}" data-select="${key}" aria-label="${name}">${opts}</select></div></div>`;
+}
 function setSliderHTML() {
   return `<div class="set-row"><div class="set-label"><span class="set-name">Countdown length</span>` +
     `<span class="set-desc">seconds before the next page auto-turns</span></div>` +
@@ -2273,9 +2344,22 @@ function setTextHTML(key, name, desc, placeholder) {
 }
 function setSection(title, inner) { return `<div class="set-section"><p class="set-section-title">${title}</p>${inner}</div>`; }
 
+// Fallback zone list for the rare browser without Intl.supportedValuesOf — a spread of
+// common UTC offsets so a player can still pick a sensible reset day.
+const COMMON_TZ_FALLBACK = [
+  "Pacific/Honolulu", "America/Anchorage", "America/Los_Angeles", "America/Denver",
+  "America/Chicago", "America/New_York", "America/Halifax", "America/Sao_Paulo",
+  "Atlantic/Azores", "UTC", "Europe/London", "Europe/Paris", "Europe/Athens",
+  "Europe/Moscow", "Asia/Dubai", "Asia/Karachi", "Asia/Kolkata", "Asia/Bangkok",
+  "Asia/Shanghai", "Asia/Tokyo", "Australia/Sydney", "Pacific/Auckland",
+];
 function renderSettingsBody() {
   const diffOpts = [{ val: "last", label: "Last" }].concat(MODE_ORDER.map((m) => ({ val: m, label: MODES[m].label })));
   const statsOpts = [{ val: "all", label: "All" }, { val: "last", label: "Last" }].concat(MODE_ORDER.map((m) => ({ val: m, label: MODES[m].label })));
+  const zones = (typeof Intl.supportedValuesOf === "function") ? Intl.supportedValuesOf("timeZone") : COMMON_TZ_FALLBACK;
+  const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const tzOpts = [{ val: "auto", label: `Auto (detected: ${detectedTz})` }]
+    .concat(zones.map((z) => ({ val: z, label: z.replace(/_/g, " ") })));
   const body = $("settingsBody");
   body.innerHTML =
     setSection("Notebook",
@@ -2300,6 +2384,10 @@ function renderSettingsBody() {
       setChoiceHTML("defaultGameType", "Default game type", "on launch", [{ val: "last", label: "Last" }, { val: "classic", label: "Classic" }, { val: "infinite", label: "Infinite" }]) +
       setChoiceHTML("defaultDifficulty", "Default difficulty", "on launch", diffOpts) +
       setChoiceHTML("defaultStatsTab", "Default stats tab", "which tab opens first", statsOpts)
+    ) +
+    setSection("Daily challenge",
+      setSelectHTML("timezone", "Time zone", "when the daily resets — your local day", tzOpts) +
+      `<p class="set-note">Today here is <b>${todayKey()}</b> — the next puzzle drops in ${formatResetCountdown(msUntilDailyReset())}. Changing this shifts your daily’s reset time and can affect your streak.</p>`
     ) +
     setSection("Display &amp; accessibility",
       setToggleHTML("highContrast", "High contrast", "darker ink, whiter paper") +
@@ -2344,6 +2432,12 @@ function wireSettingsBody() {
   body.querySelectorAll("[data-choice]").forEach((b) => b.addEventListener("click", () => {
     settings[b.dataset.choice] = b.dataset.val;
     saveSettings(settings); applySettings(); renderSettingsBody();
+  }));
+  body.querySelectorAll("[data-select]").forEach((sel) => sel.addEventListener("change", () => {
+    settings[sel.dataset.select] = sel.value;
+    saveSettings(settings);
+    renderDailyButtonState();   // refresh the start-screen button + countdown live
+    renderSettingsBody();       // refresh the "today here is…" note
   }));
   const slider = $("countdownSlider");
   if (slider) {
