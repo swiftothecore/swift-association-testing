@@ -13,6 +13,7 @@ Standout features:
 - Lots and lots of easter eggs
 - Over 50 achievements
 - Daily challenge
+- Installable as an app — works offline once loaded
 
 With many features in the works as we speak:
 

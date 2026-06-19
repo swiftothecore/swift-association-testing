@@ -1,0 +1,17 @@
+{
+  "name": "Swift To The Song Association",
+  "short_name": "Song Assoc.",
+  "description": "A Taylor Swift lyric guessing game. Each round shows a word — name a song whose lyrics contain it. 13 rounds, a songwriter's notebook.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5efe1",
+  "theme_color": "#f5efe1",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
