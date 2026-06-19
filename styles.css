@@ -1277,7 +1277,7 @@
      and the long zone names clip with an ellipsis instead of spilling. */
   .set-select {
     font-family: var(--type); font-size: 13px;
-    max-width: 230px; width: 100%;
+    max-width: 340px; width: 100%;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     color: var(--ink); background: var(--page-wash, #efe7d2);
     border: 1.5px solid var(--ink-soft); border-radius: 2px;
