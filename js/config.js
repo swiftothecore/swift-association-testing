@@ -17,6 +17,7 @@ export const DAILY_STREAK_KEY = "swiftSongAssociation.dailyStreak";
 export const TYPES_KEY = "swiftSongAssociation.typesPlayed";   // {classic,infinite,daily} — for "Hits Different"
 export const TALLY_KEY = "swiftSongAssociation.songTally";     // lifetime per-song/per-word tally — Favourite Song, Songs Discovered, Nemesis Word, I Hate It Here
 export const SETTINGS_KEY = "swiftSongAssociation.settings";   // user preferences (see DEFAULT_SETTINGS)
+export const METRICS_KEY = "swiftSongAssociation.metrics";    // lifetime cross-game counters — fastest/avg answer, accuracy, lyric lines, daily totals
 
 // Every persisted key shares this namespace; export/import and "clear everything"
 // sweep all keys under it.
@@ -190,6 +191,10 @@ export const ACH_ICONS = {
   snake:   `<svg viewBox="0 0 24 24"><path class="ink" fill="none" stroke-width="2.3" stroke-linecap="round" d="M5 19 C10 19 10 13 6 13 C2 13 2 7 7 7 C13 7 13 12 18 12 C21 12 21 8 18.5 7"/><circle class="ink-fill" cx="18.5" cy="6.5" r="1.6"/><path class="ink" stroke-width="1" stroke-linecap="round" d="M19.6 5.6 L21 4.6 M19.6 7.4 L21 8.4"/></svg>`,
   house:   `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M12 2.5 L21.5 11 H18 V21 H6 V11 H2.5 Z"/><rect x="9.5" y="14" width="5" height="7" fill="var(--paper)"/></svg>`,
   target:  `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" class="ink" fill="none" stroke-width="2"/><circle cx="12" cy="12" r="5.5" class="ink" fill="none" stroke-width="2"/><circle cx="12" cy="12" r="1.8" class="ink-fill"/></svg>`,
+  mirrorball: `<svg viewBox="0 0 24 24"><path class="ink" stroke-width="1.6" d="M12 1.5 V5"/><circle class="ink-fill" cx="12" cy="13" r="8"/><g stroke="var(--paper)" stroke-width="0.9" fill="none"><path d="M4.4 11 H19.6"/><path d="M4.4 15 H19.6"/><path d="M6 7.6 H18"/><path d="M6 18.4 H18"/><path d="M12 5 V21"/><path d="M8 5.7 V20.3"/><path d="M16 5.7 V20.3"/></g></svg>`,
+  diamond: `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M7 3 H17 L20 9 H4 Z"/><path class="ink-fill" d="M4 9 H20 L12 21.5 Z"/><g stroke="var(--paper)" stroke-width="0.9" fill="none"><path d="M4 9 H20"/><path d="M9.5 3 L8 9 L12 21.5"/><path d="M14.5 3 L16 9 L12 21.5"/><path d="M12 3 V9"/></g></svg>`,
+  nib:     `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M12 2 L17 13 L12 22 L7 13 Z"/><circle cx="12" cy="10.5" r="1.7" fill="var(--paper)"/><path class="ink" stroke-width="1.2" d="M12 12.5 V21"/></svg>`,
+  eyeclosed: `<svg viewBox="0 0 24 24"><path class="ink" fill="none" stroke-width="2" stroke-linecap="round" d="M3 10 C7 15.5 17 15.5 21 10"/><g class="ink" stroke-width="1.6" stroke-linecap="round"><path d="M5 13 L3.8 16"/><path d="M9 14.6 L8.4 17.6"/><path d="M12 15.2 V18.2"/><path d="M15 14.6 L15.6 17.6"/><path d="M19 13 L20.2 16"/></g></svg>`,
 };
 export const ACHIEVEMENTS = [
   { id: "enchanted",        name: "Enchanted",        desc: "Finish your first game",              secret: false, icon: "sparkle" },
@@ -236,6 +241,10 @@ export const ACHIEVEMENTS = [
   { id: "look-what-you-made-me-do", name: "Look What You Made Me Do", desc: "Make the snake appear",  secret: true,  icon: "snake" },
   { id: "safe-and-sound",   name: "Safe & Sound",     desc: "Play Easy three times in a row",       secret: false, icon: "house" },
   { id: "revenge",          name: "R-E-V-E-N-G-E",    desc: "Beat your own best score on any board", secret: false, icon: "target" },
+  { id: "mirrorball",       name: "Mirrorball",       desc: "Score a perfect 13/13 in every difficulty", secret: true, icon: "mirrorball" },
+  { id: "diamonds",         name: "Diamonds Are Forever", desc: "3 rare words right in a row (no Ultra)", secret: true, icon: "diamond" },
+  { id: "wordsmith",        name: "Wordsmith",        desc: "Win a round on a fuzzy lyric match",    secret: true,  icon: "nib" },
+  { id: "eyes-closed",      name: "Eyes Closed",      desc: "10 fuzzy lyric matches in one Lyricist game", secret: true, icon: "eyeclosed" },
 ];
 export const ACH_BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));
 

@@ -4,7 +4,7 @@
 import {
   HS_KEY, RECORDS_KEY, HISTORY_KEY, STATS_KEY, ACH_KEY, DIFF_KEY,
   DAILY_KEY, DAILY_BOARD_KEY, DAILY_STREAK_KEY, TYPES_KEY, TALLY_KEY,
-  SETTINGS_KEY, APP_PREFIX, DEFAULT_SETTINGS,
+  SETTINGS_KEY, METRICS_KEY, APP_PREFIX, DEFAULT_SETTINGS,
   MODES, MODE_ORDER,
 } from "./config.js";
 
@@ -125,6 +125,42 @@ export function recordGameTally(rounds) {
   }
   saveSongTally(t);
   return t;
+}
+
+/* ---------- Lifetime metrics (cross-game, cross-mode counters) ---------- */
+// One record across every game type & difficulty, folded once per finished game.
+// Backs the Stats "by the numbers" block: fastest/avg answer, accuracy, lyric lines,
+// daily totals. Kept separate from per-mode stats so it spans classic/infinite/daily.
+//   fastestMs   — fastest single correct answer in a timed mode (null = none yet)
+//   answerSumMs — total time spent on timed rounds (for the average)
+//   answerN     — count of timed rounds counted (for the average)
+//   lyricLines  — lifetime lyric lines recalled
+//   roundsTotal / roundsCorrect — lifetime rounds played / answered right (accuracy)
+//   dailyPlayed / dailyPerfect  — lifetime daily challenges finished / perfected
+export function loadMetrics() {
+  const d = { fastestMs: null, answerSumMs: 0, answerN: 0, lyricLines: 0, roundsTotal: 0, roundsCorrect: 0, dailyPlayed: 0, dailyPerfect: 0 };
+  try {
+    const raw = localStorage.getItem(METRICS_KEY);
+    if (raw) { const o = JSON.parse(raw); if (o && typeof o === "object") return { ...d, ...o }; }
+  } catch (e) { /* ignore */ }
+  return d;
+}
+export function saveMetrics(m) {
+  try { localStorage.setItem(METRICS_KEY, JSON.stringify(m)); } catch (e) { /* ignore */ }
+}
+// Fold one finished game into the lifetime metrics. `g` carries the per-game totals
+// gathered during play (see app.js submitAnswer / endGame). Returns the updated record.
+export function recordGameMetrics(g) {
+  const m = loadMetrics();
+  m.roundsTotal += g.rounds || 0;
+  m.roundsCorrect += g.correct || 0;
+  m.lyricLines += g.lyricLines || 0;
+  m.answerSumMs += g.timeSumMs || 0;
+  m.answerN += g.timedRounds || 0;
+  if (g.fastestMs != null && (m.fastestMs == null || g.fastestMs < m.fastestMs)) m.fastestMs = g.fastestMs;
+  if (g.isDaily) { m.dailyPlayed += 1; if (g.dailyPerfect) m.dailyPerfect += 1; }
+  saveMetrics(m);
+  return m;
 }
 
 // The old fake-celebrity "Hall of Fame" (HS_KEY) is fully retired — no reader or
@@ -337,7 +373,7 @@ export function resetRecords() {
   try { localStorage.removeItem(HISTORY_KEY); } catch (e) { /* ignore */ }
   removeByPrefix(HS_KEY);
 }
-export function resetStatsAll()   { removeByPrefix(STATS_KEY); }
+export function resetStatsAll()   { removeByPrefix(STATS_KEY); try { localStorage.removeItem(METRICS_KEY); } catch (e) { /* ignore */ } }
 export function resetAchievements() { try { localStorage.removeItem(ACH_KEY); localStorage.removeItem(TYPES_KEY); } catch (e) { /* ignore */ } }
 export function resetTally()      { try { localStorage.removeItem(TALLY_KEY); } catch (e) { /* ignore */ } }
 export function resetDaily() {

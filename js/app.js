@@ -19,6 +19,7 @@ import {
   bumpDailyStreak, effectiveDailyStreak,
   markTypePlayed,
   loadSongTally, recordGameTally,
+  loadMetrics, recordGameMetrics,
   loadSettings, saveSettings,
   exportData, importData,
   resetRecords, resetStatsAll, resetAchievements, resetTally, resetDaily, clearAllData,
@@ -294,8 +295,8 @@ function renderStats(lastScore, viewMode = defaultStatsView()) {
       <div class="histogram">${bars}</div>`;
   }
 
-  // Catalogue + daily streak are lifetime summaries — they live only on the All tab.
-  if (isAll) body += lifetimeStatsHTML() + dailyStatsHTML();
+  // Catalogue, lifetime numbers + daily streak are lifetime summaries — All tab only.
+  if (isAll) body += extraStatsHTML() + lifetimeStatsHTML() + dailyStatsHTML();
   el.innerHTML = tabs + body + achievementsGridHTML();
   el.querySelectorAll("[data-statmode]").forEach((b) =>
     b.addEventListener("click", () => renderStats(lastScore, b.dataset.statmode)));
@@ -411,6 +412,40 @@ function dailyStatsHTML() {
     `<div class="streak-cell"><span class="stat-val">🔥 ${d.current}</span><span class="stat-lbl">day streak</span></div>` +
     `<div class="streak-cell"><span class="stat-val">${d.best}</span><span class="stat-lbl">best streak</span></div>` +
     `</div>` + note;
+}
+
+// Lifetime cross-game numbers — global (All tab only, like the catalogue). Drawn from
+// the metrics store folded in endGame, plus aggregate stats (best streak ever) and the
+// song tally (albums collected). Empty until the first finished game.
+function extraStatsHTML() {
+  const m = loadMetrics();
+  if (m.roundsTotal === 0) return "";
+  const agg = aggregateStats();
+  const t = loadSongTally();
+  const secs = (ms) => (ms / 1000).toFixed(1) + "s";
+  const fastest = m.fastestMs != null ? secs(m.fastestMs) : "—";
+  const avg = m.answerN ? secs(m.answerSumMs / m.answerN) : "—";
+  const accuracy = m.roundsTotal ? Math.round((m.roundsCorrect / m.roundsTotal) * 100) + "%" : "—";
+  const albumsTotal = new Set(allSongs.map((s) => s.album).filter(Boolean)).size || 1;
+  const albumsCollected = Object.keys(t.albums || {}).filter((a) => t.albums[a] > 0).length;
+  return `<p class="histogram-label" style="margin-top:24px;">by the numbers</p>
+    <div class="stats-grid">
+      <div class="stat-cell"><span class="stat-val">${accuracy}</span><span class="stat-lbl">Accuracy</span></div>
+      <div class="stat-cell"><span class="stat-val">${m.roundsTotal}</span><span class="stat-lbl">Rounds played</span></div>
+      <div class="stat-cell"><span class="stat-val">${agg.bestInRow || 0}</span><span class="stat-lbl">Best streak ever</span></div>
+    </div>
+    <div class="streak-row">
+      <div class="streak-cell"><span class="stat-val">${fastest}</span><span class="stat-lbl">Fastest answer</span></div>
+      <div class="streak-cell"><span class="stat-val">${avg}</span><span class="stat-lbl">Avg answer time</span></div>
+    </div>
+    <div class="streak-row">
+      <div class="streak-cell"><span class="stat-val">${albumsCollected} / ${albumsTotal}</span><span class="stat-lbl">Albums collected</span></div>
+      <div class="streak-cell"><span class="stat-val">${m.lyricLines}</span><span class="stat-lbl">Lyric lines recalled</span></div>
+    </div>
+    <div class="streak-row">
+      <div class="streak-cell"><span class="stat-val">${m.dailyPlayed}</span><span class="stat-lbl">Daily challenges</span></div>
+      <div class="streak-cell"><span class="stat-val">${m.dailyPerfect}</span><span class="stat-lbl">Daily perfects</span></div>
+    </div>`;
 }
 
 // Infinite runs aren't comparable to the 13-round game (scores can exceed 13 and
@@ -1088,6 +1123,10 @@ function resetRunState() {
   verseBonus = 0;
   gameTimeSum = 0;
   gameHitRedZone = false;
+  rareStreak = 0;
+  gameFuzzyMatches = 0;
+  gameTimedRounds = 0;
+  gameFastestMs = null;
   newlyUnlocked = [];
   usedWords = [];
   recentEras = [];
@@ -1497,7 +1536,7 @@ function matchLyricLine(phrase) {
   for (const s of currentSongs) {
     if (s._normLyrics.includes(normPhrase)) {
       const line = recoverLyricLine(s, normPhrase);
-      return { song: s, line, ...gradeLyricRecall(normPhrase, line) };
+      return { song: s, line, fuzzy: false, ...gradeLyricRecall(normPhrase, line) };
     }
   }
 
@@ -1519,7 +1558,7 @@ function matchLyricLine(phrase) {
   }
   if (!best) return null;
   const line = recoverFuzzyLine(best.song, normPhrase);
-  return { song: best.song, line, ...gradeLyricRecall(normPhrase, line) };
+  return { song: best.song, line, fuzzy: true, ...gradeLyricRecall(normPhrase, line) };
 }
 
 // Recover a display line for a FUZZY (non-verbatim) match: scan the song's contiguous
@@ -1645,6 +1684,20 @@ function submitAnswer(song, isTimeout) {
     lyricLineAnswers++;                  // recalled a lyric line (for You Knew The Line)
     verseBonus += lyricMatch.bonus;      // reward fuller recall, separate from the 0–13 score
     if (lyricMatch.tier === "perfect") unlock("word-for-word");
+    if (lyricMatch.fuzzy) {              // landed it without the line being verbatim
+      gameFuzzyMatches++;
+      unlock("wordsmith");
+    }
+  }
+
+  // Diamonds Are Forever — three rare/scarce prompt words answered right in a row.
+  // Disqualified in Ultra (its pool is the rarest words, so a streak there is trivial).
+  const rar = rarityTier(currentSongs.length);
+  if (currentMode.id !== "ultra" && correct && (rar.name === "rare" || rar.name === "scarce")) {
+    rareStreak++;
+    if (rareStreak >= 3) unlock("diamonds");
+  } else {
+    rareStreak = 0;
   }
 
   // achievements: timing + streak signals (mid-game unlocks toast immediately).
@@ -1655,8 +1708,11 @@ function submitAnswer(song, isTimeout) {
     const elapsed = (performance.now() - timerStart) / 1000;
     const remaining = currentMode.seconds - elapsed;
     gameTimeSum += Math.min(elapsed, currentMode.seconds);   // for Perfect Storm
+    gameTimedRounds++;                                       // for the lifetime avg answer time
     if (remaining <= 3) gameHitRedZone = true;               // for Peace (timeouts count too)
     if (correct) {
+      const ms = Math.min(elapsed, currentMode.seconds) * 1000;
+      if (gameFastestMs == null || ms < gameFastestMs) gameFastestMs = ms;   // lifetime fastest answer
       if (elapsed < 2) unlock("speak-now");
       if (round === 1 && elapsed < 2) unlock("ready-for-it");
       if (remaining < 1) unlock("getaway-car");
@@ -1808,6 +1864,14 @@ function endGame() {
     album: roundAlbums[i] || null,
     word: roundWords[i] || null,
   })));
+
+  // Lifetime cross-game metrics (fastest/avg answer, accuracy, lyric lines, daily totals).
+  recordGameMetrics({
+    rounds: roundsSurvived, correct: score,
+    timeSumMs: gameTimeSum * 1000, timedRounds: gameTimedRounds,
+    fastestMs: gameFastestMs, lyricLines: lyricLineAnswers,
+    isDaily, dailyPerfect: isDaily && score === TOTAL_ROUNDS,
+  });
   const played = totalPlayed();   // classic modes only — infinite/daily tracked separately
 
   // Record this game type; "Hits Different" needs all three (classic + infinite + daily).
@@ -1829,6 +1893,8 @@ function endGame() {
     if (roundResults.includes(false) && trailingStreak >= 5) unlock("long-story-short");
     if (currentMode.id === "ultra" && score >= 10) unlock("great-war");
     if (score === TOTAL_ROUNDS && (currentMode.id === "hard" || currentMode.id === "ultra")) unlock("long-live");
+    // Mirrorball — a perfect 13/13 logged in every difficulty (updateStats already folded this game).
+    if (["easy", "medium", "hard", "ultra"].every((m) => loadStats(m).scoreCounts[TOTAL_ROUNDS] > 0)) unlock("mirrorball");
     if (longestAlbumRun(roundResults, roundAlbums) >= 3) unlock("branch-out");
     if (distinctStudioAlbumsHit(roundResults, roundAlbums) >= STUDIO_ALBUMS.length - 1) unlock("eras-tour");
     if (timedMode && !gameHitRedZone) unlock("peace");
@@ -1843,6 +1909,7 @@ function endGame() {
   }
   // Game-type-agnostic signals (classic / infinite / daily all count).
   if (lyricLineAnswers >= 5) unlock("you-knew-the-line");
+  if (currentMode.lyricOnly && gameFuzzyMatches >= 10) unlock("eyes-closed");
   if (recoveryCount(roundResults) >= 3) unlock("shake-it-off");
   if (hasTriangle(roundSongs)) unlock("the-triangle");
   if (roundSongs.includes("If This Was A Movie")) unlock("spicy-drama");
@@ -1958,6 +2025,10 @@ let lyricLineAnswers = 0;        // lyric-line answers this game (for You Knew T
 let verseBonus = 0;              // verse-bonus points this game (fuller lyric recall; separate from score)
 let gameTimeSum = 0;             // total answer time this game, secs (for Perfect Storm)
 let gameHitRedZone = false;      // any round answered with ≤3s left this game (for Peace)
+let rareStreak = 0;              // consecutive correct rare/scarce words this game (for Diamonds Are Forever)
+let gameFuzzyMatches = 0;        // fuzzy (non-verbatim) lyric matches this game (for Wordsmith / Eyes Closed)
+let gameTimedRounds = 0;         // rounds answered in a timed mode this game (for the lifetime avg answer time)
+let gameFastestMs = null;        // fastest single correct answer this game, ms (for the lifetime fastest-answer metric)
 
 const PEN_LABELS = { quill: "quill pen", fountain: "fountain pen", glitter: "glitter gel pen" };
 
