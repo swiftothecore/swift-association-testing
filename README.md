@@ -5,6 +5,7 @@ I’m currently working on a game inspired by ELLE’s Song Association. Where, 
 Standout features:
 
 - Five difficulty options
+- Progressive hints (an optional ladder of nudges — a hinted run won't set a personal best)
 - Endless mode
 - In-depth settings menu
 - Unique UI with a notebook theme

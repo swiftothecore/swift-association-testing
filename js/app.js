@@ -53,6 +53,11 @@ let roundResults = [];   // per-round true/false for the bracelet
 let roundAlbums = [];    // per-round album of the picked song (for the final bracelet)
 let roundWords = [];     // per-round prompt word (for the lifetime tally / Nemesis Word)
 let roundSongs = [];     // per-round answered song title, null on a miss (lifetime tally)
+let roundHinted = [];    // per-round true if a hint was taken (a hinted run can't set a PB)
+let hintsUsed = 0;       // count of rounds this game where a hint was taken
+let hintTier = 0;        // hints revealed this round (0..3); reset each round
+let roundHintSong = null;// the valid song this round's hints zoom in on
+let hintUrgeTimer = null;// idle nudge timer for Relaxed (no clock)
 let gameType = "classic";       // "classic" (fixed 13) | "infinite" (until lives run out) | "daily"
 let infiniteVariant = "3lives"; // "3lives" | "sudden"
 let lives = 0;                  // remaining lives in infinite mode
@@ -1134,6 +1139,8 @@ function resetRunState() {
   roundAlbums = [];
   roundWords = [];
   roundSongs = [];
+  roundHinted = [];
+  hintsUsed = 0;
   dailyRng = null;
 }
 function applyInputHints() {
@@ -1146,6 +1153,87 @@ function applyInputHints() {
   }
   input.placeholder = currentMode.dropdown ? "a title… or sing me a line" : "the full title… or a lyric line";
   hint.textContent = currentMode.dropdown ? "Enter accepts the top match — or type a lyric line" : "no hints — type the full title or a real lyric line, then Enter";
+  if (settings.enableHints !== false && currentMode.hint && gameType !== "daily") {
+    hint.textContent += " · Tab for a hint";
+  }
+}
+
+/* ---------- Hints (progressive ladder, Easy/Normal/Relaxed only) ---------- */
+// All tiers derive from currentSongs — nothing is handwritten. A hinted run still
+// plays/scores/logs to history but can't set a personal best (see endGame).
+function hintsAllowed() {
+  return settings.enableHints !== false && !!currentMode.hint &&
+    gameType !== "daily" && !roundLocked;
+}
+
+// Reset the hint UI for a fresh round; show the affordance only when hints apply.
+function renderHintAffordance() {
+  clearTimeout(hintUrgeTimer);
+  const btn = $("hintBtn");
+  const box = $("hintBox");
+  box.innerHTML = "";
+  hintTier = 0;
+  if (!btn) return;
+  btn.classList.remove("urge");
+  if (hintsAllowed() && roundHintSong) {
+    btn.hidden = false;
+    btn.disabled = false;
+    btn.textContent = "need a hint?";
+    // Relaxed has no clock — nudge after a few idle seconds instead of at half-time.
+    if (!(currentMode.seconds > 0) && !motionReduced()) {
+      hintUrgeTimer = setTimeout(() => {
+        if (hintsAllowed() && hintTier === 0) btn.classList.add("urge");
+      }, 6000);
+    }
+  } else {
+    btn.hidden = true;
+  }
+}
+
+// Reveal the next hint tier (1 = count + album, 2 = title shape, 3 = lyric line).
+function useHint() {
+  if (!hintsAllowed() || hintTier >= 3 || !roundHintSong) return;
+  if (hintTier === 0 && !roundHinted[round - 1]) {
+    roundHinted[round - 1] = true;
+    hintsUsed++;
+  }
+  hintTier++;
+  const btn = $("hintBtn");
+  clearTimeout(hintUrgeTimer);
+  if (btn) btn.classList.remove("urge");
+
+  const box = $("hintBox");
+  const tiers = [];
+  // Tier 1 — how many songs, and the album of one of them (era/album-coloured chip).
+  if (hintTier >= 1) {
+    const n = currentSongs.length;
+    const album = roundHintSong.album || "";
+    const color = albumColor(album) || "var(--bead)";
+    const chip = album
+      ? ` · one's from <span class="hint-chip" style="--chip:${color}">${escapeHtml(album)}</span>`
+      : "";
+    tiers.push(`<p class="hint-tier">in <b>${n}</b> song${n === 1 ? "" : "s"}${chip}</p>`);
+  }
+  // Tier 2 — the title's shape: first letter + word count.
+  if (hintTier >= 2) {
+    const title = roundHintSong.title || "";
+    const letter = (title.match(/[a-z]/i) || ["?"])[0].toUpperCase();
+    const words = title.trim().split(/\s+/).filter(Boolean).length;
+    tiers.push(`<p class="hint-tier">starts with “<b>${escapeHtml(letter)}</b>” · ${words} word${words === 1 ? "" : "s"}</p>`);
+  }
+  // Tier 3 — the actual lyric line, prompt word highlighted.
+  if (hintTier >= 3) {
+    const line = extractLineWithWord(roundHintSong.lyrics, currentWord, effectiveStrict());
+    tiers.push(`<blockquote class="hint-tier hint-line">${highlightWord(line, currentWord)}</blockquote>`);
+  }
+  box.innerHTML = tiers.join("");
+
+  if (btn && hintTier >= 3) {
+    btn.textContent = "no more hints";
+    btn.disabled = true;
+  } else if (btn) {
+    btn.textContent = "another hint?";
+  }
 }
 
 function startGame() {
@@ -1342,6 +1430,7 @@ function advanceRound() {
   justEarnedIndex = -1;
   currentWord = pickWord();
   currentSongs = validSongs(currentWord, effectiveStrict(), currentMode.noTitle);
+  roundHintSong = currentSongs.length ? currentSongs[Math.floor(Math.random() * currentSongs.length)] : null;
   applyEra(pickEra());
 
   const rar = rarityTier(currentSongs.length);
@@ -1369,6 +1458,7 @@ function advanceRound() {
   input.focus();
 
   resetTension();
+  renderHintAffordance();
   runRoundEggs();
   // Note: the timer is started by the caller (nextRound) — for a page turn it
   // only starts once the flip finishes, so no time is lost during the animation.
@@ -1404,6 +1494,11 @@ function startTimer(resume) {
     // the bridge build: ramp tension over the final 4 seconds
     setTension(remaining >= 4 ? 0 : (4 - remaining) / 4);
     updateTally(remaining);
+    // past half-time, if no hint taken yet, nudge the hint affordance
+    if (elapsed / total >= 0.5 && hintTier === 0 && hintsAllowed() && !motionReduced()) {
+      const hb = $("hintBtn");
+      if (hb && !hb.hidden) hb.classList.add("urge");
+    }
     if (remaining <= 0) {
       label.textContent = "0.0";
       submitAnswer(null, true);
@@ -1836,6 +1931,7 @@ function runCountdown() {
 /* ---------- End game ---------- */
 function endGame() {
   clearTimer();
+  clearTimeout(hintUrgeTimer);
   resetTension();
   applyEra(FINALE_ERAS[Math.floor(Math.random() * FINALE_ERAS.length)]);
 
@@ -1854,10 +1950,12 @@ function endGame() {
     s: boardScore, c: score, n: roundsSurvived,
     m: isDaily ? "daily" : mode, t: gameType,
     d: new Date().toISOString(), tm: runTime,
+    ...(hintsUsed > 0 ? { h: 1 } : {}),
   });
 
-  // Daily plays don't touch any mode's stats board.
-  if (!isDaily) updateStats(boardScore, mode, gameMaxStreak);
+  // Daily plays don't touch any mode's stats board. A hinted run counts toward
+  // played/average/distribution but can't set any "best" (countBest = false).
+  if (!isDaily) updateStats(boardScore, mode, gameMaxStreak, hintsUsed === 0);
 
   // Lifetime per-song / per-word tally (every game type counts — it's a catalog
   // record, not a per-mode board). Powers Favourite Song, Songs Discovered,
@@ -1966,8 +2064,9 @@ function endGame() {
   hideNewBestBanner();
 
   // Every positive run folds into your personal records (best-per-mode); a 0 doesn't
-  // (it would never be a best). The full run is always in the history log either way.
-  if (boardScore > 0) {
+  // (it would never be a best). A hinted run is skipped here too — it can't set a PB,
+  // though it's always in the history log either way.
+  if (boardScore > 0 && hintsUsed === 0) {
     const recTime = isInfinite ? null : runTime;   // infinite ranks by rounds, not speed
     const prevBest = loadRecords(mode)[0];
     const { isBest } = insertRecord(mode, boardScore, todayKey(), recTime);
@@ -1983,6 +2082,12 @@ function endGame() {
     }
   } else {
     renderBestLine($("resultPodium"), mode);
+    if (hintsUsed > 0) {
+      const note = document.createElement("p");
+      note.className = "hint-used-note";
+      note.textContent = "hint used — this run won't set a personal best";
+      $("resultPodium").appendChild(note);
+    }
   }
 }
 
@@ -2342,11 +2447,16 @@ function wireInput() {
       if (debounceId) clearTimeout(debounceId);
       debounceId = setTimeout(updateDropdown, 120);
     }
+    clearTimeout(hintUrgeTimer);            // typing cancels the Relaxed idle nudge
+    $("hintBtn").classList.remove("urge");
     handleTypingEggs(input.value);
   });
   input.addEventListener("keydown", (e) => {
     if ($("settingsModal").classList.contains("open")) return;   // modal is captive
-    if (e.key === "Enter") {
+    if (e.key === "Tab" && hintsAllowed()) {
+      e.preventDefault();                   // keep focus in the input; reveal a hint instead
+      useHint();
+    } else if (e.key === "Enter") {
       e.preventDefault();
       e.stopPropagation();        // this keypress submits — don't let it also bubble to the page-advance handler
       // The dropdown refresh is debounced (120ms). If a keystroke is still
@@ -2365,6 +2475,7 @@ function wireInput() {
       hideDropdown();
     }
   });
+  $("hintBtn").addEventListener("click", () => { useHint(); input.focus(); });
   // After a verdict the input is disabled, so a document-level Enter advances
   // the page: skips the correct-answer countdown, or fires "next page" on a miss.
   document.addEventListener("keydown", (e) => {
@@ -2456,6 +2567,7 @@ function renderSettingsBody() {
       setToggleHTML("enterOnMiss", "Enter advances on a miss", "press Enter to leave the answer screen") +
       setToggleHTML("showExamples", "Show example songs after a miss", "") +
       setToggleHTML("stemMatching", "Match word variants", "off = exact word only (love won’t match loving)") +
+      setToggleHTML("enableHints", "Hints", "Easy/Normal/Relaxed — Tab for a hint; a hinted run can’t set a personal best") +
       setChoiceHTML("defaultGameType", "Default game type", "on launch", [{ val: "last", label: "Last" }, { val: "classic", label: "Classic" }, { val: "infinite", label: "Infinite" }]) +
       setChoiceHTML("defaultDifficulty", "Default difficulty", "on launch", diffOpts) +
       setChoiceHTML("defaultStatsTab", "Default stats tab", "which tab opens first", statsOpts)

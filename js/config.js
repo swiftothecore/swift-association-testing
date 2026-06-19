@@ -43,6 +43,8 @@ export const DEFAULT_SETTINGS = {
   showExamples: true,       // show example songs after a wrong answer
   stemMatching: true,       // match word variants (love→loving, gold→golden); off = exact word only
 
+  enableHints: true,        // show progressive hints in Easy/Normal/Relaxed (a hinted run can't set a personal best)
+
   defaultGameType: "last",  // "last" | "classic" | "infinite"
   defaultDifficulty: "last",// "last" | a MODES id
   defaultStatsTab: "all",   // which Stats tab opens first: "all" | "last" | a MODES id
@@ -61,16 +63,16 @@ export const DEFAULT_SETTINGS = {
    word-rarity pool, matching strictness, wrong-answer help). Gameplay code is
    shared; the mode object sets the parameters. */
 export const MODES = {
-  easy:   { id: "easy",   label: "Easy",   seconds: 15, dropdown: true,  pool: "easy",  strict: false, noTitle: false, examples: 3, blurb: "15s · hints on · common words" },
-  medium: { id: "medium", label: "Normal", seconds: 10, dropdown: true,  pool: "all",   strict: false, noTitle: true,  examples: 3, blurb: "10s · hints on · all words · not in the title" },
-  hard:   { id: "hard",   label: "Hard",   seconds: 7,  dropdown: false, pool: "hard",  strict: false, noTitle: true,  examples: 3, blurb: "7s · no hints · rarer words · not in the title" },
-  ultra:  { id: "ultra",  label: "Ultra",  seconds: 5,  dropdown: false, pool: "ultra", strict: true,  noTitle: true,  examples: 0, blurb: "5s · no hints · rarest · exact · not in the title" },
+  easy:   { id: "easy",   label: "Easy",   seconds: 15, dropdown: true,  pool: "easy",  strict: false, noTitle: false, examples: 3, hint: true,  blurb: "15s · hints on · common words" },
+  medium: { id: "medium", label: "Normal", seconds: 10, dropdown: true,  pool: "all",   strict: false, noTitle: true,  examples: 3, hint: true,  blurb: "10s · hints on · all words · not in the title" },
+  hard:   { id: "hard",   label: "Hard",   seconds: 7,  dropdown: false, pool: "hard",  strict: false, noTitle: true,  examples: 3, hint: false, blurb: "7s · no hints · rarer words · not in the title" },
+  ultra:  { id: "ultra",  label: "Ultra",  seconds: 5,  dropdown: false, pool: "ultra", strict: true,  noTitle: true,  examples: 0, hint: false, blurb: "5s · no hints · rarest · exact · not in the title" },
   // Lyric-only: no title input (lyricOnly), longer clock. You answer by typing a lyric
   // line (a few words around the prompt word are enough — the matcher is fuzzy).
-  lyricist: { id: "lyricist", label: "Lyricist", seconds: 20, dropdown: false, pool: "all", strict: false, noTitle: false, examples: 3, lyricOnly: true, blurb: "20s · type a lyric line, not the title" },
+  lyricist: { id: "lyricist", label: "Lyricist", seconds: 20, dropdown: false, pool: "all", strict: false, noTitle: false, examples: 3, hint: false, lyricOnly: true, blurb: "20s · type a lyric line, not the title" },
   // No-timer practice mode (seconds: 0 → startTimer takes the no-timer path). Same
   // forgiving levers as Normal; the only difference is the clock never runs.
-  relaxed: { id: "relaxed", label: "Relaxed", seconds: 0, dropdown: true, pool: "all", strict: false, noTitle: false, examples: 3, blurb: "no timer · hints on · all words" },
+  relaxed: { id: "relaxed", label: "Relaxed", seconds: 0, dropdown: true, pool: "all", strict: false, noTitle: false, examples: 3, hint: true,  blurb: "no timer · hints on · all words" },
 };
 export const MODE_ORDER = ["relaxed", "easy", "medium", "hard", "ultra", "lyricist"];
 

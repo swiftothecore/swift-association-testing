@@ -36,19 +36,24 @@ export function totalPlayed() { return MODE_ORDER.reduce((n, m) => n + loadStats
 
 // bestRun = the game's longest correct-in-a-row (gameMaxStreak); we keep the
 // lifetime max per mode for the "Best in a row" stat.
-export function updateStats(gameScore, mode, bestRun) {
+// `countBest` (default true) — when false (a hint was used this run), the play still
+// counts toward played/average/distribution, but it can't set any "best" (best score,
+// best-in-a-row, or the non-zero-game streak). Keeps hinted runs out of the records.
+export function updateStats(gameScore, mode, bestRun, countBest = true) {
   const s = loadStats(mode);
   s.played += 1;
-  s.best = Math.max(s.best, gameScore);
   s.totalScore += gameScore;
   s.scoreCounts[gameScore] = (s.scoreCounts[gameScore] || 0) + 1;
   s.lastPlayed = new Date().toISOString().slice(0, 10);
-  s.bestInRow = Math.max(s.bestInRow || 0, bestRun || 0);
-  if (gameScore >= STREAK_THRESHOLD) {
-    s.currentStreak += 1;
-    s.maxStreak = Math.max(s.maxStreak, s.currentStreak);
-  } else {
-    s.currentStreak = 0;
+  if (countBest) {
+    s.best = Math.max(s.best, gameScore);
+    s.bestInRow = Math.max(s.bestInRow || 0, bestRun || 0);
+    if (gameScore >= STREAK_THRESHOLD) {
+      s.currentStreak += 1;
+      s.maxStreak = Math.max(s.maxStreak, s.currentStreak);
+    } else {
+      s.currentStreak = 0;
+    }
   }
   saveStats(s, mode);
   return s;
