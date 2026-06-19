@@ -270,6 +270,36 @@ export const ACHIEVEMENTS = [
 ];
 export const ACH_BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));
 
+// Achievements are shown grouped by theme on the Charm Collection page. Order here is
+// the section order. The final "Secret charms" section is render-only (not a group).
+export const ACH_GROUPS = [
+  { id: "core",      label: "Core" },
+  { id: "daily",     label: "Daily challenge" },
+  { id: "infinite",  label: "Infinite mode" },
+  { id: "lyricist",  label: "Lyricist & lyric lines" },
+  { id: "catalogue", label: "Catalogue knowledge" },
+];
+// One muted notebook hue per theme — tints the bracelet charms AND the section dots.
+export const ACH_GROUP_COLORS = {
+  core:      "#c8951f",
+  daily:     "#3f7d6e",
+  infinite:  "#2f4d7a",
+  lyricist:  "#9b6b9e",
+  catalogue: "#b23a3a",
+};
+// Membership: only the non-core ids are listed; everything else defaults to "core"
+// (groupOf in app.js). Keeps this in sync without re-listing every achievement.
+export const ACH_GROUP_OF = {
+  "today-was-a-fairytale": "daily", "daylight": "daily", "story-of-us": "daily", "evermore": "daily",
+  "out-of-the-woods": "infinite", "twenty-two": "infinite", "long-story-short": "infinite",
+  "cruel-summer": "infinite", "holy-ground": "infinite",
+  "all-too-well": "lyricist", "you-knew-the-line": "lyricist", "word-for-word": "lyricist",
+  "wordsmith": "lyricist", "eyes-closed": "lyricist",
+  "branch-out": "catalogue", "eras-tour": "catalogue", "the-triangle": "catalogue",
+  "my-mind-is-alive": "catalogue", "thousand-cuts": "catalogue", "spicy-drama": "catalogue",
+  "diamonds": "catalogue", "paris": "catalogue",
+};
+
 /* ---------- Easter-egg art ---------- */
 export const PEN_SVG = {
   // A feather quill: a barbed plume, a bare curved rachis, and a sharpened cut nib.

@@ -5,7 +5,7 @@ import {
   MODES, MODE_ORDER,
   ERAS, TENDER_ERAS, FINALE_ERAS,
   ALBUM_COLORS, CB_ALBUM_COLORS, STUDIO_ALBUMS, TITLE_ALIASES,
-  ACHIEVEMENTS, ACH_ICONS, ACH_BY_ID,
+  ACHIEVEMENTS, ACH_ICONS, ACH_BY_ID, ACH_GROUPS, ACH_GROUP_COLORS, ACH_GROUP_OF,
   PEN_SVG, STAR_SVG, SPARKLE_SVG, DOODLE_SVG,
 } from "./config.js";
 import { buildBraceletSVG } from "./bracelet.js";
@@ -120,6 +120,7 @@ const screens = {
   results: $("screen-results"),
   stats: $("screen-stats"),
   records: $("screen-records"),
+  achievements: $("screen-achievements"),
 };
 function showScreen(name) {
   Object.values(screens).forEach((s) => s.classList.remove("active"));
@@ -263,7 +264,7 @@ function renderStats(lastScore, viewMode = defaultStatsView()) {
 
   // Infinite is its own game type — its own headline + ledger, not the 0–13 histogram.
   if (isInf) {
-    el.innerHTML = tabs + infiniteTabHTML() + achievementsGridHTML();
+    el.innerHTML = tabs + infiniteTabHTML();
     el.querySelectorAll("[data-statmode]").forEach((b) =>
       b.addEventListener("click", () => renderStats(lastScore, b.dataset.statmode)));
     return;
@@ -307,7 +308,7 @@ function renderStats(lastScore, viewMode = defaultStatsView()) {
 
   // Catalogue, lifetime numbers + daily streak are lifetime summaries — All tab only.
   if (isAll) body += extraStatsHTML() + lifetimeStatsHTML() + dailyStatsHTML();
-  el.innerHTML = tabs + body + achievementsGridHTML();
+  el.innerHTML = tabs + body;
   el.querySelectorAll("[data-statmode]").forEach((b) =>
     b.addEventListener("click", () => renderStats(lastScore, b.dataset.statmode)));
 }
@@ -631,18 +632,85 @@ function renderResultRecap() {
   el.style.display = "";
 }
 
-function achievementsGridHTML() {
-  const items = ACHIEVEMENTS.map((a) => {
-    if (earnedAchievements[a.id]) {
-      return `<div class="ach">${charmMarkup(a.icon)}<div class="ach-text"><div class="ach-nm">${escapeHtml(a.name)}</div><div class="ach-dc">${escapeHtml(a.desc)}</div></div></div>`;
-    }
-    if (a.secret) {
-      return `<div class="ach locked secret"><span class="charm-q" aria-hidden="true">?</span><div class="ach-text"><div class="ach-nm">???</div><div class="ach-dc">a secret charm</div></div></div>`;
-    }
-    return `<div class="ach locked">${charmMarkup(a.icon)}<div class="ach-text"><div class="ach-nm">${escapeHtml(a.name)}</div><div class="ach-dc">${escapeHtml(a.desc)}</div></div></div>`;
-  }).join("");
-  const earnedCount = ACHIEVEMENTS.filter((a) => earnedAchievements[a.id]).length;
-  return `<p class="histogram-label" style="margin-top:24px;">achievements · ${earnedCount}/${ACHIEVEMENTS.length}</p><div class="ach-grid">${items}</div>`;
+// One charm tile: earned (revealed), a still-locked secret (masked ???), or a
+// visible locked target. Shared by the grouped grid and the secret section.
+function achTile(a) {
+  if (earnedAchievements[a.id]) {
+    return `<div class="ach">${charmMarkup(a.icon)}<div class="ach-text"><div class="ach-nm">${escapeHtml(a.name)}</div><div class="ach-dc">${escapeHtml(a.desc)}</div></div></div>`;
+  }
+  if (a.secret) {
+    return `<div class="ach locked secret"><span class="charm-q" aria-hidden="true">?</span><div class="ach-text"><div class="ach-nm">???</div><div class="ach-dc">a secret charm</div></div></div>`;
+  }
+  return `<div class="ach locked">${charmMarkup(a.icon)}<div class="ach-text"><div class="ach-nm">${escapeHtml(a.name)}</div><div class="ach-dc">${escapeHtml(a.desc)}</div></div></div>`;
+}
+
+const achGroupOf = (id) => ACH_GROUP_OF[id] || "core";
+
+// The growing friendship-bracelet keepsake: one star charm per earned achievement,
+// tinted by theme. Reuses buildBraceletSVG's per-bead colour channel (the `albums`
+// arg + `colors` map) — every earned charm is a "correct" bead. `earnedAsc` is the
+// earned achievements oldest→newest, so the newest sits at the clasp end and swings in.
+function achievementBraceletSVG(earnedAsc) {
+  if (!earnedAsc.length) return "";   // empty handled by the page (bare-thread caption)
+  const results = earnedAsc.map(() => true);
+  const groups = earnedAsc.map((a) => achGroupOf(a.id));
+  return buildBraceletSVG(results, 0, earnedAsc.length - 1, groups,
+    { total: earnedAsc.length, letterBead: false, colors: ACH_GROUP_COLORS });
+}
+
+function renderAchievementsPage() {
+  const total = ACHIEVEMENTS.length;
+  // earned, oldest → newest (drives both the bracelet order and the "latest" pick)
+  const earnedAsc = ACHIEVEMENTS.filter((a) => earnedAchievements[a.id])
+    .sort((x, y) => (earnedAchievements[x.id] || "").localeCompare(earnedAchievements[y.id] || ""));
+  const earnedCount = earnedAsc.length;
+  const pct = Math.round((earnedCount / total) * 100);
+
+  let html = `<div class="ach-page-head"><div class="ach-page-title">Charm Collection</div>` +
+    `<div class="ach-page-sub">${earnedCount} / ${total} charms collected</div></div>`;
+
+  const strand = achievementBraceletSVG(earnedAsc);
+  html += `<div class="ach-bracelet">${strand ||
+    `<p class="ach-bracelet-empty">your bracelet starts here — earn a charm to string the first bead</p>`}</div>`;
+
+  const meter = `<div class="cat-meter">` +
+    `<div class="cat-meter-head"><span>charms collected</span><span>${pct}%</span></div>` +
+    `<div class="cat-meter-num"><b>${earnedCount}</b> / ${total}</div>` +
+    `<div class="cat-bar"><div class="cat-seg" style="width:${(earnedCount / total) * 100}%;background:var(--ink-accent)"></div></div>` +
+    `</div>`;
+
+  const latest = earnedAsc[earnedAsc.length - 1];   // newest = clasp-end charm
+  const latestCard = latest ? `<div class="cat-nemesis ach-latest">` +
+    `<div><div class="cat-card-head">latest charm</div>` +
+    `<div class="ach-latest-sub">${escapeHtml(latest.desc)}</div></div>` +
+    `<div class="cat-nemesis-word"><span>${escapeHtml(latest.name)}</span>` +
+    `<svg viewBox="0 0 160 60" preserveAspectRatio="none" aria-hidden="true">` +
+    `<path d="M18 30 C18 12, 60 8, 90 10 C130 13, 152 22, 150 34 C148 48, 100 54, 64 52 C28 50, 12 42, 16 28" fill="none" stroke="rgba(178,58,58,0.7)" stroke-width="2.2" stroke-linecap="round"/>` +
+    `</svg></div></div>` : "";
+
+  html += `<div class="ach-head-row">${meter}${latestCard}</div>`;
+
+  // themed sections: earned (revealed, newest first) then visible locked targets.
+  // Still-locked secrets are held back for the trailing Secret section.
+  ACH_GROUPS.forEach((g) => {
+    const members = ACHIEVEMENTS.filter((a) =>
+      achGroupOf(a.id) === g.id && (earnedAchievements[a.id] || !a.secret));
+    if (!members.length) return;
+    const earnedM = members.filter((a) => earnedAchievements[a.id])
+      .sort((x, y) => (earnedAchievements[y.id] || "").localeCompare(earnedAchievements[x.id] || ""));
+    const lockedM = members.filter((a) => !earnedAchievements[a.id]);
+    const tiles = [...earnedM, ...lockedM].map(achTile).join("");
+    html += `<p class="histogram-label ach-section"><span class="ach-group-dot" style="background:${ACH_GROUP_COLORS[g.id]}"></span>${g.label}</p>` +
+      `<div class="ach-grid">${tiles}</div>`;
+  });
+
+  const secretLocked = ACHIEVEMENTS.filter((a) => a.secret && !earnedAchievements[a.id]);
+  if (secretLocked.length) {
+    html += `<p class="histogram-label ach-section"><span class="ach-group-dot ach-group-dot--secret"></span>Secret charms · ${secretLocked.length}</p>` +
+      `<div class="ach-grid">${secretLocked.map(achTile).join("")}</div>`;
+  }
+
+  $("achievementsBody").innerHTML = html;
 }
 
 /* ---------- Personal records (your own best runs, per mode) ---------- */
@@ -794,6 +862,12 @@ function openRecords(from) {
   recordsBackTarget = from;
   renderRecordsPage();
   showScreen("records");
+}
+let achievementsBackTarget = "start";  // where the Charm Collection's ← back returns to
+function openAchievements(from) {
+  achievementsBackTarget = from;
+  renderAchievementsPage();
+  showScreen("achievements");
 }
 
 /* ---------- Bracelet (hand-strung SVG) ---------- */
@@ -2709,7 +2783,11 @@ function performDanger(which) {
   if (which === "all") { clearAllData(); location.reload(); return; }
   if (which === "hof") resetRecords();
   else if (which === "stats") resetStatsAll();
-  else if (which === "ach") { resetAchievements(); earnedAchievements = loadAchievements(); }
+  else if (which === "ach") {
+    resetAchievements();
+    earnedAchievements = loadAchievements();
+    if (screens.achievements.classList.contains("active")) renderAchievementsPage();
+  }
   else if (which === "tally") resetTally();
   else if (which === "daily") resetDaily();
   refreshStartBoard();
@@ -2792,6 +2870,13 @@ async function init() {
   $("viewRecordsBtn").addEventListener("click", () => openRecords("results"));
   $("recordsBackBtn").addEventListener("click", () => {
     const prev = recordsBackTarget;
+    showScreen(prev);
+    if (prev === "start") { $("startContent").style.display = ""; }
+  });
+  $("achievementsBtn").addEventListener("click", () => openAchievements("start"));
+  $("viewAchievementsBtn").addEventListener("click", () => openAchievements("results"));
+  $("achievementsBackBtn").addEventListener("click", () => {
+    const prev = achievementsBackTarget;
     showScreen(prev);
     if (prev === "start") { $("startContent").style.display = ""; }
   });
