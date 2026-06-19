@@ -1636,6 +1636,10 @@ function gradeLyricRecall(normPhrase, line) {
 function submitAnswer(song, isTimeout) {
   if (roundLocked) return;
 
+  // Paris easter egg — answering "Paris" when the prompt word is "somewhere".
+  // Fires on the attempt regardless of whether it's a correct match for the round.
+  if (currentWord === "somewhere" && normalizeTitle($("songInput").value || "") === "paris") unlock("paris");
+
   let lyricMatch = null;
   if (!song && !isTimeout) {
     if (currentMode.lyricOnly) {           // Lyricist mode: lyric line is the only path

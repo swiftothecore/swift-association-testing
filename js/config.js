@@ -195,6 +195,7 @@ export const ACH_ICONS = {
   diamond: `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M7 3 H17 L20 9 H4 Z"/><path class="ink-fill" d="M4 9 H20 L12 21.5 Z"/><g stroke="var(--paper)" stroke-width="0.9" fill="none"><path d="M4 9 H20"/><path d="M9.5 3 L8 9 L12 21.5"/><path d="M14.5 3 L16 9 L12 21.5"/><path d="M12 3 V9"/></g></svg>`,
   nib:     `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M12 2 L17 13 L12 22 L7 13 Z"/><circle cx="12" cy="10.5" r="1.7" fill="var(--paper)"/><path class="ink" stroke-width="1.2" d="M12 12.5 V21"/></svg>`,
   eyeclosed: `<svg viewBox="0 0 24 24"><path class="ink" fill="none" stroke-width="2" stroke-linecap="round" d="M3 10 C7 15.5 17 15.5 21 10"/><g class="ink" stroke-width="1.6" stroke-linecap="round"><path d="M5 13 L3.8 16"/><path d="M9 14.6 L8.4 17.6"/><path d="M12 15.2 V18.2"/><path d="M15 14.6 L15.6 17.6"/><path d="M19 13 L20.2 16"/></g></svg>`,
+  tower:   `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M12 1.5 L13.4 6 H10.6 Z"/><path class="ink" fill="none" stroke-width="1.6" stroke-linejoin="round" d="M10.7 5.5 L7.5 14 L4 22 H20 L16.5 14 L13.3 5.5"/><g class="ink" stroke-width="1.3"><path d="M6.4 16.8 H17.6"/><path d="M9 9.5 H15"/><path d="M8.4 13 C10.5 11.5 13.5 11.5 15.6 13"/><path d="M5.6 18.6 C9.5 16.6 14.5 16.6 18.4 18.6"/></g><path class="ink" stroke-width="1.3" d="M12 6.5 V22"/></svg>`,
 };
 export const ACHIEVEMENTS = [
   { id: "enchanted",        name: "Enchanted",        desc: "Finish your first game",              secret: false, icon: "sparkle" },
@@ -245,6 +246,7 @@ export const ACHIEVEMENTS = [
   { id: "diamonds",         name: "Diamonds Are Forever", desc: "3 rare words right in a row (no Ultra)", secret: true, icon: "diamond" },
   { id: "wordsmith",        name: "Wordsmith",        desc: "Win a round on a fuzzy lyric match",    secret: true,  icon: "nib" },
   { id: "eyes-closed",      name: "Eyes Closed",      desc: "10 fuzzy lyric matches in one Lyricist game", secret: true, icon: "eyeclosed" },
+  { id: "paris",            name: "Paris",            desc: "Answer “Paris” when the word is “somewhere”", secret: true, icon: "tower" },
 ];
 export const ACH_BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));
 
