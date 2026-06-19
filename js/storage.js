@@ -5,7 +5,7 @@ import {
   HS_KEY, RECORDS_KEY, HISTORY_KEY, STATS_KEY, ACH_KEY, DIFF_KEY,
   DAILY_KEY, DAILY_BOARD_KEY, DAILY_STREAK_KEY, TYPES_KEY, TALLY_KEY,
   SETTINGS_KEY, METRICS_KEY, APP_PREFIX, DEFAULT_SETTINGS,
-  MODES, MODE_ORDER,
+  MODES, MODE_ORDER, TOTAL_ROUNDS,
 } from "./config.js";
 
 const HISTORY_CAP = 1000;   // keep the most recent N runs; older ones drop off
@@ -282,6 +282,31 @@ export function loadDailyResult(dateStr) {
 }
 export function saveDailyResult(dateStr, data) {
   try { localStorage.setItem(DAILY_KEY + "." + dateStr, JSON.stringify(data)); } catch (e) { /* ignore */ }
+}
+
+// Lifetime daily totals derived from the per-day result keys (the authoritative
+// record — saved on every daily completion). The `metrics` counters miss any
+// dailies finished before that store existed; these keys don't, so the Stats
+// "by the numbers" daily figures count from here instead.
+//   played   — distinct days a daily was completed
+//   perfect  — of those, days scored 13/13
+export function dailyTotals() {
+  let played = 0, perfect = 0;
+  const prefix = DAILY_KEY + ".";
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k || !k.startsWith(prefix)) continue;
+      try {
+        const o = JSON.parse(localStorage.getItem(k));
+        if (o && typeof o.score === "number") {
+          played += 1;
+          if (o.score === TOTAL_ROUNDS) perfect += 1;
+        }
+      } catch (e) { /* skip malformed entry */ }
+    }
+  } catch (e) { /* ignore */ }
+  return { played, perfect };
 }
 
 // The per-day daily fake board (DAILY_BOARD_KEY) is retired — daily now shows a

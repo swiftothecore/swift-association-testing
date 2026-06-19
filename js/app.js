@@ -15,7 +15,7 @@ import {
   loadStats, updateStats, totalPlayed,
   loadAchievements, saveAchievements,
   loadMode,
-  loadDailyResult, saveDailyResult,
+  loadDailyResult, saveDailyResult, dailyTotals,
   bumpDailyStreak, effectiveDailyStreak,
   markTypePlayed,
   loadSongTally, recordGameTally,
@@ -434,34 +434,50 @@ function dailyStatsHTML() {
 // Lifetime cross-game numbers — global (All tab only, like the catalogue). Drawn from
 // the metrics store folded in endGame, plus aggregate stats (best streak ever) and the
 // song tally (albums collected). Empty until the first finished game.
+// Tiny ink marginalia icons for the ledger rows (18×18, stroked in currentColor).
+const NUM_ICONS = {
+  rounds:  `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M5 3h5l3 3v9H5z"/><path d="M10 3v3h3"/></svg>`,
+  streak:  `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M9 2.4l1.9 4.1 4.5.5-3.4 3 1 4.5L9 12.2 5 14.5l1-4.5-3.4-3 4.5-.5z"/></svg>`,
+  bolt:    `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M10.5 2L4.5 10H8l-.8 6 6.3-9H10z"/></svg>`,
+  clock:   `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="9" cy="9" r="6.4"/><path d="M9 5v4.2l2.8 1.8" stroke-linecap="round"/></svg>`,
+  disc:    `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="9" cy="9" r="6.4"/><circle cx="9" cy="9" r="1.3"/></svg>`,
+  lines:   `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M3.5 6h11M3.5 9h11M3.5 12h7"/></svg>`,
+  cal:     `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><rect x="3" y="4.2" width="12" height="10.8" rx="1.2"/><path d="M3 7.4h12M6 2.6v2.6M12 2.6v2.6"/></svg>`,
+  rosette: `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><circle cx="9" cy="9" r="6.4"/><path d="M9 5.4l1 2.1 2.3.2-1.7 1.5.5 2.3L9 10.5 6.9 11.7l.5-2.3L5.7 7.7 8 7.5z"/></svg>`,
+};
+
 function extraStatsHTML() {
   const m = loadMetrics();
   if (m.roundsTotal === 0) return "";
   const agg = aggregateStats();
   const t = loadSongTally();
+  const dt = dailyTotals();   // authoritative daily counts (per-day keys, not the metrics store)
   const secs = (ms) => (ms / 1000).toFixed(1) + "s";
   const fastest = m.fastestMs != null ? secs(m.fastestMs) : "—";
   const avg = m.answerN ? secs(m.answerSumMs / m.answerN) : "—";
-  const accuracy = m.roundsTotal ? Math.round((m.roundsCorrect / m.roundsTotal) * 100) + "%" : "—";
+  const accPct = m.roundsTotal ? Math.round((m.roundsCorrect / m.roundsTotal) * 100) : 0;
   const albumsTotal = new Set(allSongs.map((s) => s.album).filter(Boolean)).size || 1;
   const albumsCollected = Object.keys(t.albums || {}).filter((a) => t.albums[a] > 0).length;
+
+  const row = (icon, label, value) =>
+    `<div class="num-row"><span class="num-ico">${NUM_ICONS[icon]}</span>` +
+    `<span class="num-lbl">${label}</span><span class="num-val">${value}</span></div>`;
+
   return `<p class="histogram-label" style="margin-top:24px;">by the numbers</p>
-    <div class="stats-grid">
-      <div class="stat-cell"><span class="stat-val">${accuracy}</span><span class="stat-lbl">Accuracy</span></div>
-      <div class="stat-cell"><span class="stat-val">${m.roundsTotal}</span><span class="stat-lbl">Rounds played</span></div>
-      <div class="stat-cell"><span class="stat-val">${agg.bestInRow || 0}</span><span class="stat-lbl">Best streak ever</span></div>
+    <div class="num-hero">
+      <div class="num-hero-head"><span>Accuracy</span><span>${m.roundsCorrect} / ${m.roundsTotal} rounds</span></div>
+      <div class="num-hero-num"><b>${accPct}</b>%</div>
+      <div class="num-bar"><div class="num-bar-fill" style="width:${accPct}%"></div></div>
     </div>
-    <div class="streak-row">
-      <div class="streak-cell"><span class="stat-val">${fastest}</span><span class="stat-lbl">Fastest answer</span></div>
-      <div class="streak-cell"><span class="stat-val">${avg}</span><span class="stat-lbl">Avg answer time</span></div>
-    </div>
-    <div class="streak-row">
-      <div class="streak-cell"><span class="stat-val">${albumsCollected} / ${albumsTotal}</span><span class="stat-lbl">Albums collected</span></div>
-      <div class="streak-cell"><span class="stat-val">${m.lyricLines}</span><span class="stat-lbl">Lyric lines recalled</span></div>
-    </div>
-    <div class="streak-row">
-      <div class="streak-cell"><span class="stat-val">${m.dailyPlayed}</span><span class="stat-lbl">Daily challenges</span></div>
-      <div class="streak-cell"><span class="stat-val">${m.dailyPerfect}</span><span class="stat-lbl">Daily perfects</span></div>
+    <div class="num-ledger">
+      ${row("rounds", "Rounds played", m.roundsTotal)}
+      ${row("streak", "Best streak ever", agg.bestInRow || 0)}
+      ${row("bolt", "Fastest answer", fastest)}
+      ${row("clock", "Average answer time", avg)}
+      ${row("disc", "Albums collected", `${albumsCollected} / ${albumsTotal}`)}
+      ${row("lines", "Lyric lines recalled", m.lyricLines)}
+      ${row("cal", "Daily challenges", dt.played)}
+      ${row("rosette", "Daily perfects", dt.perfect)}
     </div>`;
 }
 
