@@ -580,8 +580,29 @@ function unlock(id) {
   saveAchievements(earnedAchievements);
   newlyUnlocked.push(id);
   showToast(ACH_BY_ID[id]);
-  // Karma: earning your 13th achievement is itself one (fires retroactively, any path).
-  if (id !== "karma" && Object.keys(earnedAchievements).length >= 13) unlock("karma");
+  checkMetaAchievements();
+}
+
+// Re-evaluated after every unlock (each unlock no-ops if already earned, so this is safe to
+// recurse). Covers the achievements whose condition is "you've earned other achievements":
+//   karma          — your 13th charm.
+//   is-it-over-now — every hidden (secret) achievement, the two meta ones excepted.
+//   the-lucky-one  — 100%: every achievement but itself (is-it-over-now is earnable first,
+//                    so there's no circular deadlock between the two meta charms).
+const META_ACH = ["is-it-over-now", "the-lucky-one"];
+function checkMetaAchievements() {
+  if (Object.keys(earnedAchievements).length >= 13) unlock("karma");
+  const hidden = ACHIEVEMENTS.filter((a) => a.secret && !META_ACH.includes(a.id));
+  if (hidden.length && hidden.every((a) => earnedAchievements[a.id])) unlock("is-it-over-now");
+  const all = ACHIEVEMENTS.filter((a) => a.id !== "the-lucky-one");
+  if (all.length && all.every((a) => earnedAchievements[a.id])) unlock("the-lucky-one");
+}
+
+// "The Piano Was Hissing" — typing "rep tv" / "reputation tv" as an answer OR as your name.
+// Letters-only so spacing/case/punctuation don't matter.
+function checkPianoEgg(s) {
+  const k = (s || "").toLowerCase().replace(/[^a-z]/g, "");
+  if (k === "reptv" || k === "reputationtv") unlock("piano-was-hissing");
 }
 
 function showToast(a) {
@@ -759,7 +780,7 @@ function renderRecordsPage() {
   const saveBtn = $("recSignSave");
   if (saveBtn) saveBtn.addEventListener("click", () => {
     const v = ($("recSignInput").value || "").trim().slice(0, 20);
-    if (v) { settings.playerName = setPlayerName(v); refreshStartBoard(); renderRecordsPage(); }
+    if (v) { settings.playerName = setPlayerName(v); checkPianoEgg(v); refreshStartBoard(); renderRecordsPage(); }
   });
   const signInput = $("recSignInput");
   if (signInput) signInput.addEventListener("keydown", (e) => { if (e.key === "Enter") saveBtn.click(); });
@@ -1745,6 +1766,7 @@ function submitAnswer(song, isTimeout) {
   // Paris easter egg — answering "Paris" when the prompt word is "somewhere".
   // Fires on the attempt regardless of whether it's a correct match for the round.
   if (currentWord === "somewhere" && normalizeTitle($("songInput").value || "") === "paris") unlock("paris");
+  checkPianoEgg($("songInput").value);   // "rep tv" / "reputation tv" typed as an answer
 
   let lyricMatch = null;
   if (!song && !isTimeout) {
@@ -1979,11 +2001,12 @@ function endGame() {
   })));
 
   // Lifetime cross-game metrics (fastest/avg answer, accuracy, lyric lines, daily totals).
-  recordGameMetrics({
+  const metrics = recordGameMetrics({
     rounds: roundsSurvived, correct: score,
     timeSumMs: gameTimeSum * 1000, timedRounds: gameTimedRounds,
     fastestMs: gameFastestMs, lyricLines: lyricLineAnswers,
     isDaily, dailyPerfect: isDaily && score === TOTAL_ROUNDS,
+    isInfinite, timeouts: gameTimeouts,
   });
   const played = totalPlayed();   // classic modes only — infinite/daily tracked separately
 
@@ -1998,6 +2021,9 @@ function endGame() {
     if (score === TOTAL_ROUNDS - 1) unlock("champagne-problems");
     if (score === 0) unlock("anti-hero");
     if (gameTimeouts === 0) unlock("fearless");
+    if (metrics.noTimeoutStreak >= 2) unlock("fearless-tv");   // two no-timeout games in a row
+    // Clean — a majority win (7+/13) on the clock, no timeouts and no hints leaned on.
+    if (timedMode && score >= 7 && gameTimeouts === 0 && hintsUsed === 0) unlock("clean");
     if (currentMode.lyricOnly) unlock("all-too-well");
     if (played >= 1) unlock("enchanted");
     if (played >= 5) unlock("begin-again");
@@ -2008,6 +2034,8 @@ function endGame() {
     if (score === TOTAL_ROUNDS && (currentMode.id === "hard" || currentMode.id === "ultra")) unlock("long-live");
     // Mirrorball — a perfect 13/13 logged in every difficulty (updateStats already folded this game).
     if (["easy", "medium", "hard", "ultra"].every((m) => loadStats(m).scoreCounts[TOTAL_ROUNDS] > 0)) unlock("mirrorball");
+    // Everything & Nothing All At Once — a majority win (7+/13) logged in every difficulty.
+    if (["easy", "medium", "hard", "ultra"].every((m) => loadStats(m).best >= 7)) unlock("everything-nothing");
     if (longestAlbumRun(roundResults, roundAlbums) >= 3) unlock("branch-out");
     if (distinctStudioAlbumsHit(roundResults, roundAlbums) >= STUDIO_ALBUMS.length - 1) unlock("eras-tour");
     if (timedMode && !gameHitRedZone) unlock("peace");
@@ -2111,7 +2139,7 @@ function promptSignOnce(after) {
   nameDiv.style.display = "";
   const save = () => {
     const v = ($("nameInput").value || "").trim().slice(0, 20);
-    if (v) settings.playerName = setPlayerName(v);   // keep the in-memory settings in sync (Settings panel reads it)
+    if (v) { settings.playerName = setPlayerName(v); checkPianoEgg(v); }   // keep the in-memory settings in sync (Settings panel reads it)
     nameDiv.style.display = "none";
     after();
   };
@@ -2647,6 +2675,7 @@ function wireSettingsBody() {
   if (nameField) nameField.addEventListener("change", () => {
     settings.playerName = nameField.value.trim().slice(0, 20);
     saveSettings(settings);
+    checkPianoEgg(settings.playerName);
     refreshStartBoard();   // re-sign the start-screen records live
     if (screens.records.classList.contains("active")) renderRecordsPage();
   });

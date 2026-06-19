@@ -198,6 +198,18 @@ export const ACH_ICONS = {
   nib:     `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M12 2 L17 13 L12 22 L7 13 Z"/><circle cx="12" cy="10.5" r="1.7" fill="var(--paper)"/><path class="ink" stroke-width="1.2" d="M12 12.5 V21"/></svg>`,
   eyeclosed: `<svg viewBox="0 0 24 24"><path class="ink" fill="none" stroke-width="2" stroke-linecap="round" d="M3 10 C7 15.5 17 15.5 21 10"/><g class="ink" stroke-width="1.6" stroke-linecap="round"><path d="M5 13 L3.8 16"/><path d="M9 14.6 L8.4 17.6"/><path d="M12 15.2 V18.2"/><path d="M15 14.6 L15.6 17.6"/><path d="M19 13 L20.2 16"/></g></svg>`,
   tower:   `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M12 1.5 L13.4 6 H10.6 Z"/><path class="ink" fill="none" stroke-width="1.6" stroke-linejoin="round" d="M10.7 5.5 L7.5 14 L4 22 H20 L16.5 14 L13.3 5.5"/><g class="ink" stroke-width="1.3"><path d="M6.4 16.8 H17.6"/><path d="M9 9.5 H15"/><path d="M8.4 13 C10.5 11.5 13.5 11.5 15.6 13"/><path d="M5.6 18.6 C9.5 16.6 14.5 16.6 18.4 18.6"/></g><path class="ink" stroke-width="1.3" d="M12 6.5 V22"/></svg>`,
+  // a single water droplet — "Clean" (the rain washed it all away)
+  drop:    `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M12 2 C12 2 5 10 5 15 a7 7 0 0 0 14 0 C19 10 12 2 12 2 Z"/><path d="M9.5 15 a2.5 2.5 0 0 0 2.5 2.5" fill="none" stroke="var(--paper)" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+  // two linked rings — everything and nothing, all at once
+  infinity:`<svg viewBox="0 0 24 24"><g class="ink" fill="none" stroke-width="2.4"><circle cx="7.6" cy="12" r="4"/><circle cx="16.4" cy="12" r="4"/></g></svg>`,
+  // a vinyl record — Taylor's Version (re-recording)
+  vinyl:   `<svg viewBox="0 0 24 24"><circle class="ink-fill" cx="12" cy="12" r="9.5"/><circle cx="12" cy="12" r="4.4" fill="var(--paper)"/><circle class="ink-fill" cx="12" cy="12" r="1.3"/><g stroke="var(--paper)" stroke-width="0.8" fill="none" opacity="0.6"><circle cx="12" cy="12" r="6.6"/><circle cx="12" cy="12" r="8"/></g></svg>`,
+  // a few piano keys — the piano was hissing
+  piano:   `<svg viewBox="0 0 24 24"><rect class="ink-fill" x="3" y="5" width="18" height="14" rx="1.5"/><rect x="4.5" y="6.5" width="15" height="11" fill="var(--paper)"/><g class="ink" stroke-width="1"><path d="M7.5 6.5 V17.5 M10.5 6.5 V17.5 M13.5 6.5 V17.5 M16.5 6.5 V17.5"/></g><g class="ink-fill"><rect x="6.4" y="6.5" width="1.6" height="6"/><rect x="9.4" y="6.5" width="1.6" height="6"/><rect x="12.4" y="6.5" width="1.6" height="6"/><rect x="15.4" y="6.5" width="1.6" height="6"/></g></svg>`,
+  // an hourglass — is it over now?
+  hourglass:`<svg viewBox="0 0 24 24"><g class="ink" stroke-width="2" stroke-linecap="round"><path d="M6 3 H18 M6 21 H18"/></g><path class="ink-fill" d="M7 4 H17 L12 12 Z"/><path class="ink-fill" d="M12 12 L17 20 H7 Z"/></svg>`,
+  // a four-leaf clover — the lucky one
+  clover:  `<svg viewBox="0 0 24 24"><g class="ink-fill"><circle cx="12" cy="7.6" r="3.1"/><circle cx="12" cy="14.4" r="3.1"/><circle cx="8.6" cy="11" r="3.1"/><circle cx="15.4" cy="11" r="3.1"/></g><path class="ink" stroke-width="1.6" stroke-linecap="round" d="M12.5 12 L14.5 21"/></svg>`,
 };
 export const ACHIEVEMENTS = [
   { id: "enchanted",        name: "Enchanted",        desc: "Finish your first game",              secret: false, icon: "sparkle" },
@@ -249,6 +261,12 @@ export const ACHIEVEMENTS = [
   { id: "wordsmith",        name: "Wordsmith",        desc: "Win a round on a fuzzy lyric match",    secret: true,  icon: "nib" },
   { id: "eyes-closed",      name: "Eyes Closed",      desc: "10 fuzzy lyric matches in one Lyricist game", secret: true, icon: "eyeclosed" },
   { id: "paris",            name: "Paris",            desc: "Answer “Paris” when the word is “somewhere”", secret: true, icon: "tower" },
+  { id: "clean",            name: "Clean",            desc: "Win without hints or a single timeout",  secret: false, icon: "drop" },
+  { id: "everything-nothing", name: "Everything & Nothing All At Once", desc: "Win a game in every difficulty", secret: false, icon: "infinity" },
+  { id: "fearless-tv",      name: "Fearless (Taylor's Version)", desc: "Two games in a row with no timeouts", secret: false, icon: "vinyl" },
+  { id: "piano-was-hissing", name: "The Piano Was Hissing", desc: "Type “reputation tv” somewhere",    secret: true,  icon: "piano" },
+  { id: "is-it-over-now",   name: "Is It Over Now?",  desc: "Earn every hidden achievement",         secret: true,  icon: "hourglass" },
+  { id: "the-lucky-one",    name: "The Lucky One",    desc: "Earn every other achievement",          secret: true,  icon: "clover" },
 ];
 export const ACH_BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));
 

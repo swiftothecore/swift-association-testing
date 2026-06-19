@@ -143,7 +143,7 @@ export function recordGameTally(rounds) {
 //   roundsTotal / roundsCorrect — lifetime rounds played / answered right (accuracy)
 //   dailyPlayed / dailyPerfect  — lifetime daily challenges finished / perfected
 export function loadMetrics() {
-  const d = { fastestMs: null, answerSumMs: 0, answerN: 0, lyricLines: 0, roundsTotal: 0, roundsCorrect: 0, dailyPlayed: 0, dailyPerfect: 0 };
+  const d = { fastestMs: null, answerSumMs: 0, answerN: 0, lyricLines: 0, roundsTotal: 0, roundsCorrect: 0, dailyPlayed: 0, dailyPerfect: 0, noTimeoutStreak: 0 };
   try {
     const raw = localStorage.getItem(METRICS_KEY);
     if (raw) { const o = JSON.parse(raw); if (o && typeof o === "object") return { ...d, ...o }; }
@@ -164,6 +164,9 @@ export function recordGameMetrics(g) {
   m.answerN += g.timedRounds || 0;
   if (g.fastestMs != null && (m.fastestMs == null || g.fastestMs < m.fastestMs)) m.fastestMs = g.fastestMs;
   if (g.isDaily) { m.dailyPlayed += 1; if (g.dailyPerfect) m.dailyPerfect += 1; }
+  // Consecutive non-infinite games finished with zero timeouts (backs "Fearless (Taylor's
+  // Version)"). Infinite games are ignored entirely — they neither extend nor break it.
+  if (!g.isInfinite) m.noTimeoutStreak = (g.timeouts === 0) ? (m.noTimeoutStreak || 0) + 1 : 0;
   saveMetrics(m);
   return m;
 }
