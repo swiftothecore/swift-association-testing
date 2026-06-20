@@ -1375,6 +1375,17 @@ function renderRecordsPage() {
       `</div>`
     : "";
 
+  // Verse bonus — the prestige metric's lifetime keepsake (best run + word-perfect totals).
+  const vm = loadMetrics();
+  const verseBlock = vm.bestVerseBonus > 0
+    ? `<p class="rec-group-label">verse bonus</p><div class="pb-grid">` +
+        `<div class="pb-tile pb-verse" style="--pb-accent:var(--bead)">` +
+          `<span class="pb-mode">Best in a game</span>` +
+          `<span class="pb-score">+${vm.bestVerseBonus}</span>` +
+          `<span class="pb-sub">${vm.versePerfect} word-perfect · ${vm.wholeVerses} whole verse${vm.wholeVerses === 1 ? "" : "s"}</span>` +
+        `</div></div>`
+    : "";
+
   const hist = loadHistory();
   _pbByMode = {};
   for (const h of hist) if (!(h.m in _pbByMode)) _pbByMode[h.m] = h.m === "daily" ? db : (loadRecords(h.m)[0] ? loadRecords(h.m)[0].score : -1);
@@ -1388,7 +1399,7 @@ function renderRecordsPage() {
   $("recordsBody").innerHTML =
     `<div class="rec-sig">${sig}</div>` +
     `<p class="rec-group-label">personal bests</p><div class="pb-grid">${classicTiles}</div>` +
-    infBlock + dailyBlock + heatSectionHTML() + histBlock;
+    infBlock + dailyBlock + verseBlock + heatSectionHTML() + histBlock;
 
   renderHeatBody();
   const heatSel = $("heatRange");
@@ -2893,7 +2904,7 @@ function endGame() {
   if (boardScore > 0 && hintsUsed === 0 && !devNoLog) {
     const recTime = isInfinite ? null : runTime;   // infinite ranks by rounds, not speed
     const prevBest = loadRecords(mode)[0];
-    const { isBest } = insertRecord(mode, boardScore, todayKey(), recTime);
+    const { isBest } = insertRecord(mode, boardScore, todayKey(), recTime, verseBonus);
     const draw = () => renderBestLine($("resultPodium"), mode);
     if (!getPlayerName()) promptSignOnce(draw);   // first record ever → sign once, reuse silently after
     else draw();
