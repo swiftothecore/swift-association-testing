@@ -315,18 +315,44 @@
     color: var(--ink-soft); text-transform: uppercase; margin: 24px 0 10px;
   }
 
-  .pb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(134px, 1fr)); gap: 10px; }
+  /* Personal-best tiles — taped index cards scattered on the page. Each card is a
+     near-opaque paper patch over the ruled lines, a washi-tape strip pinning the top,
+     a tiny static tilt, and a per-mode accent (--pb-accent, set inline in pbTile). */
+  .pb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(146px, 1fr)); gap: 18px 14px; padding-top: 8px; }
+  .pb-grid-inf { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 16px 12px; }
   .pb-tile {
-    border: 1.5px solid rgba(43,39,34,0.14); border-radius: 8px;
-    padding: 9px 12px 11px; background: rgba(255,255,255,0.16);
+    --pb-accent: var(--ink-accent);
+    position: relative; border: 1px solid rgba(43,39,34,0.16); border-radius: 3px;
+    padding: 16px 13px 13px; background: rgba(251,247,234,0.93);
+    box-shadow: 0 1px 0 rgba(43,39,34,0.06);
     display: flex; flex-direction: column; gap: 3px;
   }
-  .pb-tile.pb-empty { opacity: 0.55; }
-  .pb-mode { font-family: var(--type); font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase; color: var(--ink-soft); }
-  .pb-score { font-family: var(--hand); font-weight: 700; font-size: 33px; line-height: 1; color: var(--ink-accent); }
+  /* washi tape pinning the card */
+  .pb-tile::before {
+    content: ""; position: absolute; top: -8px; left: 50%; width: 42px; height: 15px;
+    transform: translateX(-50%) rotate(-3deg);
+    background: rgba(214,200,160,0.6); border: 1px solid rgba(160,145,110,0.35);
+  }
+  /* subtle static scatter — deterministic per slot, not animated */
+  .pb-grid .pb-tile:nth-child(4n+1) { transform: rotate(-1.4deg); }
+  .pb-grid .pb-tile:nth-child(4n+2) { transform: rotate(1deg); }
+  .pb-grid .pb-tile:nth-child(4n+3) { transform: rotate(-0.6deg); }
+  .pb-grid .pb-tile:nth-child(4n)   { transform: rotate(1.5deg); }
+  .pb-grid .pb-tile:nth-child(even)::before { transform: translateX(-50%) rotate(3.5deg); }
+  .pb-tile.pb-sudden::before { background: rgba(187,86,64,0.3); border-color: rgba(150,60,45,0.4); }
+  .pb-tile.pb-daily::before  { background: rgba(178,58,58,0.28); border-color: rgba(150,40,30,0.4); }
+  .pb-tile.pb-empty { opacity: 0.5; }
+  .pb-kicker { font-family: var(--type); font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-soft); }
+  .pb-mode { font-family: var(--type); font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--pb-accent); }
+  .pb-score { font-family: var(--hand); font-weight: 700; font-size: 40px; line-height: 0.95; color: var(--ink); margin: 2px 0 1px; }
+  .pb-inf .pb-score { font-size: 34px; }
   .pb-empty .pb-score { color: var(--ink-soft); }
-  .pb-unit { font-size: 16px; color: var(--ink-soft); }
+  .pb-unit { font-size: 17px; color: var(--ink-soft); }
   .pb-sub { font-family: var(--type); font-size: 10px; color: var(--ink-soft); }
+  @media (prefers-reduced-motion: reduce) {
+    .pb-grid .pb-tile, .pb-grid .pb-tile::before { transform: none; }
+    .pb-grid .pb-tile::before { left: 50%; margin-left: -21px; }
+  }
 
   .hist-head, .hist-row {
     display: grid; grid-template-columns: 1fr 0.8fr 1.9fr 1.3fr;

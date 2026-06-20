@@ -76,6 +76,16 @@ export const MODES = {
   relaxed: { id: "relaxed", label: "Relaxed", seconds: 0, dropdown: true, pool: "all", strict: false, noTitle: false, examples: 3, hint: true,  blurb: "no timer · suggestions & hints · all words" },
 };
 export const MODE_ORDER = ["relaxed", "easy", "medium", "hard", "ultra", "lyricist"];
+// Per-mode accent for the index-card record tiles (label + tape tint). Keyed by mode id;
+// infinite tokens borrow the colour of their underlying difficulty.
+export const MODE_COLORS = {
+  relaxed:  "#5f87a8",   // denim
+  easy:     "#7a9e5e",   // green
+  medium:   "#c6912b",   // gold
+  hard:     "#bb5640",   // coral-red
+  ultra:    "#5a5a66",   // graphite
+  lyricist: "#8a78b0",   // lavender
+};
 
 /* Era engine */
 export const ERAS = ["gold", "lavender", "red", "denim", "graphite", "midnight"];

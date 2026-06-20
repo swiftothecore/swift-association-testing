@@ -2,7 +2,7 @@
 import { $, escapeRegExp, escapeHtml, prefersReducedMotion, shuffle, chance, normalizeTitle, normalizeLyric, fuzzySubstringRatio, levenshtein, mulberry32, dailySeed } from "./util.js";
 import {
   TOTAL_ROUNDS, RECENT_WINDOW, DIFF_KEY,
-  MODES, MODE_ORDER,
+  MODES, MODE_ORDER, MODE_COLORS,
   ERAS, TENDER_ERAS, FINALE_ERAS,
   ALBUM_COLORS, CB_ALBUM_COLORS, STUDIO_ALBUMS, TITLE_ALIASES,
   ACHIEVEMENTS, ACH_ICONS, ACH_BY_ID, ACH_GROUPS, ACH_GROUP_COLORS, ACH_GROUP_OF,
@@ -974,22 +974,43 @@ function dailyBest() {
   for (const h of loadHistory()) if (h.t === "daily" && h.s > best) best = h.s;
   return best;
 }
+// Accent colour for a record tile — classic mode, infinite token (borrows its
+// difficulty), or daily (the red margin rule).
+function modeAccent(token) {
+  if (token === "daily") return "#b23a3a";
+  const base = isInfiniteToken(token) ? token.split("-")[2] : token;
+  return MODE_COLORS[base] || "var(--ink-accent)";
+}
 function pbTile(mode, opts = {}) {
   const rec = opts.score != null ? { score: opts.score, date: null } : loadRecords(mode)[0];
   const empty = !rec || rec.score == null;
-  const unit = isInfiniteToken(mode) ? "" : "/" + TOTAL_ROUNDS;
+  const isInf = isInfiniteToken(mode);
+  const unit = isInf ? "" : "/" + TOTAL_ROUNDS;
+  // Infinite tiles split the label into a small variant kicker + the difficulty;
+  // the sudden-death variant gets a distinct tape tint so the two read apart.
+  let kicker = "", label = opts.label || modeLabel(mode), sudden = false;
+  if (isInf) {
+    const parts = mode.split("-");                 // ["inf", variant, modeid]
+    kicker = VARIANT_LABELS[parts[1]] || parts[1];
+    label = MODES[parts[2]] ? MODES[parts[2]].label : parts[2];
+    sudden = parts[1] === "sudden";
+  }
   let sub = opts.sub;
   if (!sub) {
     if (!rec) sub = "no runs yet";
     else {
       const parts = [];
+      if (isInf) parts.push("rounds");
       if (rec.time != null) parts.push(fmtTime(rec.time));
       if (rec.date) parts.push(recordDateLabel(rec.date));
       sub = parts.length ? parts.join(" · ") : "—";
     }
   }
-  return `<div class="pb-tile${empty ? " pb-empty" : ""}">` +
-    `<span class="pb-mode">${escapeHtml(opts.label || modeLabel(mode))}</span>` +
+  const cls = "pb-tile" + (empty ? " pb-empty" : "") + (isInf ? " pb-inf" : "") +
+    (sudden ? " pb-sudden" : "") + (mode === "daily" ? " pb-daily" : "");
+  return `<div class="${cls}" style="--pb-accent:${modeAccent(mode)}">` +
+    (kicker ? `<span class="pb-kicker">${escapeHtml(kicker)}</span>` : "") +
+    `<span class="pb-mode">${escapeHtml(label)}</span>` +
     `<span class="pb-score">${empty ? "—" : rec.score + (unit ? `<span class="pb-unit">${unit}</span>` : "")}</span>` +
     `<span class="pb-sub">${escapeHtml(sub)}</span></div>`;
 }
@@ -1231,7 +1252,7 @@ function renderRecordsPage() {
     if (loadRecords(tok).length) infTokens.push(tok);
   }
   const infBlock = infTokens.length
-    ? `<p class="rec-group-label">infinite — rounds survived</p><div class="pb-grid">${infTokens.map((t) => pbTile(t)).join("")}</div>`
+    ? `<p class="rec-group-label">infinite — rounds survived</p><div class="pb-grid pb-grid-inf">${infTokens.map((t) => pbTile(t)).join("")}</div>`
     : "";
   const db = dailyBest();
   const streak = effectiveDailyStreak(todayKey());
