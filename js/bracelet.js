@@ -23,6 +23,9 @@ export function buildBraceletSVG(results, activeRound, freshIndex, albums, opts)
   const colors = (opts && opts.colors) || ALBUM_COLORS;
   // per-round flags: was a hint taken that round? marks the charm with a small "H".
   const hinted = (opts && opts.hinted) || [];
+  // per-round verse tier ("perfect"/"verse"): a word-perfect recall hangs a pen-nib
+  // charm instead of the usual star — a keepsake of writing the line from memory.
+  const verseTiers = (opts && opts.verseTiers) || [];
   const W = 520, H = 64, xL = 26, xR = W - 26;
   // the thread sags between its tied ends like a real bracelet laid on the page
   const yAt = (x) => 20 + 10 * Math.sin(Math.PI * ((x - xL) / (xR - xL)));
@@ -78,10 +81,24 @@ export function buildBraceletSVG(results, activeRound, freshIndex, albums, opts)
       }
       const fresh = i === freshIndex;
       const delay = fresh ? "" : ` style="animation-delay:${(-(i * 0.9) % 5.5).toFixed(2)}s"`;
+      const isNib = verseTiers[i] === "perfect" || verseTiers[i] === "verse";
+      let charm;
+      if (isNib) {
+        // a downward fountain-pen nib: rhombus body, a vent hole and a slit
+        const cy = y + s(15.5), h = s(8.2), w = s(4.8);
+        const nibD = `M${x},${(cy - h).toFixed(2)} L${(x + w).toFixed(2)},${(cy - h * 0.15).toFixed(2)} L${x},${(cy + h).toFixed(2)} L${(x - w).toFixed(2)},${(cy - h * 0.15).toFixed(2)} Z`;
+        charm =
+          `<path d="${nibD}" class="b-bead" stroke-width="1.1" stroke-linejoin="round"${beadStyle}/>` +
+          `<circle cx="${x}" cy="${(cy - h * 0.2).toFixed(2)}" r="${s(1.3)}" class="b-nib-hole"/>` +
+          `<path d="M${x},${(cy - h * 0.05).toFixed(2)} L${x},${(cy + h * 0.82).toFixed(2)}" class="b-nib-slit" stroke-width="1"/>`;
+      } else {
+        charm =
+          `<path d="${starPath(x, y + s(15.5), s(7.4), s(3.1))}" class="b-bead" stroke-width="1.1" stroke-linejoin="round"${beadStyle}/>` +
+          `<circle cx="${x - s(1.9)}" cy="${y + s(12.6)}" r="${s(1.2)}" class="b-gloss"/>`;
+      }
       svg += `<g class="charm-dangle${fresh ? " fresh" : ""}"${delay}>` +
         `<circle cx="${x}" cy="${y + s(5.4)}" r="${s(2.3)}" fill="none" stroke="var(--ink)" stroke-width="1" opacity="0.7"/>` +
-        `<path d="${starPath(x, y + s(15.5), s(7.4), s(3.1))}" class="b-bead" stroke-width="1.1" stroke-linejoin="round"${beadStyle}/>` +
-        `<circle cx="${x - s(1.9)}" cy="${y + s(12.6)}" r="${s(1.2)}" class="b-gloss"/>` +
+        charm +
         `</g>`;
     } else if (answered === false) {
       // a quiet matte spacer bead — tinted to the picked album, kept muted

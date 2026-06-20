@@ -1406,8 +1406,8 @@ let justEarnedIndex = -1; // bead that just became a charm, for the swing-in
 
 function renderBracelet() {
   const opts = gameType === "infinite"
-    ? { total: Math.max(round, 1), letterBead: false, colors: albumPalette(), hinted: roundHinted }
-    : { colors: albumPalette(), hinted: roundHinted };
+    ? { total: Math.max(round, 1), letterBead: false, colors: albumPalette(), hinted: roundHinted, verseTiers: roundVerseTier }
+    : { colors: albumPalette(), hinted: roundHinted, verseTiers: roundVerseTier };
   $("bracelet").innerHTML = buildBraceletSVG(roundResults, round, justEarnedIndex, roundAlbums, opts);
   $("charmCount").textContent = roundResults.filter(Boolean).length;
   $("pageNum").textContent = gameType === "infinite"
@@ -2514,16 +2514,18 @@ function submitAnswer(song, isTimeout) {
   if (correct) score++;
   correctStreak = correct ? correctStreak + 1 : 0;
   if (gameType === "infinite" && !correct) { lives--; renderLives(); }
+  // A word-perfect+ recall earns a pen-nib bead (set BEFORE renderBracelet so the
+  // charm shows on the bead the moment it's earned, not a round late).
+  const versePlus = lyricMatch && (lyricMatch.tier === "perfect" || lyricMatch.tier === "verse");
+  if (versePlus) roundVerseTier[round - 1] = lyricMatch.tier;
   renderBracelet();
 
   if (lyricMatch) {
     lyricLineAnswers++;                  // recalled a lyric line (for You Knew The Line)
     verseBonus += lyricMatch.bonus;      // reward fuller recall, separate from the 0–13 score
-    const perfectPlus = lyricMatch.tier === "perfect" || lyricMatch.tier === "verse";
-    if (perfectPlus) {
+    if (versePlus) {
       gameVersePerfect++;                // lifetime versePerfect / milestone achievements
       verseKeepsake.push({ line: lyricMatch.line, word: currentWord, tier: lyricMatch.tier });
-      roundVerseTier[round - 1] = lyricMatch.tier;   // nib bracelet charm
     }
     if (lyricMatch.tier === "verse") { gameWholeVerses++; unlock("overachiever"); }
     // Someone Has A Favourite Song — 3 lyric answers from the same song in one game.
@@ -2823,8 +2825,8 @@ function endGame() {
 
   showScreen("results");
   const keepsakeOpts = isInfinite
-    ? { total: Math.max(roundsSurvived, 1), letterBead: false, colors: albumPalette(), hinted: roundHinted }
-    : { colors: albumPalette(), hinted: roundHinted };
+    ? { total: Math.max(roundsSurvived, 1), letterBead: false, colors: albumPalette(), hinted: roundHinted, verseTiers: roundVerseTier }
+    : { colors: albumPalette(), hinted: roundHinted, verseTiers: roundVerseTier };
   $("resultBracelet").innerHTML = buildBraceletSVG(roundResults, 0, -1, roundAlbums, keepsakeOpts);
   $("finalScore").textContent = boardScore;
   // Verse bonus (fuller lyric recall) rides alongside the score, never folded into it.
