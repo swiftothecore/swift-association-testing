@@ -351,6 +351,45 @@
   .hist-crown .ink-fill { fill: var(--ink); stroke: none; }
   #histMore { margin-top: 12px; }
 
+  /* ---------- Records calendar heatmap (games played per day / per hour) ----------
+     A contribution-grid in the notebook's gold "ink density". The grid spans the full
+     content width: columns are 1fr (so they fill exactly, no right-edge remainder) and
+     JS sets the row heights in px to keep the squares square; the day-label column
+     shares those exact row heights so the labels line up with the rows. */
+  .heat-wrap { margin-bottom: 4px; }
+  .heat-controls {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 14px; flex-wrap: wrap; margin-bottom: 14px;
+  }
+  /* timeframe dropdown — typewriter-styled; the right padding reserves room for the
+     native arrow so the longest label ("last 7 days · by hour") never sits under it. */
+  .heat-select {
+    font-family: var(--type); font-size: 12px; color: var(--ink);
+    background: var(--page-wash, #efe7d2);
+    border: 1.5px solid var(--ink-soft); border-radius: 2px;
+    padding: 6px 32px 6px 12px; outline: none; cursor: pointer; line-height: 1.2;
+  }
+  .heat-select:focus { border-color: var(--ink-accent); }
+  .heat-legend { display: flex; align-items: center; gap: 6px; font-family: var(--type); font-size: 10px; letter-spacing: 1px; color: var(--ink-soft); }
+  .heat-legend i { width: 11px; height: 11px; border-radius: 2px; border: 0.5px solid rgba(43,39,34,0.14); }
+
+  .heat-row { display: flex; align-items: flex-start; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+  .heat-side { display: flex; flex-direction: column; flex: none; }
+  .heat-days, .heat-hours {
+    display: grid; gap: 3px; font-family: var(--type); font-size: 9px; color: var(--ink-soft);
+  }
+  .heat-days span, .heat-hours span { align-self: center; line-height: 1; white-space: nowrap; padding-right: 4px; }
+  .heat-main { flex: 1; min-width: 0; }
+  .heat-months, .heat-cols { font-family: var(--type); font-size: 9px; letter-spacing: 0.5px; color: var(--ink-soft); }
+  .heat-months { position: relative; }
+  .heat-months span { position: absolute; top: 0; white-space: nowrap; }
+  .heat-cols { display: grid; }
+  .heat-cols span { text-align: center; line-height: 16px; }
+  .heat-grid { display: grid; gap: 3px; width: 100%; }
+  .heat-cell { border-radius: 2px; }
+  .heat-foot { font-family: var(--hand); font-size: 18px; color: var(--ink-soft); margin-top: 12px; transform: rotate(-0.4deg); }
+  .heat-foot b { color: var(--ink-accent); font-weight: 700; }
+
   /* ---------- Bracelet (round progress + score) ---------- */
   .bracelet-wrap { margin-bottom: 26px; }
   .bracelet-meta {

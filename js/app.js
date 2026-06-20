@@ -1015,7 +1015,209 @@ function appendHistoryRows(hist) {
   const more = $("histMore");
   if (more && historyShown >= hist.length) more.style.display = "none";
 }
+
+/* ---------- Records calendar heatmap (games played per day / per hour) ----------
+   A GitHub-style contribution grid. Data comes entirely from the run history log —
+   each entry's ISO datetime, bucketed by the player's active timezone so squares land
+   on their local calendar day/hour (consistent with the daily challenge). Gold "ink
+   density" = games played: faint = none, deepening to solid for a heavy day. The grid
+   fills the full content width (JS sizes the cells from the measured width so they stay
+   square and the day labels line up exactly with the rows). */
+const HEAT_GAP = 3;                          // px gap between squares
+const HEAT_FILL = ["rgba(43,39,34,0.09)", "rgba(200,149,31,0.30)", "rgba(200,149,31,0.56)", "rgba(200,149,31,0.80)", "#a9791f"];
+const MON_ABBR = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+const WD_ABBR = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];   // indexed by getUTCDay
+const HEAT_HOURS = { 0: "12a", 6: "6a", 12: "12p", 18: "6p", 23: "11p" };
+let _heatView = null;            // "y1" | "ytd" | "m1" | "wk"; null until the adaptive default is picked
+let _heatResizeWired = false;    // window-resize listener attached once
+
+// An ISO datetime → the player's local calendar-day key / hour, in the active zone.
+function localDayKeyOf(iso) {
+  try { return new Date(iso).toLocaleDateString("en-CA", { timeZone: activeTimeZone() }); }
+  catch (e) { return String(iso).slice(0, 10); }
+}
+function localHourOf(iso) {
+  try {
+    const p = new Intl.DateTimeFormat("en-GB", { timeZone: activeTimeZone(), hour12: false, hour: "2-digit" }).formatToParts(new Date(iso));
+    return (+(p.find((x) => x.type === "hour")?.value) || 0) % 24;
+  } catch (e) { return new Date(iso).getHours(); }
+}
+// Pure date-string math on a UTC anchor — stable, no zone drift (keys are "YYYY-MM-DD").
+function keyPlus(key, n) { const d = new Date(key + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+function keyMinus(key, n) { return keyPlus(key, -n); }
+function keyDiff(a, b) { return Math.round((new Date(a + "T00:00:00Z") - new Date(b + "T00:00:00Z")) / 864e5); }
+function keyDow(key) { return new Date(key + "T00:00:00Z").getUTCDay(); }      // 0=Sun..6=Sat
+function keyMonth(key) { return new Date(key + "T00:00:00Z").getUTCMonth(); }
+function heatPrettyDate(key) {
+  try { return new Date(key + "T00:00:00Z").toLocaleDateString("en-GB", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" }); }
+  catch (e) { return key; }
+}
+function hourLabel(h) { const ap = h < 12 ? "am" : "pm"; let hr = h % 12; if (hr === 0) hr = 12; return hr + ap; }
+
+// Mon-start (default) puts Monday on row 0; Sun-start puts Sunday on row 0.
+function heatRow(key) { const d = keyDow(key); return settings.weekStart === "sun" ? d : (d + 6) % 7; }
+function dowLabels() { return settings.weekStart === "sun" ? ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] : ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]; }
+// Games played per local day, across the whole history log.
+function heatDayCounts() {
+  const m = Object.create(null);
+  for (const h of loadHistory()) { const k = localDayKeyOf(h.d); m[k] = (m[k] || 0) + 1; }
+  return m;
+}
+function heatLevel(c, max) { if (c <= 0) return 0; if (max <= 4) return Math.min(4, c); return Math.min(4, Math.ceil(c / (max / 4))); }
+// >1 month of history → default to the year; otherwise the compact 30-day view.
+function heatDefaultView() {
+  const hist = loadHistory();
+  if (!hist.length) return "m1";
+  return keyDiff(todayKey(), localDayKeyOf(hist[hist.length - 1].d)) > 30 ? "y1" : "m1";
+}
+
+function heatSectionHTML() {
+  const opts = [["y1", "last 12 months"], ["ytd", todayKey().slice(0, 4)], ["m1", "last 30 days"], ["wk", "last 7 days · by hour"]];
+  const optHTML = opts.map(([v, l]) => `<option value="${v}"${v === _heatView ? " selected" : ""}>${escapeHtml(l)}</option>`).join("");
+  const legend = [0, 1, 2, 3, 4].map((l) => `<i style="background:${HEAT_FILL[l]}"></i>`).join("");
+  return `<p class="rec-group-label">calendar — games played</p>` +
+    `<div class="heat-wrap">` +
+      `<div class="heat-controls">` +
+        `<select id="heatRange" class="heat-select" aria-label="calendar timeframe">${optHTML}</select>` +
+        `<div class="heat-legend"><span>less</span>${legend}<span>more</span></div>` +
+      `</div>` +
+      `<div id="heatBody"></div>` +
+      `<div id="heatFoot" class="heat-foot"></div>` +
+    `</div>`;
+}
+
+function setHeatFoot(view, total, days) {
+  const f = $("heatFoot"); if (!f) return;
+  const g = (n) => `${n} game${n === 1 ? "" : "s"}`;
+  let msg;
+  if (total === 0) msg = view === "m1" ? `no games yet this month — <b>play to start filling your calendar</b>` : `nothing logged here yet — <b>play a round to begin</b>`;
+  else if (view === "y1") msg = `<b>${g(total)}</b> across <b>${days} day${days === 1 ? "" : "s"}</b> — darker means more games`;
+  else if (view === "ytd") msg = `<b>${g(total)}</b> so far in ${todayKey().slice(0, 4)}`;
+  else msg = `<b>${g(total)}</b> over the last 30 days`;
+  f.innerHTML = msg;
+}
+
+function renderDailyHeat(body, view) {
+  const today = todayKey();
+  const counts = heatDayCounts();
+  let rangeStart;
+  if (view === "y1") rangeStart = keyMinus(today, 364);
+  else if (view === "m1") rangeStart = keyMinus(today, 29);
+  else rangeStart = today.slice(0, 4) + "-01-01";                       // ytd: counts up from 1 Jan
+  const gridStart = keyMinus(rangeStart, heatRow(rangeStart));          // back up to the week-start boundary
+  const weeks = Math.floor(keyDiff(today, gridStart) / 7) + 1;
+
+  let max = 0, total = 0, daysPlayed = 0;
+  for (let w = 0; w < weeks; w++) for (let r = 0; r < 7; r++) {
+    const key = keyPlus(gridStart, w * 7 + r);
+    if (keyDiff(today, key) < 0 || keyDiff(key, rangeStart) < 0) continue;   // future / before range
+    const c = counts[key] || 0;
+    if (c > max) max = c;
+    if (c > 0) { total += c; daysPlayed++; }
+  }
+
+  const cells = [], months = []; let lastMonth = -1;
+  for (let w = 0; w < weeks; w++) {
+    const topKey = keyPlus(gridStart, w * 7);
+    const repKey = keyDiff(topKey, rangeStart) < 0 ? rangeStart : topKey;     // don't label a pre-range month
+    const m = keyMonth(repKey);
+    if (m !== lastMonth) { months.push(`<span style="left:${(w / weeks * 100).toFixed(3)}%">${MON_ABBR[m]}</span>`); lastMonth = m; }
+    for (let r = 0; r < 7; r++) {
+      const key = keyPlus(gridStart, w * 7 + r);
+      if (keyDiff(today, key) < 0 || keyDiff(key, rangeStart) < 0) { cells.push(`<div class="heat-cell" style="background:transparent"></div>`); continue; }
+      const c = counts[key] || 0;
+      cells.push(`<div class="heat-cell" title="${c} game${c === 1 ? "" : "s"} · ${heatPrettyDate(key)}" style="background:${HEAT_FILL[heatLevel(c, max)]};border:0.5px solid rgba(43,39,34,0.10)"></div>`);
+    }
+  }
+
+  const labels = dowLabels();
+  const dayLabelHTML = [0, 2, 4].map((r) => `<span style="grid-row:${r + 1}">${labels[r]}</span>`).join("");
+  const prov = 11;                                                       // provisional cell px until fitHeatGrid measures
+  body.innerHTML =
+    `<div class="heat-row">` +
+      `<div class="heat-side"><div class="heat-corner" style="height:15px"></div>` +
+        `<div class="heat-days" id="heatDays" style="grid-template-rows:repeat(7,${prov}px)">${dayLabelHTML}</div></div>` +
+      `<div class="heat-main">` +
+        `<div class="heat-months" style="height:15px">${months.join("")}</div>` +
+        `<div class="heat-grid" id="heatGrid" data-view="${view}" data-weeks="${weeks}" style="grid-auto-flow:column;grid-template-columns:repeat(${weeks},1fr);grid-template-rows:repeat(7,${prov}px)">${cells.join("")}</div>` +
+      `</div>` +
+    `</div>`;
+  setHeatFoot(view, total, daysPlayed);
+  fitHeatGrid();
+}
+
+function renderWeekHeat(body) {
+  const today = todayKey();
+  const nowHour = localHourOf(new Date().toISOString());
+  const counts = Object.create(null);
+  for (const h of loadHistory()) {
+    const dk = localDayKeyOf(h.d);
+    if (keyDiff(today, dk) > 6 || keyDiff(today, dk) < 0) continue;     // outside the rolling 7-day window
+    const k = dk + "|" + localHourOf(h.d); counts[k] = (counts[k] || 0) + 1;
+  }
+  let max = 0, total = 0;
+  for (let d = 0; d < 7; d++) { const dk = keyMinus(today, 6 - d); for (let h = 0; h < 24; h++) { if (dk === today && h > nowHour) continue; const c = counts[dk + "|" + h] || 0; if (c > max) max = c; total += c; } }
+
+  const colLabels = [];
+  for (let d = 0; d < 7; d++) colLabels.push(`<span>${WD_ABBR[keyDow(keyMinus(today, 6 - d))]}</span>`);
+  const hourLabelHTML = [0, 6, 12, 18, 23].map((h) => `<span style="grid-row:${h + 1}">${HEAT_HOURS[h]}</span>`).join("");
+  const cells = [];
+  for (let d = 0; d < 7; d++) {
+    const dk = keyMinus(today, 6 - d);
+    for (let h = 0; h < 24; h++) {
+      if (dk === today && h > nowHour) { cells.push(`<div class="heat-cell" style="background:transparent"></div>`); continue; }
+      const c = counts[dk + "|" + h] || 0;
+      cells.push(`<div class="heat-cell" title="${c} game${c === 1 ? "" : "s"} · ${heatPrettyDate(dk)} ${hourLabel(h)}" style="background:${HEAT_FILL[heatLevel(c, max)]};border:0.5px solid rgba(43,39,34,0.10)"></div>`);
+    }
+  }
+  const CH = 12;
+  body.innerHTML =
+    `<div class="heat-row">` +
+      `<div class="heat-side"><div class="heat-corner" style="height:16px"></div>` +
+        `<div class="heat-hours" style="grid-template-rows:repeat(24,${CH}px);gap:${HEAT_GAP}px">${hourLabelHTML}</div></div>` +
+      `<div class="heat-main">` +
+        `<div class="heat-cols" style="grid-template-columns:repeat(7,1fr);gap:${HEAT_GAP}px;height:16px">${colLabels.join("")}</div>` +
+        `<div class="heat-grid" id="heatGrid" data-view="wk" style="grid-auto-flow:column;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(24,${CH}px);gap:${HEAT_GAP}px">${cells.join("")}</div>` +
+      `</div>` +
+    `</div>`;
+  const f = $("heatFoot");
+  if (f) f.innerHTML = total ? `<b>${total} game${total === 1 ? "" : "s"}</b> in the last 7 days — busiest hours are darkest` : `nothing in the last 7 days — <b>play to light up your week</b>`;
+}
+
+function renderHeatBody() {
+  const body = $("heatBody"); if (!body) return;
+  if (_heatView === "wk") renderWeekHeat(body); else renderDailyHeat(body, _heatView);
+  const sel = $("heatRange"); if (sel) sel.value = _heatView;
+}
+// Size the daily grid to the full content width: square cells + matching day-label rows.
+// Dense ranges (12 months, year) fill the width with small cells; sparse ranges (30 days =
+// 5 weeks) are capped at HEAT_CELL_MAX and left-aligned so the squares don't balloon. The
+// month-label strip is pinned to the grid's actual width either way so labels stay aligned.
+// Retries on rAF while the width reads 0 (the records screen is hidden during the initial
+// render, so the first measurement after showScreen can still be mid-layout).
+const HEAT_CELL_MAX = 30;   // sparse ranges cap here (left-aligned)
+const HEAT_CELL_MIN = 6;    // dense ranges on a narrow screen floor here (row scrolls)
+function fitHeatGrid(retries = 10) {
+  const grid = $("heatGrid"); if (!grid || grid.dataset.view === "wk") return;
+  const w = grid.clientWidth;
+  if (!w) { if (retries > 0) requestAnimationFrame(() => fitHeatGrid(retries - 1)); return; }
+  const weeks = +grid.dataset.weeks || 1;
+  const full = (w - (weeks - 1) * HEAT_GAP) / weeks;
+  // Three regimes: cap big (sparse → left-aligned), floor small (dense+narrow → fixed px, the
+  // row scrolls), else fill the width exactly with 1fr columns. Fixed-width keeps cells square.
+  let cell, fixed;
+  if (full > HEAT_CELL_MAX) { cell = HEAT_CELL_MAX; fixed = true; }
+  else if (full < HEAT_CELL_MIN) { cell = HEAT_CELL_MIN; fixed = true; }
+  else { cell = full; fixed = false; }
+  grid.style.gridTemplateColumns = fixed ? `repeat(${weeks},${cell}px)` : `repeat(${weeks},1fr)`;
+  grid.style.gridTemplateRows = `repeat(7,${cell}px)`;
+  const days = $("heatDays"); if (days) days.style.gridTemplateRows = `repeat(7,${cell}px)`;
+  const months = grid.parentElement.querySelector(".heat-months");
+  if (months) months.style.width = fixed ? `${weeks * cell + (weeks - 1) * HEAT_GAP}px` : "";
+}
+
 function renderRecordsPage() {
+  if (_heatView === null) _heatView = heatDefaultView();
   const name = getPlayerName();
   const sig = name
     ? `<span class="rec-sig-name">${escapeHtml(name)}’s notebook</span><span class="rec-sig-sub">best scores &amp; history</span>`
@@ -1052,7 +1254,12 @@ function renderRecordsPage() {
   $("recordsBody").innerHTML =
     `<div class="rec-sig">${sig}</div>` +
     `<p class="rec-group-label">personal bests</p><div class="pb-grid">${classicTiles}</div>` +
-    infBlock + dailyBlock + histBlock;
+    infBlock + dailyBlock + heatSectionHTML() + histBlock;
+
+  renderHeatBody();
+  const heatSel = $("heatRange");
+  if (heatSel) heatSel.addEventListener("change", () => { _heatView = heatSel.value; renderHeatBody(); });
+  if (!_heatResizeWired) { _heatResizeWired = true; window.addEventListener("resize", () => { if ($("heatGrid")) fitHeatGrid(); }); }
 
   const saveBtn = $("recSignSave");
   if (saveBtn) saveBtn.addEventListener("click", () => {
@@ -1071,6 +1278,8 @@ function openRecords(from) {
   recordsBackTarget = from;
   renderRecordsPage();
   showScreen("records");
+  fitHeatGrid();                                   // now visible (display:block) → size to the real width
+  requestAnimationFrame(() => fitHeatGrid());      // and again next frame, in case layout wasn't flushed
 }
 let achievementsBackTarget = "start";  // where the Charm Collection's ← back returns to
 function openAchievements(from) {
@@ -3005,6 +3214,7 @@ function renderSettingsBody() {
       `<p class="set-note">Today here is <b>${todayKey()}</b> — the next puzzle drops in ${formatResetCountdown(msUntilDailyReset())}. Changing this shifts your daily’s reset time and can affect your streak.</p>`
     ) +
     setSection("Display &amp; accessibility",
+      setChoiceHTML("weekStart", "Week starts on", "first row of the records calendar", [{ val: "mon", label: "Monday" }, { val: "sun", label: "Sunday" }]) +
       setToggleHTML("highContrast", "High contrast", "darker ink, whiter paper") +
       setToggleHTML("colorBlindAlbums", "Colour-blind album colours", "a more distinguishable palette") +
       setToggleHTML("hideDailyScore", "Hide daily score until reveal", "")
