@@ -15,8 +15,8 @@ import {
   loadStats, updateStats, totalPlayed,
   loadAchievements, saveAchievements,
   loadMode,
-  loadDailyResult, saveDailyResult, dailyTotals,
-  bumpDailyStreak, effectiveDailyStreak,
+  loadDailyResult, saveDailyResult, clearDailyResult, dailyTotals,
+  bumpDailyStreak, effectiveDailyStreak, saveDailyStreak,
   markTypePlayed,
   loadSongTally, recordGameTally,
   loadMetrics, recordGameMetrics,
@@ -80,6 +80,10 @@ let debounceId = null;
 let statsBackTarget = "start";
 let settings = { ...{} };       // populated from loadSettings() in init
 let pausedRemaining = null;     // timer seconds left when the settings modal paused play
+
+// Dev cheats (only active behind the ?dev flag; see devActive / js/dev.js).
+let devNoLog = false;           // when true, endGame skips folding the run into history/stats/records
+let devFrozenRemaining = null;  // seconds stashed by the dev timer-freeze toggle
 
 /* ---------- Settings: effective getters & application ---------- */
 // Reduced motion: the setting overrides the OS preference ("on"/"off"); "auto"
@@ -1387,6 +1391,7 @@ function activeTimeZone() {
 // Today's date key, "YYYY-MM-DD" in the active zone (en-CA renders ISO order). The
 // daily gate, puzzle seed, streak, share, and button state all route through this.
 function todayKey() {
+  if (typeof window !== "undefined" && window.__devDate) return window.__devDate;   // dev date override
   try { return new Date().toLocaleDateString("en-CA", { timeZone: activeTimeZone() }); }
   catch (e) { return new Date().toLocaleDateString("en-CA"); }
 }
@@ -2292,7 +2297,8 @@ function endGame() {
   const runTime = currentMode.seconds > 0 ? gameTimeSum : null;
 
   // Log every finished run to the chronological history (classic / infinite / daily).
-  appendHistory({
+  // devNoLog (a dev cheat) skips every persistence fold so test runs don't dirty the data.
+  if (!devNoLog) appendHistory({
     s: boardScore, c: score, n: roundsSurvived,
     m: isDaily ? "daily" : mode, t: gameType,
     d: new Date().toISOString(), tm: runTime,
@@ -2301,12 +2307,12 @@ function endGame() {
 
   // Daily plays don't touch any mode's stats board. A hinted run counts toward
   // played/average/distribution but can't set any "best" (countBest = false).
-  if (!isDaily) updateStats(boardScore, mode, gameMaxStreak, hintsUsed === 0);
+  if (!isDaily && !devNoLog) updateStats(boardScore, mode, gameMaxStreak, hintsUsed === 0);
 
   // Lifetime per-song / per-word tally (every game type counts — it's a catalog
   // record, not a per-mode board). Powers Favourite Song, Songs Discovered,
   // Favourite Album, Nemesis Word.
-  recordGameTally(roundResults.map((correct, i) => ({
+  if (!devNoLog) recordGameTally(roundResults.map((correct, i) => ({
     correct,
     title: roundSongs[i] || null,
     album: roundAlbums[i] || null,
@@ -2314,7 +2320,7 @@ function endGame() {
   })));
 
   // Lifetime cross-game metrics (fastest/avg answer, accuracy, lyric lines, daily totals).
-  const metrics = recordGameMetrics({
+  const metrics = devNoLog ? { noTimeoutStreak: 0 } : recordGameMetrics({
     rounds: roundsSurvived, correct: score,
     timeSumMs: gameTimeSum * 1000, timedRounds: gameTimedRounds,
     fastestMs: gameFastestMs, lyricLines: lyricLineAnswers,
@@ -2324,7 +2330,7 @@ function endGame() {
   const played = totalPlayed();   // classic modes only — infinite/daily tracked separately
 
   // Record this game type; "Hits Different" needs all three (classic + infinite + daily).
-  const typesPlayed = markTypePlayed(gameType);
+  const typesPlayed = devNoLog ? { classic: false, infinite: false, daily: false } : markTypePlayed(gameType);
   if (typesPlayed.classic && typesPlayed.infinite && typesPlayed.daily) unlock("hits-different");
 
   // end-of-game achievements (daily counts toward the game-quality ones; infinite deferred)
@@ -2418,7 +2424,7 @@ function endGame() {
   // Every positive run folds into your personal records (best-per-mode); a 0 doesn't
   // (it would never be a best). A hinted run is skipped here too — it can't set a PB,
   // though it's always in the history log either way.
-  if (boardScore > 0 && hintsUsed === 0) {
+  if (boardScore > 0 && hintsUsed === 0 && !devNoLog) {
     const recTime = isInfinite ? null : runTime;   // infinite ranks by rounds, not speed
     const prevBest = loadRecords(mode)[0];
     const { isBest } = insertRecord(mode, boardScore, todayKey(), recTime);
@@ -3141,6 +3147,221 @@ function routeSettingsWheel(e) {
   e.preventDefault();
 }
 
+/* ---------- Dev cheats (flag-gated; the panel itself lives in js/dev.js) ---------- */
+// Activation: append ?dev=swift13 to the URL once to arm (persists in localStorage),
+// ?dev=0 to disarm. The param is stripped from the URL afterwards so it isn't shared.
+const DEV_FLAG = "swiftSongAssociation.dev";
+function devActive() {
+  try {
+    const params = new URLSearchParams(location.search);
+    if (params.has("dev")) {
+      const v = params.get("dev");
+      if (v === "0" || v === "off") localStorage.removeItem(DEV_FLAG);
+      else if (v === "swift13" || v === "1") localStorage.setItem(DEV_FLAG, "1");
+      params.delete("dev");
+      const qs = params.toString();
+      history.replaceState(null, "", location.pathname + (qs ? "?" + qs : "") + location.hash);
+    }
+    return localStorage.getItem(DEV_FLAG) === "1";
+  } catch (e) { return false; }
+}
+
+// Re-point the *current* live round to a chosen prompt word without advancing.
+function devApplyWord(word) {
+  if (!word) return;
+  currentWord = word;
+  if (!usedWords.includes(word)) usedWords.push(word);
+  currentSongs = validSongs(currentWord, effectiveStrict(), currentMode.noTitle);
+  roundHintSong = currentSongs.length ? currentSongs[Math.floor(Math.random() * currentSongs.length)] : null;
+  $("wordDisplay").textContent = currentWord;
+  renderExcludedNote();
+  renderHintAffordance();
+}
+
+// Answer the current live round. kind: "correct" | "wrong" | "timeout".
+function devAnswer(kind) {
+  if (!screens.game.classList.contains("active")) return;
+  if (roundLocked) { advanceFromFeedback(); return; }   // a verdict is showing → just turn the page
+  if (kind === "timeout") { submitAnswer(null, true); return; }
+  if (kind === "wrong") {
+    const bad = allSongs.find((s) => !currentSongs.some((c) => c.title === s.title));
+    if (bad) submitAnswer(bad); else submitAnswer(null, true);
+    return;
+  }
+  if (currentSongs.length) submitAnswer(currentSongs[0]);   // correct
+}
+
+/* Timer cheats — operate on the live interval (timerStart) or a frozen value. */
+function devTimerFreeze() {
+  if (!timerId) return false;
+  devFrozenRemaining = Math.max(0, currentMode.seconds - (performance.now() - timerStart) / 1000);
+  clearTimer();
+  return true;
+}
+function devTimerUnfreeze() {
+  if (devFrozenRemaining == null) return;
+  startTimer(devFrozenRemaining);
+  devFrozenRemaining = null;
+}
+function devTimerAdd(secs) {
+  if (timerId) timerStart += secs * 1000;
+  else if (devFrozenRemaining != null) devFrozenRemaining = Math.max(0, devFrozenRemaining + secs);
+}
+function devTimerSet(secs) {
+  if (timerId) timerStart = performance.now() - (currentMode.seconds - secs) * 1000;
+  else if (devFrozenRemaining != null) devFrozenRemaining = secs;
+}
+function devTimerDisable() {
+  clearTimer();
+  devFrozenRemaining = null;
+  const wrap = document.querySelector(".timer-wrap");
+  if (wrap) wrap.style.display = "none";
+}
+
+// Build and finish a whole game in one shot (fills the per-round arrays from real
+// data, then runs the genuine endGame so results / records / achievements all fire).
+function devSimulate(correctCount, opts = {}) {
+  const type = opts.type || "classic";
+  gameType = type === "infinite" ? "infinite" : type === "daily" ? "daily" : "classic";
+  if (opts.mode && MODES[opts.mode]) currentMode = MODES[opts.mode];
+  if (gameType === "daily") currentMode = MODES.medium;
+  resetRunState();
+  if (gameType === "infinite") lives = startingLives();
+  const total = TOTAL_ROUNDS;
+  const want = Math.max(0, Math.min(correctCount, total));
+  for (let i = 0; i < total; i++) {
+    round = i + 1;
+    const word = pickWord();
+    currentWord = word;
+    const valid = validSongs(word, effectiveStrict(), currentMode.noTitle);
+    const correct = i < want && valid.length > 0;
+    roundWords[i] = word;
+    roundResults[i] = correct;
+    if (correct) {
+      const song = valid[Math.floor(Math.random() * valid.length)];
+      roundAlbums[i] = song.album || null;
+      roundSongs[i] = song.title;
+      score++;
+      correctStreak++;
+      gameMaxStreak = Math.max(gameMaxStreak, correctStreak);
+      gameTimedRounds++;
+      gameTimeSum += 2;
+    } else {
+      roundAlbums[i] = null;
+      roundSongs[i] = null;
+      correctStreak = 0;
+      gameTimeouts++;
+      if (gameType === "infinite") lives--;
+    }
+  }
+  round = total;
+  endGame();
+}
+
+/* Seeding helpers — fabricate plausible data from the real catalog. */
+function devSeedRecords() {
+  const today = todayKey();
+  MODE_ORDER.forEach((m, mi) => {
+    for (let k = 0; k < 3; k++) {
+      const sc = Math.max(1, TOTAL_ROUNDS - k - (mi % 3));
+      const time = m === "relaxed" ? null : 30 + k * 8 + Math.random() * 10;
+      insertRecord(m, sc, today, time);
+    }
+  });
+}
+function devSeedHistory(n = 25) {
+  const modes = ["easy", "medium", "hard", "ultra", "lyricist"];
+  const now = Date.now();
+  for (let i = 0; i < n; i++) {
+    const m = modes[Math.floor(Math.random() * modes.length)];
+    const c = Math.floor(Math.random() * (TOTAL_ROUNDS + 1));
+    appendHistory({ s: c, c, n: TOTAL_ROUNDS, m, t: "classic",
+      d: new Date(now - i * 7 * 3600 * 1000).toISOString(), tm: 30 + Math.random() * 60 });
+  }
+}
+function devSeedTally(games = 6) {
+  for (let g = 0; g < games; g++) {
+    const rounds = [];
+    for (let i = 0; i < TOTAL_ROUNDS; i++) {
+      const s = allSongs[Math.floor(Math.random() * allSongs.length)];
+      const correct = Math.random() < 0.7;
+      rounds.push({ correct, title: correct ? s.title : null,
+        album: correct ? (s.album || null) : null,
+        word: playableWords[Math.floor(Math.random() * playableWords.length)] });
+    }
+    recordGameTally(rounds);
+  }
+}
+function devUnlockAllAch() {
+  const d = new Date().toISOString().slice(0, 10);
+  ACHIEVEMENTS.forEach((a) => { earnedAchievements[a.id] = d; });
+  saveAchievements(earnedAchievements);
+}
+function devLockAllAch() { resetAchievements(); earnedAchievements = {}; }
+
+// The single curated surface handed to the dev panel. Getters read live module
+// state on each call; the rest are thin wrappers over the game's own functions.
+function buildDevApi() {
+  return {
+    MODES, MODE_ORDER, ERAS, ACHIEVEMENTS,
+    getState: () => ({
+      screen: Object.keys(screens).find((k) => screens[k].classList.contains("active")),
+      round, score, total: TOTAL_ROUNDS,
+      mode: currentMode.id, gameType, infiniteVariant, lives,
+      era: document.body.getAttribute("data-era"),
+      word: currentWord, roundLocked,
+      hintsUsed, devNoLog, devDate: window.__devDate || null,
+      valid: currentSongs.map((s) => ({
+        title: s.title, album: s.album || null,
+        line: extractLineWithWord(s.lyrics, currentWord),
+      })),
+    }),
+    words: () => playableWords.slice(),
+    // Round control
+    answer: devAnswer,
+    advance: () => advanceFromFeedback(),
+    setWord: devApplyWord,
+    setScore: (n) => { score = Math.max(0, n | 0); },
+    jumpToRound: (n) => { round = Math.max(0, (n | 0) - 1); clearTimer(); advanceRound(); startTimer(); },
+    endNow: () => endGame(),
+    simulate: devSimulate,
+    // Start games
+    start: (mode) => { if (mode && MODES[mode]) setMode(mode); startGame(); },
+    startInfinite: (variant) => startInfinite(variant || infiniteVariant),
+    startDaily: () => startDaily(),
+    // Word / era / mode
+    setEra: (era) => applyEra(era),
+    setMode: (id) => setMode(id),
+    // Timer
+    timer: { freeze: devTimerFreeze, unfreeze: devTimerUnfreeze, add: devTimerAdd,
+             set: devTimerSet, disable: devTimerDisable },
+    // Daily
+    daily: {
+      resetToday: () => clearDailyResult(todayKey()),
+      setDate: (d) => { window.__devDate = d || null; },
+      setStreak: (current, best, lastPlayed) =>
+        saveDailyStreak({ current: current | 0, best: Math.max(best | 0, current | 0),
+          lastPlayed: lastPlayed || todayKey() }),
+    },
+    // Seeding
+    seed: { records: devSeedRecords, history: devSeedHistory, tally: devSeedTally,
+            unlockAch: devUnlockAllAch, lockAch: devLockAllAch,
+            fireAch: (id) => unlock(id), setName: (n) => { settings.playerName = setPlayerName(n); } },
+    // Resets
+    reset: { records: resetRecords, stats: resetStatsAll, ach: () => { resetAchievements(); earnedAchievements = {}; },
+             tally: resetTally, daily: resetDaily, all: clearAllData },
+    // Visual eggs
+    eggs: { snake: () => slitherSnake(), doodle: (k) => addDoodle(k || "cat", "corner-br", 60, 60),
+            sparkle: () => celebrateCorrect(3), starShower: () => celebratePerfect(),
+            blueWash: () => triggerBlueWash(), secret13: () => revealSecret13(),
+            pen: (p) => setPen(p || null) },
+    // Misc
+    setNoLog: (on) => { devNoLog = !!on; },
+    reload: () => location.reload(),
+    goStart: () => { showScreen("start"); $("startContent").style.display = ""; refreshStartBoard(); },
+  };
+}
+
 /* ---------- Init ---------- */
 async function init() {
   showScreen("start");
@@ -3242,6 +3463,13 @@ async function init() {
         <p>${escapeHtml(err.message)}</p>
         <p>Try refreshing the page.</p>
       </div>`;
+  }
+
+  // Dev cheats panel — only loaded behind the ?dev flag, so it costs nothing in
+  // normal play. The module is committed but inert until armed (see devActive).
+  if (devActive()) {
+    try { (await import("./dev.js")).initDev(buildDevApi()); }
+    catch (e) { console.warn("dev panel failed to load", e); }
   }
 }
 

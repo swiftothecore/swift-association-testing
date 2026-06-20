@@ -283,6 +283,11 @@ export function loadDailyResult(dateStr) {
 export function saveDailyResult(dateStr, data) {
   try { localStorage.setItem(DAILY_KEY + "." + dateStr, JSON.stringify(data)); } catch (e) { /* ignore */ }
 }
+// Drop just one day's saved daily result (dev helper) — lets a single day be
+// replayed without nuking the streak the way resetDaily() does.
+export function clearDailyResult(dateStr) {
+  try { localStorage.removeItem(DAILY_KEY + "." + dateStr); } catch (e) { /* ignore */ }
+}
 
 // Lifetime daily totals derived from the per-day result keys (the authoritative
 // record — saved on every daily completion). The `metrics` counters miss any
