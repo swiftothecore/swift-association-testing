@@ -291,8 +291,10 @@
     font-family: var(--type); font-size: 11px; color: var(--ink-soft);
     margin: 9px 0 0; padding-top: 8px; border-top: 1px dashed rgba(43,39,34,0.16);
   }
-  /* the tab row reused on the stats page */
+  /* the tab rows reused on the stats page — two tiers (view / difficulty) */
   .stats-tabs { margin-bottom: 16px; }
+  .stats-tabs:has(+ .stats-subtabs) { margin-bottom: 8px; }
+  .stats-subtabs { margin-bottom: 16px; padding-left: 18px; }
   /* #resultPodium holds the compact best line (classic/infinite) or the daily streak panel */
   .podium { list-style: none; margin: 0 0 4px; padding: 0; }
 

@@ -279,17 +279,31 @@ function sparklineSVG(scores) {
     <circle cx="${lx}" cy="${ly}" r="3.6" class="form-dot"/>
   </svg>`;
 }
+// Last difficulty viewed under the Classic tier this session — so re-clicking
+// "Classic" (after a detour through All/Infinite) returns there, not to the
+// active play mode. Falls back to currentMode.id until a difficulty is opened.
+let lastStatsDifficulty = null;
 function renderStats(lastScore, viewMode = defaultStatsView()) {
   const el = $("statsBody");
+  // "classic" is a tier-1 selector, not a real view — resolve it to a difficulty.
+  if (viewMode === "classic") viewMode = lastStatsDifficulty || currentMode.id;
   const isAll = viewMode === "all";
   const isInf = viewMode === "infinite";
-  // mode tabs — an "All" collated tab, each difficulty, then a distinct Infinite tab
-  const tabDefs = [{ m: "all", label: "All" }].concat(MODE_ORDER.map((m) => ({ m, label: MODES[m].label })));
-  const tabs = `<div class="mode-tabs stats-tabs">` + tabDefs.map((t) =>
-    `<button type="button" class="mode-tab${t.m === viewMode ? " active" : ""}" data-statmode="${t.m}">${t.label}</button>`
-  ).join("") +
+  const isClassic = !isAll && !isInf; // a difficulty mode id
+  if (isClassic) lastStatsDifficulty = viewMode;
+  // Two-tier tabs (mirrors the start screen). Tier 1 = view / game type:
+  // All · Classic · Infinite. Tier 2 = difficulty, shown only under Classic.
+  const tier1 = `<div class="mode-tabs stats-tabs">` +
+    `<button type="button" class="mode-tab${isAll ? " active" : ""}" data-statmode="all">All</button>` +
+    `<button type="button" class="mode-tab${isClassic ? " active" : ""}" data-statmode="classic">Classic</button>` +
     `<button type="button" class="mode-tab mode-tab--inf${isInf ? " active" : ""}" data-statmode="infinite"><span class="inf-glyph" aria-hidden="true">∞</span>Infinite</button>` +
     `</div>`;
+  const tier2 = isClassic
+    ? `<div class="mode-tabs stats-subtabs">` + MODE_ORDER.map((m) =>
+        `<button type="button" class="mode-tab${m === viewMode ? " active" : ""}" data-statmode="${m}">${MODES[m].label}</button>`
+      ).join("") + `</div>`
+    : "";
+  const tabs = tier1 + tier2;
 
   // Infinite is its own game type — its own headline + ledger, not the 0–13 histogram.
   if (isInf) {
