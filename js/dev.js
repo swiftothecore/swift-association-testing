@@ -35,6 +35,10 @@ export function initDev(api) {
     readout,
     mk("button", { class: "dv-collapse", onclick: () => panel.classList.toggle("dv-min") }, "▾"));
   const panel = mk("div", { id: "dev-panel" }, head, body);
+  // Honour a persisted "hidden" preference: backtick-hiding sticks across reloads
+  // (the panel is still armed/loaded, just collapsed away until backtick brings it back).
+  const HIDE_KEY = "swiftSongAssociation.devHidden";
+  if (localStorage.getItem(HIDE_KEY) === "1") panel.classList.add("dv-hidden");
   document.body.append(panel);
 
   // ---- Inspect ---------------------------------------------------------------
@@ -169,10 +173,12 @@ export function initDev(api) {
     toastT = setTimeout(() => toastEl.classList.remove("show"), 1600);
   }
 
-  // Backtick toggles the whole panel; also expose for the console.
+  // Backtick toggles the whole panel and remembers the choice across reloads
+  // (still armed — just hidden until the next backtick).
   document.addEventListener("keydown", (e) => {
     if (e.key === "`" && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) {
-      panel.classList.toggle("dv-hidden");
+      const hidden = panel.classList.toggle("dv-hidden");
+      try { localStorage.setItem(HIDE_KEY, hidden ? "1" : "0"); } catch (e2) { /* ignore */ }
     }
   });
   window.__dev = api;
