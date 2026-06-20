@@ -144,10 +144,10 @@ function showScreen(name) {
 }
 
 /* ---------- Random sticky-tape placement for the nav keepsake cards ----------
-   Each card gets one strip (sometimes two), pinned to a randomly chosen corner or
-   edge with a little rotation jitter. We write CSS custom properties the ::before/
-   ::after pseudo-elements read (see styles.css). `corner` carries only the sides it
-   uses; the rest fall back to `auto`. */
+   Each card gets 2–4 strips (mostly 3), each pinned to a distinct randomly chosen corner
+   or edge with a little rotation jitter, so the cards look genuinely taped down rather
+   than templated. Strips are injected as .nav-tape child elements (styles.css) — real
+   elements, so there's no two-strip ceiling like the old ::before/::after approach. */
 const TAPE_SPOTS = [
   { left: "-9px",  top: "-6px",     rot: [-52, -34] },              // top-left
   { right: "-9px", top: "-6px",     rot: [34, 52] },                // top-right
@@ -156,25 +156,24 @@ const TAPE_SPOTS = [
   { left: "50%",   top: "-7px",     tx: "-50%", rot: [-7, 7] },     // top-centre
   { left: "50%",   bottom: "-8px",  tx: "-50%", rot: [-7, 7] },     // bottom-centre
 ];
-const TAPE_PROPS = ["top", "right", "bottom", "left", "tx", "rot", "content"];
-function applyTapeSpot(card, spot, n) {
-  const lo = spot.rot[0], hi = spot.rot[1];
-  const rot = (lo + Math.random() * (hi - lo)).toFixed(1) + "deg";
-  card.style.setProperty(`--t${n}-top`, spot.top || "auto");
-  card.style.setProperty(`--t${n}-right`, spot.right || "auto");
-  card.style.setProperty(`--t${n}-bottom`, spot.bottom || "auto");
-  card.style.setProperty(`--t${n}-left`, spot.left || "auto");
-  card.style.setProperty(`--t${n}-tx`, spot.tx || "0");
-  card.style.setProperty(`--t${n}-rot`, rot);
-  if (n === 2) card.style.setProperty("--t2-content", '""');
+function makeTapeStrip(spot) {
+  const t = document.createElement("span");
+  t.className = "nav-tape";
+  const rot = (spot.rot[0] + Math.random() * (spot.rot[1] - spot.rot[0])).toFixed(1);
+  t.style.top = spot.top || "auto";
+  t.style.right = spot.right || "auto";
+  t.style.bottom = spot.bottom || "auto";
+  t.style.left = spot.left || "auto";
+  t.style.transform = `translateX(${spot.tx || "0"}) rotate(${rot}deg)`;
+  return t;
 }
 function scatterNavTape(screenName) {
   const root = screens[screenName] || document;
   root.querySelectorAll(".nav-card").forEach((card) => {
-    TAPE_PROPS.forEach((p) => { card.style.removeProperty(`--t1-${p}`); card.style.removeProperty(`--t2-${p}`); });
+    card.querySelectorAll(".nav-tape").forEach((t) => t.remove());   // clear last visit's strips
     const pool = shuffle(TAPE_SPOTS.slice());
-    applyTapeSpot(card, pool[0], 1);
-    if (chance(0.4)) applyTapeSpot(card, pool[1], 2);  // sometimes a second strip
+    const count = 2 + (chance(0.7) ? 1 : 0) + (chance(0.2) ? 1 : 0); // 2–4, usually 3
+    for (let i = 0; i < count && i < pool.length; i++) card.appendChild(makeTapeStrip(pool[i]));
   });
 }
 

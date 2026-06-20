@@ -1453,29 +1453,17 @@
      plus a diagonal sheen), so the card never shows through. ::before is the primary
      strip, ::after an optional second strip; placement varies per card below so the row
      doesn't read as a repeated template. */
-  .nav-card::before, .nav-card::after {
-    position: absolute; z-index: 3; width: 48px; height: 15px;
+  /* Sticky tape strips are injected as .nav-tape children by scatterNavTape() in app.js
+     (2–4 per card, random corners/edges + rotation jitter). They're real elements, not
+     pseudo-elements, so a card isn't capped at two strips. Each is OPAQUE pastel washi:
+     a cream backing under a half-strength tint wash, plus a diagonal sheen. */
+  .nav-tape {
+    position: absolute; z-index: 3; width: 48px; height: 15px; pointer-events: none;
     background:
       linear-gradient(105deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0) 48%, rgba(43, 39, 34, 0.07)),
       linear-gradient(rgba(var(--tint), 0.5), rgba(var(--tint), 0.5)),
       #fbf6e9;
     box-shadow: 0 1px 2px rgba(43, 39, 34, 0.14);
-  }
-  /* Placement is randomised per visit by scatterNavTape() in app.js, which writes the
-     --t1-*/--t2-* custom properties (corner offsets, an optional translate for centred
-     strips, and a rotation). ::before is the primary strip; ::after only appears when
-     JS sets --t2-content. The fallbacks below are a sensible static layout if JS is off. */
-  .nav-card::before {
-    content: "";
-    top: var(--t1-top, -6px); right: var(--t1-right, auto);
-    bottom: var(--t1-bottom, auto); left: var(--t1-left, -9px);
-    transform: translateX(var(--t1-tx, 0)) rotate(var(--t1-rot, -42deg));
-  }
-  .nav-card::after {
-    content: var(--t2-content, none);
-    top: var(--t2-top, auto); right: var(--t2-right, auto);
-    bottom: var(--t2-bottom, auto); left: var(--t2-left, auto);
-    transform: translateX(var(--t2-tx, 0)) rotate(var(--t2-rot, 0deg));
   }
   .nav-card-seat {
     width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 8px;
