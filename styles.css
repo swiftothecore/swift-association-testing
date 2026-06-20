@@ -31,6 +31,10 @@
   body[data-era="denim"]    { --ink-accent:#3f6fa3; --highlighter:rgba(120,170,220,0.45); --bead:#5b87b8; --page-wash:rgba(91,135,184,0.05); }
   body[data-era="graphite"] { --ink-accent:#4a4a4a; --highlighter:rgba(130,130,130,0.40); --bead:#6b6b6b; --page-wash:rgba(90,90,90,0.05); }
   body[data-era="midnight"] { --ink-accent:#2b3a67; --highlighter:rgba(90,110,180,0.42); --bead:#3d4f86; --page-wash:rgba(43,58,103,0.06); }
+  body[data-era="debut"]      { --ink-accent:#3f7d54; --highlighter:rgba(120,185,135,0.42); --bead:#5a9e6e; --page-wash:rgba(63,125,84,0.05); }
+  body[data-era="reputation"] { --ink-accent:#2c2c2e; --highlighter:rgba(80,80,86,0.42);   --bead:#3a3a3e; --page-wash:rgba(44,44,46,0.07); }
+  body[data-era="lover"]      { --ink-accent:#b8487f; --highlighter:rgba(234,150,196,0.46); --bead:#d472a6; --page-wash:rgba(196,100,154,0.05); }
+  body[data-era="evermore"]   { --ink-accent:#6b4a2e; --highlighter:rgba(160,120,80,0.42);  --bead:#8a6038; --page-wash:rgba(122,90,56,0.05); }
 
   * { box-sizing: border-box; }
 
@@ -486,6 +490,8 @@
   .b-miss-dot { fill: var(--ink-soft); opacity: 0.7; }
   .b-bead { fill: var(--bead); stroke: var(--ink); }
   .b-gloss { fill: #fff; opacity: 0.55; }
+  /* the "H" stamped on a charm whose round used a hint */
+  .b-hint-h { fill: #fffdf6; font-family: "Courier Prime", "Courier New", monospace; font-weight: 700; pointer-events: none; }
 
   .b-halo {
     fill: none; stroke: var(--bead);
@@ -762,13 +768,17 @@
 
   /* ---------- Pen-circle confirm ---------- */
   .circled-choice { text-align: center; padding: 24px 16px 30px; }
-  .cc-box { position: relative; display: inline-block; padding: 10px 26px; max-width: 100%; }
+  .cc-box { position: relative; display: inline-block; padding: 16px 34px; max-width: 100%; }
   .cc-box .cc-text {
     position: relative; z-index: 1;
     font-family: var(--hand); font-weight: 700; color: var(--ink);
-    font-size: clamp(28px, 7.5vw, 44px); line-height: 1.1;
+    font-size: clamp(28px, 7.5vw, 44px); line-height: 1.2;
   }
-  .cc-box svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+  /* the ring is pushed a touch outside the padded box so its inward-curving top
+     and bottom clear the text even when a long title wraps to two lines.
+     (an SVG is a replaced element, so it needs explicit width/height — top/bottom
+     insets alone won't stretch it) */
+  .cc-box svg { position: absolute; top: -6px; left: -4px; width: calc(100% + 8px); height: calc(100% + 12px); overflow: visible; pointer-events: none; }
   .cc-ring {
     fill: none; stroke: var(--ink-accent); stroke-width: 2.4; stroke-linecap: round;
     stroke-dasharray: 1; stroke-dashoffset: 1;
@@ -1289,7 +1299,11 @@
   .ach-recap { margin: 18px 0 4px; text-align: center; }
   .ach-recap .ach-recap-title { font-family: var(--type); font-size: 11px; letter-spacing: 1px; color: var(--ink-soft); text-transform: uppercase; margin-bottom: 10px; }
   .ach-recap-row { display: flex; flex-wrap: wrap; gap: 14px 18px; justify-content: center; }
-  .ach-recap .ach-chip { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 84px; }
+  .ach-recap .ach-chip { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 84px;
+    background: none; border: none; padding: 4px 2px; border-radius: 8px; cursor: pointer;
+    font: inherit; transition: transform 0.12s ease, background 0.12s ease; }
+  .ach-recap .ach-chip:hover { transform: translateY(-2px); background: var(--page-wash); }
+  .ach-recap .ach-chip:focus-visible { outline: 2px solid var(--ink-accent); outline-offset: 2px; }
   .ach-recap .ach-chip .charm { width: 38px; height: 38px; color: var(--bead); }
   .ach-recap .ach-chip .charm svg { width: 100%; height: 100%; overflow: visible; }
   .ach-recap .ach-chip .charm .ink { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
@@ -1682,9 +1696,9 @@
 
   /* notebook-name text field */
   .set-text {
-    font-family: var(--hand); font-size: 18px; width: 150px; text-align: right;
+    font-family: var(--hand); font-size: 18px; line-height: 1.5; width: 150px; text-align: right;
     border: none; border-bottom: 1.5px solid var(--ink-soft); background: transparent;
-    color: var(--ink); outline: none; padding: 2px 2px 3px;
+    color: var(--ink); outline: none; padding: 2px 2px 6px;
   }
   .set-text:focus { border-bottom-color: var(--ink-accent); }
   .set-text::placeholder { color: var(--ink-soft); opacity: 0.7; }

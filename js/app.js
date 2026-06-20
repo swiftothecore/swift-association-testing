@@ -283,14 +283,29 @@ function renderExcludedNote() {
   el.style.display = "";
 }
 function extractLineWithWord(lyrics, word, strict) {
-  const rx = wordRegex(word, strict);
   const lines = lyrics.split("\n");
+  // Prioritise a line bearing the *exact* prompt word over a looser stem variant
+  // (e.g. "babe" shouldn't surface a line whose only match is "baby"). Only the
+  // lenient paths fall back; an explicitly strict caller already wants exact-only.
+  if (!strict) {
+    const exactRx = new RegExp("\\b" + escapeRegExp(word) + "\\b", "i");
+    const exactLine = lines.find((l) => exactRx.test(l));
+    if (exactLine) return exactLine.trim();
+  }
+  const rx = wordRegex(word, strict);
   const line = lines.find((l) => rx.test(l)) || lines[0] || "";
   return line.trim();
 }
 function highlightWord(line, word, strict) {
   if (strict === undefined) strict = effectiveStrict();
-  const body = strict ? escapeRegExp(word) : wordVariants(word).join("|");
+  // Mark the real word when the line actually contains it; only fall back to the
+  // looser stem variants when it doesn't, so "babe" never highlights "baby".
+  let body;
+  if (strict) body = escapeRegExp(word);
+  else {
+    const exactRx = new RegExp("\\b" + escapeRegExp(word) + "\\b", "i");
+    body = exactRx.test(line) ? escapeRegExp(word) : wordVariants(word).join("|");
+  }
   const rx = new RegExp("\\b(" + body + ")\\b", "ig");
   return escapeHtml(line).replace(rx, "<mark>$1</mark>");
 }
@@ -892,10 +907,12 @@ function renderResultRecap() {
   if (!newlyUnlocked.length) { el.style.display = "none"; el.innerHTML = ""; return; }
   const chips = newlyUnlocked.map((id) => {
     const a = ACH_BY_ID[id];
-    return `<div class="ach-chip" data-tip="${escapeHtml(a.desc)}" data-tip-delay="120">${charmMarkup(a.icon)}<span class="nm">${escapeHtml(a.name)}</span></div>`;
+    return `<button type="button" class="ach-chip" data-tip="${escapeHtml(a.desc)}" data-tip-delay="120">${charmMarkup(a.icon)}<span class="nm">${escapeHtml(a.name)}</span></button>`;
   }).join("");
   el.innerHTML = `<div class="ach-recap-title">newly unlocked</div><div class="ach-recap-row">${chips}</div>`;
   el.style.display = "";
+  // tapping any charm jumps to the full Charm Collection (back-arrow returns here)
+  el.querySelectorAll(".ach-chip").forEach((c) => c.addEventListener("click", () => openAchievements("results")));
 }
 
 // One charm tile: earned (revealed), a still-locked secret (masked ???), or a
@@ -1371,8 +1388,8 @@ let justEarnedIndex = -1; // bead that just became a charm, for the swing-in
 
 function renderBracelet() {
   const opts = gameType === "infinite"
-    ? { total: Math.max(round, 1), letterBead: false, colors: albumPalette() }
-    : { colors: albumPalette() };
+    ? { total: Math.max(round, 1), letterBead: false, colors: albumPalette(), hinted: roundHinted }
+    : { colors: albumPalette(), hinted: roundHinted };
   $("bracelet").innerHTML = buildBraceletSVG(roundResults, round, justEarnedIndex, roundAlbums, opts);
   $("charmCount").textContent = roundResults.filter(Boolean).length;
   $("pageNum").textContent = gameType === "infinite"
@@ -2049,13 +2066,24 @@ function rarityTier(n) {
   return { name: "scarce", t: 1, stamp: "scarce" };
 }
 
+// The valid song this round's hints zoom in on. Prefer one whose lyrics hold the
+// EXACT prompt word so the revealed line/affordance never leans on a looser stem
+// variant ("babe" should point at a "babe" line, not a "baby" one).
+function pickHintSong() {
+  if (!currentSongs.length) return null;
+  const exactRx = new RegExp("\\b" + escapeRegExp(currentWord) + "\\b", "i");
+  const pool = currentSongs.filter((s) => exactRx.test(s.lyrics));
+  const from = pool.length ? pool : currentSongs;
+  return from[Math.floor(Math.random() * from.length)];
+}
+
 function advanceRound() {
   round++;
   roundLocked = false;
   justEarnedIndex = -1;
   currentWord = pickWord();
   currentSongs = validSongs(currentWord, effectiveStrict(), currentMode.noTitle);
-  roundHintSong = currentSongs.length ? currentSongs[Math.floor(Math.random() * currentSongs.length)] : null;
+  roundHintSong = pickHintSong();
   applyEra(pickEra());
 
   const rar = rarityTier(currentSongs.length);
@@ -2457,6 +2485,8 @@ function submitAnswer(song, isTimeout) {
   gameMaxStreak = Math.max(gameMaxStreak, correctStreak);
   if (correctStreak >= 5) unlock("bejeweled");
   if (correctStreak >= 10) unlock("sparks-fly");
+  // It's Raining And It's Monday — answer the word "rain" right on a Monday.
+  if (correct && currentWord === "rain" && new Date().getDay() === 1) unlock("raining-monday");
 
   // Circle the player's pick before revealing the verdict (skipped on timeout / reduced
   // motion, and on a lyric answer — the circle re-draws a title the player never typed).
@@ -2675,8 +2705,8 @@ function endGame() {
 
   showScreen("results");
   const keepsakeOpts = isInfinite
-    ? { total: Math.max(roundsSurvived, 1), letterBead: false, colors: albumPalette() }
-    : { colors: albumPalette() };
+    ? { total: Math.max(roundsSurvived, 1), letterBead: false, colors: albumPalette(), hinted: roundHinted }
+    : { colors: albumPalette(), hinted: roundHinted };
   $("resultBracelet").innerHTML = buildBraceletSVG(roundResults, 0, -1, roundAlbums, keepsakeOpts);
   $("finalScore").textContent = boardScore;
   // Verse bonus (fuller lyric recall) rides alongside the score, never folded into it.
@@ -2906,7 +2936,7 @@ function runRoundEggs() {
   // at most one margin doodle / note, by priority
   if (gameType === "classic" && round === 5) {
     addDoodle("fence", "corner-br", 76, 64);
-  } else if (era === "graphite" && settings.snake && chance(0.5)) {
+  } else if (era === "reputation" && settings.snake && chance(0.5)) {
     slitherSnake();
   } else if (midnightHour) {
     addMarginNote("meet me at midnight");
@@ -2942,7 +2972,7 @@ function triggerBlueWash() {
 }
 
 // A detailed serpent that slithers right across the page during a reputation
-// (graphite) round. The body follows the head along a travelling sine wave
+// round. The body follows the head along a travelling sine wave
 // (follow-the-leader), tapers to a point at the tail, wears a scale pattern,
 // and flicks a forked tongue. Built frame-by-frame so the undulation is real,
 // not a sliding sticker. Reduced motion gets a quiet inked coil instead.
@@ -3473,7 +3503,7 @@ function devApplyWord(word) {
   currentWord = word;
   if (!usedWords.includes(word)) usedWords.push(word);
   currentSongs = validSongs(currentWord, effectiveStrict(), currentMode.noTitle);
-  roundHintSong = currentSongs.length ? currentSongs[Math.floor(Math.random() * currentSongs.length)] : null;
+  roundHintSong = pickHintSong();
   $("wordDisplay").textContent = currentWord;
   renderExcludedNote();
   renderHintAffordance();
@@ -3647,7 +3677,9 @@ function buildDevApi() {
     // Seeding
     seed: { records: devSeedRecords, history: devSeedHistory, tally: devSeedTally,
             unlockAch: devUnlockAllAch, lockAch: devLockAllAch,
-            fireAch: (id) => unlock(id), setName: (n) => { settings.playerName = setPlayerName(n); } },
+            fireAch: (id) => unlock(id),
+            removeAch: (id) => { if (earnedAchievements[id]) { delete earnedAchievements[id]; saveAchievements(earnedAchievements); } },
+            setName: (n) => { settings.playerName = setPlayerName(n); } },
     // Resets
     reset: { records: resetRecords, stats: resetStatsAll, ach: () => { resetAchievements(); earnedAchievements = {}; },
              tally: resetTally, daily: resetDaily, all: clearAllData },

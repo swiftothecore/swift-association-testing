@@ -21,6 +21,8 @@ export function buildBraceletSVG(results, activeRound, freshIndex, albums, opts)
   // Album→colour map; callers pass the active palette (colour-blind variant when
   // that setting is on), defaulting to the standard album colours.
   const colors = (opts && opts.colors) || ALBUM_COLORS;
+  // per-round flags: was a hint taken that round? marks the charm with a small "H".
+  const hinted = (opts && opts.hinted) || [];
   const W = 520, H = 64, xL = 26, xR = W - 26;
   // the thread sags between its tied ends like a real bracelet laid on the page
   const yAt = (x) => 20 + 10 * Math.sin(Math.PI * ((x - xL) / (xR - xL)));
@@ -70,10 +72,15 @@ export function buildBraceletSVG(results, activeRound, freshIndex, albums, opts)
       svg += `<circle cx="${x}" cy="${y}" r="${s(4.1)}" class="b-bead" stroke-width="1"${beadStyle}/>`;
       const fresh = i === freshIndex;
       const delay = fresh ? "" : ` style="animation-delay:${(-(i * 0.9) % 5.5).toFixed(2)}s"`;
+      // a hinted round wears a small "H" on the star charm (a hint was used here)
+      const hintMark = hinted[i]
+        ? `<text x="${x}" y="${y + s(15.5) + s(2.5)}" text-anchor="middle" font-size="${s(7)}" class="b-hint-h">H</text>`
+        : "";
       svg += `<g class="charm-dangle${fresh ? " fresh" : ""}"${delay}>` +
         `<circle cx="${x}" cy="${y + s(5.4)}" r="${s(2.3)}" fill="none" stroke="var(--ink)" stroke-width="1" opacity="0.7"/>` +
         `<path d="${starPath(x, y + s(15.5), s(7.4), s(3.1))}" class="b-bead" stroke-width="1.1" stroke-linejoin="round"${beadStyle}/>` +
         `<circle cx="${x - s(1.9)}" cy="${y + s(12.6)}" r="${s(1.2)}" class="b-gloss"/>` +
+        hintMark +
         `</g>`;
     } else if (answered === false) {
       // a quiet matte spacer bead — tinted to the picked album, kept muted

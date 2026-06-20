@@ -126,7 +126,8 @@ export function initDev(api) {
     row(btn("seed tally", () => { api.seed.tally(); toast("tally seeded"); }),
         btn("unlock all ach", () => { api.seed.unlockAch(); toast("all achievements unlocked"); }),
         btn("lock all", () => { api.seed.lockAch(); toast("achievements cleared"); }, "warn")),
-    row(achSel, btn("fire", () => api.seed.fireAch(achSel.value))),
+    row(achSel, btn("fire", () => api.seed.fireAch(achSel.value)),
+        btn("remove", () => { api.seed.removeAch(achSel.value); toast("achievement removed"); }, "warn")),
     row(nameInput, btn("set name", () => { if (nameInput.value.trim()) { api.seed.setName(nameInput.value.trim()); toast("name set"); } }))));
 
   // ---- Visual eggs -----------------------------------------------------------
