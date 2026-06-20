@@ -376,11 +376,12 @@
     box-shadow: 0 1px 0 rgba(43,39,34,0.06);
     display: flex; flex-direction: column; gap: 3px;
   }
-  /* washi tape pinning the card (realistic surface from the shared .nav-tape rule) */
+  /* washi tape pinning the card (realistic surface from the shared .nav-tape rule);
+     tinted to match the tile's difficulty-accent text (--pb-accent). */
   .pb-tile::before {
     content: ""; position: absolute; top: -8px; left: 50%; width: 44px; height: 16px;
     transform: translateX(-50%) rotate(-3deg);
-    --tape-tint: 201, 178, 122;
+    --tape-color: var(--pb-accent);
   }
   /* subtle static scatter — deterministic per slot, not animated */
   .pb-grid .pb-tile:nth-child(4n+1) { transform: rotate(-1.4deg); }
@@ -388,8 +389,6 @@
   .pb-grid .pb-tile:nth-child(4n+3) { transform: rotate(-0.6deg); }
   .pb-grid .pb-tile:nth-child(4n)   { transform: rotate(1.5deg); }
   .pb-grid .pb-tile:nth-child(even)::before { transform: translateX(-50%) rotate(3.5deg); }
-  .pb-tile.pb-sudden::before { --tape-tint: 187, 86, 64; }
-  .pb-tile.pb-daily::before  { --tape-tint: 178, 58, 58; }
   .pb-tile.pb-empty { opacity: 0.5; }
   .pb-kicker { font-family: var(--type); font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-soft); }
   .pb-mode { font-family: var(--type); font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--pb-accent); }
@@ -649,7 +648,7 @@
   .dropdown .item::before {
     content: ""; position: absolute; top: -7px; left: 50%;
     width: 32px; height: 14px; transform: translateX(-50%) rotate(-4deg);
-    --tape-tint: 224, 196, 120;
+    --tape-color: #e0c478;
   }
   .dropdown .item:nth-child(even) { transform: rotate(0.5deg); }
   .dropdown .item:nth-child(even)::before { transform: translateX(-50%) rotate(5deg); }
@@ -1465,7 +1464,7 @@
          visibly lifts off the page);
        · a diagonal WRINKLE highlight + faint crease, so light catches an uneven surface;
        · longitudinal FIBRE grain + a bright top edge / shaded bottom edge for thickness.
-     Per-context knobs: --tape-tint (an "r,g,b" triplet) colours the strip; --tape-clip
+     Per-context knobs: --tape-color (any CSS colour) tints the strip; --tape-clip
      supplies the hand-torn outline (nav strips set a fresh random one inline; the tiles
      and dropdown cycle a few preset tears below). */
   .nav-tape,
@@ -1478,8 +1477,10 @@
         rgba(43, 39, 34, 0.05) 66%, rgba(255, 255, 255, 0.14) 78%, rgba(255, 255, 255, 0) 90%),
       /* fine paper fibre running along the strip */
       repeating-linear-gradient(90.5deg, rgba(74, 62, 42, 0.05) 0 1px, rgba(255, 255, 255, 0.025) 1px 3px),
-      /* the tint */
-      linear-gradient(rgba(var(--tape-tint, 201, 178, 122), 0.34), rgba(var(--tape-tint, 201, 178, 122), 0.27)),
+      /* the tint (color-mix so any plain colour can drive it, e.g. the tile's accent) */
+      linear-gradient(
+        color-mix(in srgb, var(--tape-color, #c9b27a) 37%, transparent),
+        color-mix(in srgb, var(--tape-color, #c9b27a) 29%, transparent)),
       /* frosted translucent base (lets the page show through, but still clearly present) */
       rgba(252, 248, 238, 0.62);
     box-shadow:
@@ -1503,7 +1504,7 @@
   /* Geometry + tint for the nav-card strips (size/transform/clip are overridden inline). */
   .nav-tape {
     position: absolute; z-index: 3; width: 50px; height: 16px; pointer-events: none;
-    --tape-tint: var(--tint);
+    --tape-color: rgb(var(--tint));
   }
   .nav-card-seat {
     width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 8px;
