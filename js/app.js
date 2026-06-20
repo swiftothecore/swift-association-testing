@@ -185,11 +185,15 @@ function makeTapeStrip(spot) {
 }
 function scatterNavTape(screenName) {
   const root = screens[screenName] || document;
-  root.querySelectorAll(".nav-card").forEach((card) => {
+  const cards = [...root.querySelectorAll(".nav-card")];
+  // Roll every card's strip count first so we can veto the "all cards doubled" case
+  // before anything is drawn: if all three rolled 2, knock one random card back to 1.
+  const counts = cards.map(() => (chance(0.3) ? 2 : 1));   // mostly one, occasionally two
+  if (counts.length && counts.every((n) => n === 2)) counts[Math.floor(Math.random() * counts.length)] = 1;
+  cards.forEach((card, c) => {
     card.querySelectorAll(".nav-tape").forEach((t) => t.remove());   // clear last visit's strips
     const pool = shuffle(TAPE_SPOTS.slice());
-    const count = chance(0.3) ? 2 : 1;   // mostly one strip, occasionally two
-    for (let i = 0; i < count && i < pool.length; i++) card.appendChild(makeTapeStrip(pool[i]));
+    for (let i = 0; i < counts[c] && i < pool.length; i++) card.appendChild(makeTapeStrip(pool[i]));
   });
 }
 
