@@ -1270,6 +1270,9 @@
     -webkit-text-fill-color: transparent; color: transparent;
     text-shadow: 0 0 16px rgba(224,163,47,.35);
     animation: foilShift 2.8s linear infinite;
+    /* Caveat's glyph ink overhangs its advance width; background-clip:text clips the
+       gold to the content box, so pad the box out to stop the right edge slicing the 3. */
+    padding: 0.06em 0.2em;
   }
   @keyframes foilShift { to { background-position: -240% 0; } }
   /* a soft warm sheen that sweeps across the paper, like light catching the page */
