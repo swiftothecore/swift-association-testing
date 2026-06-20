@@ -329,9 +329,10 @@
   .pb-sub { font-family: var(--type); font-size: 10px; color: var(--ink-soft); }
 
   .hist-head, .hist-row {
-    display: grid; grid-template-columns: 1fr 0.7fr 0.8fr 1.4fr 1.2fr;
+    display: grid; grid-template-columns: 1fr 0.8fr 1.9fr 1.3fr;
     align-items: baseline; gap: 10px;
   }
+  .hist-head > span, .hist-row > span { min-width: 0; }
   .hist-head {
     font-family: var(--type); font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
     color: var(--ink-soft); padding: 0 7px 6px; border-bottom: 1px solid rgba(43,39,34,0.12);
@@ -341,8 +342,13 @@
   .hist-row.hist-pb { background: var(--highlighter); border-radius: 4px; border-bottom-color: transparent; }
   .hist-score { font-family: var(--hand); font-size: 22px; color: var(--ink); line-height: 1; }
   .hist-unit { font-family: var(--type); font-size: 11px; color: var(--ink-soft); }
-  .hist-acc, .hist-mode, .hist-time { font-family: var(--type); font-size: 13px; color: var(--ink-soft); }
-  .hist-date { font-family: var(--type); font-size: 11px; color: var(--ink-soft); }
+  .hist-time { font-family: var(--type); font-size: 13px; color: var(--ink-soft); }
+  .hist-mode, .hist-date { font-family: var(--type); font-size: 11px; color: var(--ink-soft); }
+  /* PB crown — the same SVG as the achievement charm, sized to sit on the score baseline. */
+  .hist-crown { display: inline-block; width: 15px; height: 15px; margin-right: 4px; vertical-align: -2px; }
+  .hist-crown svg { width: 100%; height: 100%; display: block; overflow: visible; }
+  .hist-crown .ink { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .hist-crown .ink-fill { fill: var(--ink); stroke: none; }
   #histMore { margin-top: 12px; }
 
   /* ---------- Bracelet (round progress + score) ---------- */
