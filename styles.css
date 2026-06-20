@@ -237,21 +237,6 @@
   }
   .btn-ghost:hover { background: var(--highlighter); border-style: solid; }
 
-  /* tier-3 results nav: records & stats as a lighter paired link row */
-  .result-links {
-    display: flex; align-items: stretch; margin-top: 16px;
-    border-top: 1px dashed rgba(43,39,34,0.16); padding-top: 4px;
-  }
-  .text-link {
-    flex: 1; background: transparent; border: none; cursor: pointer;
-    font-family: var(--type); font-size: 12px; letter-spacing: 0.5px;
-    color: var(--ink-soft); padding: 9px 6px; transition: color 0.15s;
-  }
-  .text-link:hover {
-    color: var(--ink); text-decoration: underline;
-    text-decoration-style: dotted; text-underline-offset: 3px;
-  }
-  .result-links-sep { width: 1px; background: rgba(43,39,34,0.16); margin: 7px 0; flex: none; }
 
   /* ---------- Hall of Fame (handwritten list) ---------- */
   .podium-title {
