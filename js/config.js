@@ -58,6 +58,7 @@ export const DEFAULT_SETTINGS = {
   sound: false,             // placeholder — no audio wired yet
   lastGameType: "classic",  // runtime memory backing defaultGameType: "last" (not shown in UI)
   playerName: "",           // notebook signature — set once, reused on every personal record
+  avatar: "",               // profile polaroid — a center-cropped data-URL, stays on this device
 };
 
 /* Difficulty modes — each just re-tunes existing levers (timer, dropdown,

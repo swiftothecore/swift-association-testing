@@ -274,6 +274,17 @@ export function setPlayerName(name) {
   return s.playerName;
 }
 
+/* ---------- Profile polaroid (a center-cropped photo data-URL) ---------- */
+// Lives in settings, so it's wiped by a settings-reset and untouched by a
+// records-reset — and rides along in an export backup. "" means no photo.
+export function getAvatar() { return loadSettings().avatar || ""; }
+export function setAvatar(dataUrl) {
+  const s = loadSettings();
+  s.avatar = dataUrl || "";
+  saveSettings(s);
+  return s.avatar;
+}
+
 /* ---------- Difficulty ---------- */
 export function loadMode() {
   try {

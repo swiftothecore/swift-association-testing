@@ -356,12 +356,58 @@
   .best-empty { font-family: var(--hand); font-size: 20px; color: var(--ink-soft); opacity: 0.85; padding: 4px 0 8px; }
 
   /* ---------- Records page (personal bests + history) ---------- */
-  .rec-sig { margin: 2px 0 16px; padding-bottom: 12px; border-bottom: 1px dashed rgba(43,39,34,0.16); }
+  .rec-sig { display: flex; align-items: center; gap: 18px; margin: 2px 0 16px; padding-bottom: 16px; border-bottom: 1px dashed rgba(43,39,34,0.16); }
+  .rec-sig-text { min-width: 0; }
   .rec-sig-name { font-family: var(--hand); font-weight: 700; font-size: 30px; color: var(--ink); display: block; line-height: 1.05; transform: rotate(-0.6deg); }
   .rec-sig-sub { font-family: var(--type); font-size: 11px; letter-spacing: 0.5px; color: var(--ink-soft); display: block; margin-top: 5px; }
   .rec-sign-row { display: flex; align-items: center; gap: 8px; }
   .rec-sign-row .set-text { text-align: left; width: 190px; }
   .rec-sign-row .btn-ghost { width: auto; margin: 0; padding: 4px 16px; }
+  .rec-pol-btn { flex: none; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; line-height: 0; }
+  .rec-pol-btn:focus-visible { outline: 2px solid var(--ink-accent); outline-offset: 4px; border-radius: 3px; }
+
+  /* Profile polaroid — a photo clipped to the page (records header + settings). */
+  .polaroid {
+    display: inline-block; position: relative; flex: none;
+    background: #fffdf9; padding: 7px 7px 0; border: 1px solid rgba(43,39,34,0.12);
+    border-radius: 2px; box-shadow: 0 2px 7px rgba(43,39,34,0.18);
+    transform: rotate(var(--tilt, -4deg)); transition: transform 0.16s ease;
+  }
+  .rec-pol-btn:hover .polaroid { transform: rotate(calc(var(--tilt, -4deg) * 0.35)) scale(1.03); }
+  .pol-photo {
+    display: block; width: 96px; height: 96px; border-radius: 1px;
+    background-color: var(--page-wash, #efe7d2); background-size: cover; background-position: center;
+  }
+  .pol-lip {
+    display: block; height: 28px; line-height: 28px; max-width: 96px;
+    font-family: var(--hand); font-weight: 700; font-size: 18px; color: var(--ink);
+    text-align: center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  }
+  .pol-tape {
+    position: absolute; top: -8px; left: 50%; width: 50px; height: 17px;
+    transform: translateX(-50%) rotate(-6deg);
+    background: var(--bead); opacity: 0.4; border-radius: 1px;
+  }
+  .polaroid.is-empty {
+    background: var(--paper); border: 1.5px dashed rgba(43,39,34,0.34); box-shadow: none;
+  }
+  .polaroid.is-empty .pol-photo {
+    background-color: transparent; display: flex; align-items: center; justify-content: center;
+    color: var(--ink-soft);
+  }
+  .pol-add svg { width: 32px; height: 32px; }
+  .polaroid.is-empty .pol-lip { color: var(--ink-soft); font-weight: 500; font-size: 16px; }
+  .pol-clip { position: absolute; top: -7px; right: 8px; width: 20px; height: 20px; color: #9a958a; transform: rotate(14deg); }
+  .polaroid-sm .pol-photo { width: 64px; height: 64px; }
+  .polaroid-sm .pol-lip { width: 64px; max-width: 64px; height: 22px; line-height: 22px; font-size: 15px; }
+  .polaroid-sm .pol-tape { width: 36px; height: 13px; top: -6px; }
+  .polaroid-sm.is-empty .pol-lip { font-size: 13px; }
+  .polaroid-sm .pol-add svg { width: 24px; height: 24px; }
+  .polaroid-sm .pol-clip { width: 15px; height: 15px; top: -5px; right: 6px; }
+  .set-avatar { display: flex; align-items: center; gap: 16px; }
+  .set-avatar-actions { display: flex; flex-direction: column; gap: 6px; }
+  .set-avatar-actions .btn-ghost { width: auto; margin: 0; padding: 4px 14px; white-space: nowrap; }
+  @media (prefers-reduced-motion: reduce) { .polaroid { transition: none; } }
 
   .rec-group-label {
     font-family: var(--type); font-size: 10px; letter-spacing: 1px;

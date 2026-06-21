@@ -11,6 +11,7 @@ import {
 import { buildBraceletSVG } from "./bracelet.js";
 import {
   loadRecords, insertRecord, migrateRecordsFromStats, getPlayerName, setPlayerName,
+  getAvatar, setAvatar,
   loadHistory, appendHistory,
   loadStats, updateStats, totalPlayed,
   loadAchievements, saveAchievements,
@@ -1350,12 +1351,84 @@ function fitHeatGrid(retries = 10) {
   if (months) months.style.width = fixed ? `${weeks * cell + (weeks - 1) * HEAT_GAP}px` : "";
 }
 
+/* ---------- Profile polaroid (a photo tucked into the notebook) ---------- */
+const POL_CAMERA_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h3l1.4-2h5.2L16 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.2"/></svg>`;
+const POL_CLIP_SVG = `<svg class="pol-clip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15.5 7.5l-6.8 6.8a2.4 2.4 0 0 0 3.4 3.4l7.1-7.1a4 4 0 0 0-5.66-5.66l-7.1 7.1"/></svg>`;
+
+// One polaroid — a photo (data-URL) clipped to the page, or the empty
+// "add a photo" slot when `photo` is "". `caption` rides the white lip;
+// `tilt`/`small` tune the look. The washi tape colour is era-tinted in CSS.
+function polaroidHTML(photo, caption, opts = {}) {
+  const tilt = opts.tilt != null ? opts.tilt : -4;
+  const cls = "polaroid" + (photo ? "" : " is-empty") + (opts.small ? " polaroid-sm" : "");
+  const cap = (caption || "").trim();
+  if (photo) {
+    return `<span class="${cls}" style="--tilt:${tilt}deg">` +
+      `<span class="pol-tape" aria-hidden="true"></span>` +
+      `<span class="pol-photo" style="background-image:url('${photo}')"></span>` +
+      `<span class="pol-lip">${escapeHtml(cap)}</span></span>`;
+  }
+  return `<span class="${cls}" style="--tilt:${tilt}deg">${POL_CLIP_SVG}` +
+    `<span class="pol-photo pol-add">${POL_CAMERA_SVG}</span>` +
+    `<span class="pol-lip">add a photo</span></span>`;
+}
+
+// Read a chosen image file, center-crop it to a square and downscale it to a
+// small JPEG data-URL (~kBs) so it sits comfortably in localStorage. No crop UI.
+const AVATAR_SIZE = 240;
+function processAvatarFile(file, cb) {
+  if (!file || !/^image\//.test(file.type)) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const side = Math.min(img.width, img.height);
+      if (!side) return;
+      const sx = (img.width - side) / 2, sy = (img.height - side) / 2;
+      const c = document.createElement("canvas");
+      c.width = c.height = AVATAR_SIZE;
+      const ctx = c.getContext("2d");
+      ctx.drawImage(img, sx, sy, side, side, 0, 0, AVATAR_SIZE, AVATAR_SIZE);
+      let url;
+      try { url = c.toDataURL("image/jpeg", 0.82); } catch (e) { return; }   // tainted/oversized → bail
+      cb(url);
+    };
+    img.onerror = () => {};
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// Pop the native file picker, process the pick, hand the data-URL back.
+function chooseAvatar(cb) {
+  const inp = document.createElement("input");
+  inp.type = "file"; inp.accept = "image/*"; inp.style.display = "none";
+  document.body.appendChild(inp);
+  inp.addEventListener("change", () => {
+    const f = inp.files && inp.files[0];
+    if (f) processAvatarFile(f, cb);
+    inp.remove();
+  });
+  inp.click();
+}
+
+// Persist a new (or cleared) photo and refresh wherever it shows.
+function applyAvatar(url) {
+  settings.avatar = setAvatar(url);
+  if (screens.records.classList.contains("active")) renderRecordsPage();
+  if ($("settingsModal").classList.contains("open")) renderSettingsBody();
+}
+
 function renderRecordsPage() {
   if (_heatView === null) _heatView = heatDefaultView();
   const name = getPlayerName();
-  const sig = name
+  const avatar = getAvatar();
+  const sigText = name
     ? `<span class="rec-sig-name">${escapeHtml(name)}’s notebook</span><span class="rec-sig-sub">best scores &amp; history</span>`
     : `<div class="rec-sign-row"><input id="recSignInput" class="set-text" maxlength="20" placeholder="sign your notebook" /><button id="recSignSave" class="btn-ghost">sign</button></div>`;
+  const sig =
+    `<button type="button" id="recPolBtn" class="rec-pol-btn" aria-label="${avatar ? "change your photo" : "add a photo"}">${polaroidHTML(avatar, name)}</button>` +
+    `<div class="rec-sig-text">${sigText}</div>`;
 
   // Personal bests — classic difficulties always shown; infinite/daily only if played.
   const classicTiles = MODE_ORDER.map((m) => pbTile(m)).join("");
@@ -1413,6 +1486,9 @@ function renderRecordsPage() {
   });
   const signInput = $("recSignInput");
   if (signInput) signInput.addEventListener("keydown", (e) => { if (e.key === "Enter") saveBtn.click(); });
+
+  const polBtn = $("recPolBtn");
+  if (polBtn) polBtn.addEventListener("click", () => chooseAvatar((url) => applyAvatar(url)));
 
   historyShown = 0;
   if (hist.length) appendHistoryRows(hist);
@@ -3475,6 +3551,20 @@ function setTextHTML(key, name, desc, placeholder) {
 }
 function setSection(title, inner) { return `<div class="set-section"><p class="set-section-title">${title}</p>${inner}</div>`; }
 
+// The profile-polaroid row: a thumbnail + add/change/remove. The photo never
+// leaves the browser, so the copy says so.
+function setAvatarRowHTML() {
+  const photo = getAvatar();
+  const controls = photo
+    ? `<button type="button" class="btn-ghost" data-avatar="change">Change photo</button>` +
+      `<button type="button" class="btn-ghost" data-avatar="remove">Remove</button>`
+    : `<button type="button" class="btn-ghost" data-avatar="change">Add a photo</button>`;
+  return `<div class="set-row set-row-avatar"><div class="set-label"><span class="set-name">Your photo</span>` +
+    `<span class="set-desc">a polaroid on your records page — stays on this device</span></div>` +
+    `<div class="set-control set-avatar">${polaroidHTML(photo, getPlayerName(), { small: true, tilt: -3 })}` +
+    `<div class="set-avatar-actions">${controls}</div></div></div>`;
+}
+
 // Fallback zone list for the rare browser without Intl.supportedValuesOf — a spread of
 // common UTC offsets so a player can still pick a sensible reset day.
 const COMMON_TZ_FALLBACK = [
@@ -3494,7 +3584,8 @@ function renderSettingsBody() {
   const body = $("settingsBody");
   body.innerHTML =
     setSection("Notebook",
-      setTextHTML("playerName", "Your name", "signed on every personal record", "your name")
+      setTextHTML("playerName", "Your name", "signed on every personal record", "your name") +
+      setAvatarRowHTML()
     ) +
     setSection("Motion &amp; animation",
       setChoiceHTML("reduceMotion", "Reduce motion", "Auto follows your system", [{ val: "auto", label: "Auto" }, { val: "on", label: "On" }, { val: "off", label: "Off" }]) +
@@ -3587,6 +3678,10 @@ function wireSettingsBody() {
     refreshStartBoard();   // re-sign the start-screen records live
     if (screens.records.classList.contains("active")) renderRecordsPage();
   });
+  body.querySelectorAll("[data-avatar]").forEach((b) => b.addEventListener("click", () => {
+    if (b.dataset.avatar === "remove") applyAvatar("");
+    else chooseAvatar((url) => applyAvatar(url));
+  }));
   body.querySelectorAll("[data-action]").forEach((b) => b.addEventListener("click", () => {
     if (b.dataset.action === "export") exportBackup();
     else if (b.dataset.action === "import") $("importFile").click();
