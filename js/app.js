@@ -71,10 +71,13 @@ let runFolded = false;   // partial/full stats already saved for the current run
 let hintTier = 0;        // hints revealed this round (0..3); reset each round
 let roundHintSong = null;// the valid song this round's hints zoom in on
 let hintUrgeTimer = null;// idle nudge timer for Relaxed (no clock)
-let gameType = "classic";       // "classic" (fixed 13) | "infinite" (until lives run out) | "daily"
+let gameType = "classic";       // "classic" (fixed 13) | "infinite" (until lives run out) | "daily" | "challenge"
 let infiniteVariant = "3lives"; // "3lives" | "sudden"
 let lives = 0;                  // remaining lives in infinite mode
 let dailyRng = null;            // seeded PRNG, non-null only during a daily game
+let currentChallenge = null;    // the active CHALLENGES entry while gameType === "challenge"
+let vanishTimer = null;         // Vanishing Word: timeout that hides the prompt word
+let lastAlphaLetter = "";       // From A to Z: first letter of the last accepted answer
 let currentWord = "";
 let currentSongs = [];
 let dropdownItems = [];
@@ -214,8 +217,8 @@ function scatterNavTape(screenName) {
 /* ---------- Era selection ---------- */
 function pickEra() {
   let pool;
-  // Round-5/round-13 biases apply to any fixed 13-round run (classic + daily).
-  const fixedRun = gameType === "classic" || gameType === "daily";
+  // Round-5/round-13 biases apply to any fixed 13-round run (classic + daily + challenge).
+  const fixedRun = gameType === "classic" || gameType === "daily" || gameType === "challenge";
   if (fixedRun && round === 5) pool = TENDER_ERAS;
   else if (fixedRun && round === TOTAL_ROUNDS) pool = FINALE_ERAS;
   else pool = ERAS.filter((e) => !recentEras.includes(e));
@@ -925,7 +928,14 @@ function totalLifetimeMisses() {
   return Object.values(misses).reduce((a, b) => a + b, 0);
 }
 
+// The challenge-progress charms (the only achievements allowed to fire while a
+// challenge run is active — everything else is sandboxed out). Derived from the group
+// map so future challenge charms are covered automatically.
+const CHALLENGE_ACH_IDS = new Set(ACHIEVEMENTS.filter((a) => ACH_GROUP_OF[a.id] === "challenges").map((a) => a.id));
 function unlock(id) {
+  // Sandbox: during a challenge run, only the challenge-progress charms unlock — no
+  // game-quality achievements (streaks, speed, etc.) leak in from mid-round checks.
+  if (gameType === "challenge" && !CHALLENGE_ACH_IDS.has(id)) return;
   if (!ACH_BY_ID[id] || earnedAchievements[id]) return;
   earnedAchievements[id] = new Date().toISOString().slice(0, 10);
   saveAchievements(earnedAchievements);
@@ -2349,6 +2359,11 @@ function resetRunState() {
   hintsUsed = 0;
   runFolded = false;
   dailyRng = null;
+  currentChallenge = null;
+  lastAlphaLetter = "";
+  clearTimeout(vanishTimer);
+  const wrap = $("wordDisplay") && $("wordDisplay").parentNode;
+  if (wrap) wrap.classList.remove("vanished");
 }
 
 // Fold the rounds completed so far into the lifetime stats (songs/words
@@ -2358,6 +2373,7 @@ function resetRunState() {
 // history. Idempotent per run via runFolded.
 function foldRunProgress() {
   if (runFolded || roundResults.length === 0) return;
+  if (gameType === "challenge") { runFolded = true; return; }   // challenges are sandboxed — never fold
   runFolded = true;
   const partialScore = gameType === "infinite" ? roundResults.length : score;
   if (gameType !== "daily") updateStats(partialScore, boardMode(), gameMaxStreak, false);
@@ -2515,6 +2531,87 @@ function startDaily() {
   $("pageTotal").textContent = TOTAL_ROUNDS;
   showScreen("game");
   nextRound();
+}
+
+// A Challenge run: a fixed-13 game with a rule modifier, sandboxed like daily (no
+// stats/records/history/tally/global achievements). The mode is fixed by the challenge.
+function startChallenge(id) {
+  const c = CHALLENGE_BY_ID[id];
+  if (!c || !challengeUnlocked(id)) return;
+  gameType = "challenge";
+  currentMode = MODES[c.mode] || MODES.medium;   // fixed by the challenge, not persisted via DIFF_KEY
+  resetRunState();
+  currentChallenge = c;                          // set AFTER resetRunState (which nulls it)
+  recordChallengeAttempt(id);
+  applyInputHints();
+  updateTagline();
+  $("pageTotalWrap").style.display = "";
+  $("pageTotal").textContent = TOTAL_ROUNDS;
+  showScreen("game");
+  nextRound();
+}
+
+// Per-round modifier for the active challenge (called from advanceRound after the
+// word is written). Vanishing Word hides the prompt after a beat; matching is
+// unaffected (currentWord/currentSongs live in state, not the DOM).
+function applyChallengeRound(wrap) {
+  if (gameType !== "challenge" || !currentChallenge || !wrap) return;
+  if (currentChallenge.rule === "vanishing") {
+    const ms = currentChallenge.revealMs || 1500;
+    vanishTimer = setTimeout(() => { wrap.classList.add("vanished"); }, ms);
+  }
+}
+
+// Did the finished run defeat the challenge?
+function challengeWinCheck(c) {
+  if (!c) return false;
+  if (c.rule === "album5") {
+    const counts = {};
+    let best = 0;
+    roundResults.forEach((ok, i) => {
+      if (!ok) return;
+      const a = roundAlbums[i];
+      if (!a || (c.album && a !== c.album)) return;
+      counts[a] = (counts[a] || 0) + 1;
+      if (counts[a] > best) best = counts[a];
+    });
+    return best >= 5;
+  }
+  // vanishing / alphabetical (score-target rules): meet the target.
+  return score >= (c.target || TOTAL_ROUNDS);
+}
+
+// Sandboxed results path for a challenge run (mirrors showDailyResult — no board,
+// no stats; its own win panel). Reached only via endGame's challenge short-circuit.
+function endChallenge() {
+  const c = currentChallenge;
+  showScreen("results");
+  $("resultBracelet").innerHTML = buildBraceletSVG(roundResults, 0, -1, roundAlbums,
+    { colors: albumPalette(), hinted: roundHinted, verseTiers: roundVerseTier });
+  $("finalScore").textContent = score;
+  $("finalSub").textContent = "out of " + TOTAL_ROUNDS;
+  $("keepGoingBtn").style.display = "none";
+  $("namePrompt").style.display = "none";
+  $("verseAnthology").style.display = "none";
+  hideNewBestBanner();
+
+  const won = challengeWinCheck(c);
+  const firstTime = won ? markChallengeDefeated(c.id, score) : false;
+  const rec = challengeRecord(c.id);
+
+  document.querySelector("#screen-results .podium-title").textContent = c.name;
+  const status = won
+    ? `<div class="chall-result-status win">challenge defeated!</div>`
+    : `<div class="chall-result-status">not yet — ${escapeHtml(c.win)}</div>`;
+  const tokenLine = firstTime ? `<div class="chall-result-token">🎟 +1 token earned</div>` : "";
+  const meta = `<div class="chall-result-meta">${rec.attempts} attempt${rec.attempts === 1 ? "" : "s"}` +
+    `${rec.best ? ` · best ${rec.best}/${TOTAL_ROUNDS}` : ""}</div>`;
+  $("resultPodium").innerHTML = status + tokenLine + meta +
+    `<button id="backToChallenges" class="btn-ghost">back to challenges</button>`;
+  $("backToChallenges").addEventListener("click", () => openChallenges("start"));
+
+  renderResultRecap();   // surface any challenge achievements just earned
+  if (won && score === TOTAL_ROUNDS) celebratePerfect();
 }
 
 // Re-render the results screen from a previously saved daily result (the
@@ -2688,6 +2785,9 @@ function advanceRound() {
   if (rar.stamp) { void stamp.offsetWidth; stamp.classList.add("show"); } // reflow re-fires the stamp-in
 
   $("wordDisplay").textContent = currentWord;
+  wrap.classList.remove("vanished");          // clear any prior round's vanish
+  clearTimeout(vanishTimer);
+  applyChallengeRound(wrap);                   // challenge per-round modifier (e.g. Vanishing Word)
   renderExcludedNote();
   $("feedback").innerHTML = "";
   $("playArea").style.display = "";
@@ -2844,6 +2944,33 @@ function rejectOffLimits(song) {
   el.innerHTML = `<b>“${escapeHtml(censor(song.title))}”</b> is in the title — try another`;
   el.classList.remove("show");
   void el.offsetWidth;                 // restart the pop-in animation
+  el.classList.add("show");
+  input.classList.remove("reject-pulse");
+  void input.offsetWidth;
+  input.classList.add("reject-pulse");
+  clearTimeout(rejectFlashTimer);
+  rejectFlashTimer = setTimeout(() => {
+    el.classList.remove("show");
+    input.classList.remove("reject-pulse");
+  }, 1700);
+  input.focus();
+}
+// From A to Z: the first A–Z letter of a title (ignoring punctuation/digits).
+function firstAlphaLetter(title) {
+  const m = (title || "").toUpperCase().match(/[A-Z]/);
+  return m ? m[0] : "";
+}
+// Soft reject for an out-of-order answer in the alphabetical challenge — same
+// no-burn flash as off-limits, just a different note.
+function rejectAlpha(letter) {
+  const input = $("songInput");
+  input.value = "";
+  dropdownItems = []; activeIndex = -1;
+  hideDropdown();
+  const el = $("rejectFlash");
+  el.innerHTML = `out of order — start with <b>${escapeHtml(lastAlphaLetter)}</b> or later`;
+  el.classList.remove("show");
+  void el.offsetWidth;
   el.classList.add("show");
   input.classList.remove("reject-pulse");
   void input.offsetWidth;
@@ -3067,6 +3194,14 @@ function submitAnswer(song, isTimeout) {
   // counts as a miss; lyric answers resolve only to valid songs, so they're exempt.
   if (song && !isTimeout && !lyricMatch && isOffLimitsPick(song)) { rejectOffLimits(song); return; }
 
+  // From A to Z: a valid answer earlier in the alphabet than the last accepted one is
+  // soft-rejected (doesn't burn the round), so the player can keep the sequence going.
+  if (song && !isTimeout && currentChallenge && currentChallenge.rule === "alphabetical"
+      && currentSongs.some((s) => s.title === song.title)) {
+    const L = firstAlphaLetter(song.title);
+    if (lastAlphaLetter && L && L < lastAlphaLetter) { rejectAlpha(L); return; }
+  }
+
   roundLocked = true;
   clearTimer();
   resetTension();
@@ -3081,6 +3216,10 @@ function submitAnswer(song, isTimeout) {
   roundSongs[round - 1] = correct && song ? song.title : null;  // credited song — for the lifetime tally
   justEarnedIndex = correct ? round - 1 : -1;
   if (correct) score++;
+  // From A to Z: advance the alphabetical floor only on an accepted correct answer.
+  if (correct && currentChallenge && currentChallenge.rule === "alphabetical") {
+    lastAlphaLetter = firstAlphaLetter(song.title);
+  }
   correctStreak = correct ? correctStreak + 1 : 0;
   if (gameType === "infinite" && !correct) { lives--; renderLives(); }
   // A word-perfect+ recall earns a pen-nib bead (set BEFORE renderBracelet so the
@@ -3289,8 +3428,13 @@ function endGame() {
   runFolded = true;   // this run's stats are saved here in full; block any unload re-fold
   clearTimer();
   clearTimeout(hintUrgeTimer);
+  clearTimeout(vanishTimer);
   resetTension();
   applyEra(FINALE_ERAS[Math.floor(Math.random() * FINALE_ERAS.length)]);
+
+  // Challenges are sandboxed — their own self-contained results path, before any
+  // stats/records/history/tally/achievement fold runs.
+  if (gameType === "challenge") { endChallenge(); return; }
 
   const isInfinite = gameType === "infinite";
   const isDaily = gameType === "daily";
@@ -3530,14 +3674,17 @@ function armQuit() {
 function quitGame() {
   if (!screens.game.classList.contains("active")) return;
 
-  // Quit achievements — checked against the live run state, before teardown.
-  // The Bolter: bail in round 1 having typed nothing.
-  if (round === 1 && roundResults.length === 0 && !($("songInput").value || "").trim()) {
-    unlock("the-bolter");
-  }
-  // No Closure: answered the first 12 of a 13-round run, then leave the 13th blank.
-  if ((gameType === "classic" || gameType === "daily") && roundResults.length === TOTAL_ROUNDS - 1) {
-    unlock("no-closure");
+  // Quit achievements — checked against the live run state, before teardown. Skipped
+  // for challenges (sandboxed — a challenge run never fires global achievements).
+  if (gameType !== "challenge") {
+    // The Bolter: bail in round 1 having typed nothing.
+    if (round === 1 && roundResults.length === 0 && !($("songInput").value || "").trim()) {
+      unlock("the-bolter");
+    }
+    // No Closure: answered the first 12 of a 13-round run, then leave the 13th blank.
+    if ((gameType === "classic" || gameType === "daily") && roundResults.length === TOTAL_ROUNDS - 1) {
+      unlock("no-closure");
+    }
   }
 
   // Save the progress made before quitting, so a partial run still credits the
@@ -3548,6 +3695,7 @@ function quitGame() {
   clearTimer();
   if (countdownId) { clearInterval(countdownId); countdownId = null; }
   clearTimeout(hintUrgeTimer);
+  clearTimeout(vanishTimer);
   resetTension();
   clearEggs();
   roundLocked = false;
