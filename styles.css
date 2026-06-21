@@ -524,8 +524,20 @@
   }
   @media (prefers-reduced-motion: reduce) { .word-wrap.vanished #wordDisplay { transition: none; } }
 
-  /* "cashed in for a ticket" badge on a converted achievement */
-  .ach-ticket { color: #7d5ba6; font-size: 12px; margin-left: 4px; }
+  /* Charm → token conversion (the escape valve) */
+  .ach-page-tickets { font-family: var(--type); font-size: 10px; letter-spacing: 0.5px; color: #7d5ba6; margin-top: 4px; }
+  .ach--earned { position: relative; }
+  .ach-ticket { position: absolute; top: 6px; right: 7px; font-size: 13px; line-height: 1; }
+  .ach-cashin {
+    position: absolute; top: 5px; right: 6px;
+    font-family: var(--type); font-size: 9px; letter-spacing: 0.3px;
+    padding: 2px 6px; border-radius: 3px; cursor: pointer;
+    border: 1px solid rgba(125,91,166,0.5); background: rgba(125,91,166,0.06); color: #7d5ba6;
+    opacity: 0; transition: opacity 0.15s;
+  }
+  .ach--earned:hover .ach-cashin, .ach-cashin:focus-visible { opacity: 1; }
+  .ach-cashin:hover { background: #7d5ba6; color: #fff; border-color: #7d5ba6; }
+  @media (hover: none) { .ach-cashin { opacity: 1; } }
 
   .hist-head, .hist-row {
     display: grid; grid-template-columns: 1fr 0.8fr 0.8fr 1.9fr 1.3fr;

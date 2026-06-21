@@ -76,6 +76,7 @@ let infiniteVariant = "3lives"; // "3lives" | "sudden"
 let lives = 0;                  // remaining lives in infinite mode
 let dailyRng = null;            // seeded PRNG, non-null only during a daily game
 let currentChallenge = null;    // the active CHALLENGES entry while gameType === "challenge"
+let challengeRunActive = false; // true only during a live challenge run (gates the achievement sandbox)
 let vanishTimer = null;         // Vanishing Word: timeout that hides the prompt word
 let lastAlphaLetter = "";       // From A to Z: first letter of the last accepted answer
 let currentWord = "";
@@ -933,9 +934,10 @@ function totalLifetimeMisses() {
 // map so future challenge charms are covered automatically.
 const CHALLENGE_ACH_IDS = new Set(ACHIEVEMENTS.filter((a) => ACH_GROUP_OF[a.id] === "challenges").map((a) => a.id));
 function unlock(id) {
-  // Sandbox: during a challenge run, only the challenge-progress charms unlock — no
-  // game-quality achievements (streaks, speed, etc.) leak in from mid-round checks.
-  if (gameType === "challenge" && !CHALLENGE_ACH_IDS.has(id)) return;
+  // Sandbox: during a live challenge run, only the challenge-progress charms unlock —
+  // no game-quality achievements (streaks, speed, etc.) leak in from mid-round checks.
+  // The flag is cleared before endChallenge folds, so post-run meta charms still fire.
+  if (challengeRunActive && !CHALLENGE_ACH_IDS.has(id)) return;
   if (!ACH_BY_ID[id] || earnedAchievements[id]) return;
   earnedAchievements[id] = new Date().toISOString().slice(0, 10);
   saveAchievements(earnedAchievements);
@@ -1188,11 +1190,21 @@ function renderResultRecap() {
   el.querySelectorAll(".ach-chip").forEach((c) => c.addEventListener("click", () => openAchievements("results")));
 }
 
+// The escape valve: an earned charm can be cashed in for a challenge token (max 5
+// ever). Converted charms wear a ticket; un-converted ones offer a "cash in" button
+// while conversions remain. Reads the wallet fresh so re-render reflects the latest.
+function achTicketMarkup(id) {
+  const w = loadChallengeTokens();
+  if (w.fromAchievements.includes(id)) return `<span class="ach-ticket" title="cashed in for a challenge token">🎟</span>`;
+  if (w.fromAchievements.length >= 5) return "";
+  return `<button type="button" class="ach-cashin" data-convert="${id}" title="trade this charm for a challenge token">cash in 🎟</button>`;
+}
+
 // One charm tile: earned (revealed), a still-locked secret (masked ???), or a
 // visible locked target. Shared by the grouped grid and the secret section.
 function achTile(a) {
   if (earnedAchievements[a.id]) {
-    return `<div class="ach">${charmMarkup(a.icon)}<div class="ach-text"><div class="ach-nm">${escapeHtml(a.name)}</div><div class="ach-dc">${escapeHtml(a.desc)}</div></div></div>`;
+    return `<div class="ach ach--earned">${charmMarkup(a.icon)}<div class="ach-text"><div class="ach-nm">${escapeHtml(a.name)}</div><div class="ach-dc">${escapeHtml(a.desc)}</div></div>${achTicketMarkup(a.id)}</div>`;
   }
   if (a.secret) {
     return `<div class="ach locked secret"><span class="charm-q" aria-hidden="true">?</span><div class="ach-text"><div class="ach-nm">???</div><div class="ach-dc">a secret charm</div></div></div>`;
@@ -1210,8 +1222,13 @@ function renderAchievementsPage() {
   const earnedCount = earnedAsc.length;
   const pct = Math.round((earnedCount / total) * 100);
 
+  const wallet = loadChallengeTokens();
+  const cashedIn = wallet.fromAchievements.length;
   let html = `<div class="ach-page-head"><div class="ach-page-title">Charm Collection</div>` +
-    `<div class="ach-page-sub">${earnedCount} / ${total} charms collected</div></div>`;
+    `<div class="ach-page-sub">${earnedCount} / ${total} charms collected</div>` +
+    (earnedCount ? `<div class="ach-page-tickets">🎟 cashed in for tokens: ${cashedIn} / 5` +
+      `${cashedIn < 5 ? ` · trade a charm for a challenge token` : ``}</div>` : ``) +
+    `</div>`;
 
   // by-theme breakdown — one small colour-coded bar per group (denominators count
   // every charm in the theme, secret ones included, so the five sum to the total).
@@ -1277,6 +1294,8 @@ function renderAchievementsPage() {
   $("achievementsBody").innerHTML = html;
   $("achievementsBody").querySelectorAll("[data-open-songbook]").forEach((b) =>
     b.addEventListener("click", () => openSongbook(b.dataset.openSongbook)));
+  $("achievementsBody").querySelectorAll("[data-convert]").forEach((b) =>
+    b.addEventListener("click", () => { if (convertAchievementToToken(b.dataset.convert)) renderAchievementsPage(); }));
 }
 
 // Shared album-rainbow segments for a {album: discoveredCount} split out of total.
@@ -2360,6 +2379,7 @@ function resetRunState() {
   runFolded = false;
   dailyRng = null;
   currentChallenge = null;
+  challengeRunActive = false;
   lastAlphaLetter = "";
   clearTimeout(vanishTimer);
   const wrap = $("wordDisplay") && $("wordDisplay").parentNode;
@@ -2542,6 +2562,7 @@ function startChallenge(id) {
   currentMode = MODES[c.mode] || MODES.medium;   // fixed by the challenge, not persisted via DIFF_KEY
   resetRunState();
   currentChallenge = c;                          // set AFTER resetRunState (which nulls it)
+  challengeRunActive = true;                     // start the achievement sandbox
   recordChallengeAttempt(id);
   applyInputHints();
   updateTagline();
@@ -2585,6 +2606,7 @@ function challengeWinCheck(c) {
 // no stats; its own win panel). Reached only via endGame's challenge short-circuit.
 function endChallenge() {
   const c = currentChallenge;
+  challengeRunActive = false;   // run is over — let defeat/meta charms fire normally
   showScreen("results");
   $("resultBracelet").innerHTML = buildBraceletSVG(roundResults, 0, -1, roundAlbums,
     { colors: albumPalette(), hinted: roundHinted, verseTiers: roundVerseTier });
@@ -3696,6 +3718,7 @@ function quitGame() {
   if (countdownId) { clearInterval(countdownId); countdownId = null; }
   clearTimeout(hintUrgeTimer);
   clearTimeout(vanishTimer);
+  challengeRunActive = false;
   resetTension();
   clearEggs();
   roundLocked = false;
