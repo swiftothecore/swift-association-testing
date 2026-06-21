@@ -10,7 +10,7 @@
  * Paths are relative so the worker works under the project subpath
  * (…github.io/swift-association-testing/).
  */
-const CACHE = "stta-v2";
+const CACHE = "stta-v3";
 const ASSETS = [
   "./",
   "index.html",
@@ -51,9 +51,12 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(req.url);
 
   if (url.origin === location.origin) {
-    // network-first, fall back to cache (and to index.html for navigations)
+    // network-first, fall back to cache (and to index.html for navigations).
+    // `cache: "reload"` makes the SW's own fetch BYPASS the browser HTTP cache —
+    // without it, GitHub Pages' max-age means fetch() can return a stale file and
+    // "network-first" silently behaves like "HTTP-cache-first" after a deploy.
     e.respondWith(
-      fetch(req)
+      fetch(req, { cache: "reload" })
         .then((res) => {
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put(req, copy));
