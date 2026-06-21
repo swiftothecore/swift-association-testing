@@ -450,7 +450,7 @@
   }
 
   .hist-head, .hist-row {
-    display: grid; grid-template-columns: 1fr 0.8fr 1.9fr 1.3fr;
+    display: grid; grid-template-columns: 1fr 0.8fr 0.8fr 1.9fr 1.3fr;
     align-items: baseline; gap: 10px;
   }
   .hist-head > span, .hist-row > span { min-width: 0; }
@@ -464,6 +464,8 @@
   .hist-score { font-family: var(--hand); font-size: 22px; color: var(--ink); line-height: 1; }
   .hist-unit { font-family: var(--type); font-size: 11px; color: var(--ink-soft); }
   .hist-time { font-family: var(--type); font-size: 13px; color: var(--ink-soft); }
+  .hist-verse { font-family: var(--type); font-size: 13px; color: var(--ink-soft); }
+  .hist-verse-star { color: #e0a32f; margin-right: 2px; }
   .hist-mode, .hist-date { font-family: var(--type); font-size: 11px; color: var(--ink-soft); }
   /* PB crown — the same SVG as the achievement charm, sized to sit on the score baseline. */
   .hist-crown { display: inline-block; width: 15px; height: 15px; margin-right: 4px; vertical-align: -2px; }

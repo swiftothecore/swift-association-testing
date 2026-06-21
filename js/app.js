@@ -1164,6 +1164,7 @@ function appendHistoryRows(hist) {
     return `<div class="hist-row${isPB ? " hist-pb" : ""}">` +
       `<span class="hist-score">${isPB ? `<span class="hist-crown" aria-hidden="true">${ACH_ICONS.crown}</span>` : ""}${h.s}${unit ? `<span class="hist-unit">${unit}</span>` : ""}</span>` +
       `<span class="hist-time">${h.tm != null ? fmtTime(h.tm) : "—"}</span>` +
+      `<span class="hist-verse">${h.v > 0 ? `<span class="hist-verse-star" aria-hidden="true">★</span>+${h.v}` : "—"}</span>` +
       `<span class="hist-mode">${escapeHtml(modeLabel(h.m))}</span>` +
       `<span class="hist-date">${histDateLabel(h.d)}</span></div>`;
   }).join(""));
@@ -1544,7 +1545,7 @@ function renderRecordsPage() {
   for (const h of hist) if (!(h.m in _pbByMode)) _pbByMode[h.m] = h.m === "daily" ? db : (loadRecords(h.m)[0] ? loadRecords(h.m)[0].score : -1);
   const histBlock = hist.length
     ? `<p class="rec-group-label">history — ${hist.length} run${hist.length === 1 ? "" : "s"}</p>` +
-      `<div class="hist-head"><span>score</span><span>time</span><span>mode</span><span>date</span></div>` +
+      `<div class="hist-head"><span>score</span><span>time</span><span>verse</span><span>mode</span><span>date</span></div>` +
       `<div id="histRows" class="hist-rows"></div>` +
       (hist.length > HISTORY_PAGE ? `<button id="histMore" class="btn-ghost">load more</button>` : "")
     : `<p class="rec-group-label">history</p><p class="stats-empty">no runs yet — finish a game to start your log.</p>`;
@@ -2940,6 +2941,7 @@ function endGame() {
     s: boardScore, c: score, n: roundsSurvived,
     m: isDaily ? "daily" : mode, t: gameType,
     d: new Date().toISOString(), tm: runTime,
+    ...(verseBonus > 0 ? { v: verseBonus } : {}),
     ...(hintsUsed > 0 ? { h: 1 } : {}),
   });
 
