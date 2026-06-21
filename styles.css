@@ -1894,7 +1894,7 @@
   .nav-ic { display: block; }
   .nav-card-title {
     display: inline-block; font-family: var(--hand); font-weight: 700;
-    font-size: 23px; line-height: 0.95; color: var(--ink); white-space: nowrap;
+    font-size: 18px; line-height: 0.95; color: var(--ink); white-space: nowrap;
     border-bottom: 2px dotted var(--ink-soft); padding-bottom: 3px;
   }
   .nav-card-kicker {
