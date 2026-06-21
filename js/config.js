@@ -351,7 +351,7 @@ export const ACH_GROUP_COLORS = {
   infinite:  "#2f4d7a",
   lyricist:  "#9b6b9e",
   catalogue: "#b23a3a",
-  challenges: "#7d5ba6",
+  challenges: "#2b2722",
 };
 // Membership: only the non-core ids are listed; everything else defaults to "core"
 // (groupOf in app.js). Keeps this in sync without re-listing every achievement.

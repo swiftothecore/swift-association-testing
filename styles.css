@@ -454,12 +454,12 @@
   .chall-head-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
   .chall-head-title { font-family: var(--hand); font-weight: 700; font-size: 26px; color: var(--ink); }
   .chall-tokens { font-family: var(--type); font-size: 12px; color: var(--ink-soft); white-space: nowrap; }
-  .chall-tokens b { font-size: 15px; color: #7d5ba6; }
+  .chall-tokens b { font-size: 15px; color: #2b2722; }
   .chall-head-sub { font-family: var(--type); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-soft); margin-top: 2px; }
 
   .chall-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(186px, 1fr)); gap: 20px 16px; padding-top: 14px; }
   .chall-tile {
-    --chall-accent: #7d5ba6;
+    --chall-accent: #2b2722;
     position: relative; border: 1px solid rgba(43,39,34,0.16); border-radius: 3px;
     padding: 18px 14px 14px; background: rgba(251,247,234,0.94);
     box-shadow: 0 1px 0 rgba(43,39,34,0.06);
@@ -507,8 +507,8 @@
 
   /* Challenge results panel (sandboxed — in place of the records board) */
   .chall-result-status { font-family: var(--hand); font-weight: 700; font-size: 22px; color: var(--ink-soft); margin-bottom: 4px; }
-  .chall-result-status.win { color: #7d5ba6; }
-  .chall-result-token { font-family: var(--type); font-size: 13px; color: #7d5ba6; margin-bottom: 4px; }
+  .chall-result-status.win { color: #2b2722; }
+  .chall-result-token { font-family: var(--type); font-size: 13px; color: #2b2722; margin-bottom: 4px; }
   .chall-result-meta { font-family: var(--type); font-size: 11px; color: var(--ink-soft); margin-bottom: 12px; }
   #backToChallenges { width: auto; margin: 0 auto; padding: 5px 18px; }
 
@@ -525,18 +525,18 @@
   @media (prefers-reduced-motion: reduce) { .word-wrap.vanished #wordDisplay { transition: none; } }
 
   /* Charm → token conversion (the escape valve) */
-  .ach-page-tickets { font-family: var(--type); font-size: 10px; letter-spacing: 0.5px; color: #7d5ba6; margin-top: 4px; }
+  .ach-page-tickets { font-family: var(--type); font-size: 10px; letter-spacing: 0.5px; color: #2b2722; margin-top: 4px; }
   .ach--earned { position: relative; }
   .ach-ticket { position: absolute; top: 6px; right: 7px; font-size: 13px; line-height: 1; }
   .ach-cashin {
     position: absolute; top: 5px; right: 6px;
     font-family: var(--type); font-size: 9px; letter-spacing: 0.3px;
     padding: 2px 6px; border-radius: 3px; cursor: pointer;
-    border: 1px solid rgba(125,91,166,0.5); background: rgba(125,91,166,0.06); color: #7d5ba6;
+    border: 1px solid rgba(43,39,34,0.5); background: rgba(43,39,34,0.06); color: #2b2722;
     opacity: 0; transition: opacity 0.15s;
   }
   .ach--earned:hover .ach-cashin, .ach-cashin:focus-visible { opacity: 1; }
-  .ach-cashin:hover { background: #7d5ba6; color: #fff; border-color: #7d5ba6; }
+  .ach-cashin:hover { background: #2b2722; color: #fff; border-color: #2b2722; }
   @media (hover: none) { .ach-cashin { opacity: 1; } }
 
   .hist-head, .hist-row {
@@ -1826,6 +1826,7 @@
   .nav-card[data-era-tint="gold"]     { --tint: 199, 149, 31; }
   .nav-card[data-era-tint="lavender"] { --tint: 139, 115, 201; }
   .nav-card[data-era-tint="denim"]    { --tint: 91, 135, 184; }
+  .nav-card[data-era-tint="graphite"] { --tint: 43, 39, 34; }
   /* Sticky tape — OPAQUE pastel washi (a cream backing under a half-strength tint wash,
      plus a diagonal sheen), so the card never shows through. ::before is the primary
      strip, ::after an optional second strip; placement varies per card below so the row
