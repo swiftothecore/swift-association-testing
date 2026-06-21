@@ -3650,7 +3650,7 @@ function renderSettingsBody() {
       setToggleHTML("showExamples", "Show example songs after a miss", "") +
       setToggleHTML("stemMatching", "Match word variants", "off = exact word only (love won’t match loving)") +
       setToggleHTML("enableHints", "Hints", "Easy &amp; Relaxed — Tab for a hint; a hinted run can’t set a personal best") +
-      setToggleHTML("censorExplicit", "Censor explicit words", "mask swearing in shown lyrics &amp; titles (f**k, s**t) — slurs are always masked") +
+      setToggleHTML("censorExplicit", "Censor explicit words", "mask swearing in shown lyrics &amp; titles (f**k, s**t)") +
       setChoiceHTML("defaultGameType", "Default game type", "on launch", [{ val: "last", label: "Last" }, { val: "classic", label: "Classic" }, { val: "infinite", label: "Infinite" }]) +
       setChoiceHTML("defaultDifficulty", "Default difficulty", "on launch", diffOpts) +
       setChoiceHTML("defaultStatsTab", "Default stats tab", "which tab opens first", statsOpts)
