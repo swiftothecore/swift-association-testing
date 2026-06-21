@@ -44,6 +44,7 @@ export const DEFAULT_SETTINGS = {
   stemMatching: true,       // match word variants (love→loving, gold→golden); off = exact word only
 
   enableHints: true,        // show progressive hints in Easy/Normal/Relaxed (a hinted run can't set a personal best)
+  censorExplicit: false,    // mask general profanity (fuck→f**k) in shown lyrics/titles; the racial slur is always masked regardless
 
   defaultGameType: "last",  // "last" | "classic" | "infinite"
   defaultDifficulty: "last",// "last" | a MODES id

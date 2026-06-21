@@ -120,3 +120,35 @@ export function dailySeed(dateStr) {
     h = (Math.imul(h, 33) ^ dateStr.charCodeAt(i)) >>> 0;
   return h;
 }
+
+/* ---------- Profanity / slur masking ---------- */
+// Mask explicit words wherever lyrics or titles are SHOWN to the player (the stored
+// data is untouched — matching still runs on the real words). Two tiers:
+//   • SLUR_RE  — the racial slur in one featured song; ALWAYS masked, no opt-out.
+//   • SWEAR_RE — general profanity; masked only when the player opts in (the
+//                "censor explicit words" setting).
+// Mild words ("damn", "hell") are deliberately left alone — "damn" is also a valid
+// prompt word, and masking either would over-censor common, non-explicit lines.
+const SLUR_RE  = /\bnigg(?:a|er)s?\b/gi;
+// Each stem is bounded so we don't bleed into innocent words (e.g. "country" never
+// matches "cunt", "Dickinson" never matches "dick"). \w* tails catch inflections
+// (fucking, shitty, bitches) without enumerating every form.
+const SWEAR_RE = /\b(?:(?:mother)?fuck\w*|shit\w*|bitch\w*|slut\w*|piss\w*|dick(?:s|head|heads)?|whore\w*|cunt\w*|asshole\w*|prick(?:s)?|bastard\w*|pussy\w*|goddamn\w*)\b/gi;
+
+// Keep the first and last letter, star the middle: fuck → f**k, shit → s**t,
+// nigga → n***a. Trailing non-letters (an apostrophe in "fuckin'") aren't matched
+// by the \w* stems, so they fall outside the mask and read cleanly.
+function maskWord(w) {
+  if (w.length <= 1) return "*";
+  if (w.length === 2) return w[0] + "*";
+  return w[0] + "*".repeat(w.length - 2) + w[w.length - 1];
+}
+
+// Mask a string for display. Slurs are masked unconditionally; general profanity
+// only when `profanity` is true. Pure — returns a new string, leaves data as-is.
+export function censorText(text, profanity) {
+  if (text == null) return text;
+  let out = String(text).replace(SLUR_RE, maskWord);
+  if (profanity) out = out.replace(SWEAR_RE, maskWord);
+  return out;
+}

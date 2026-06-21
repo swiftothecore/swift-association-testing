@@ -1,5 +1,5 @@
 "use strict";
-import { $, escapeRegExp, escapeHtml, prefersReducedMotion, shuffle, chance, normalizeTitle, normalizeLyric, fuzzySubstringRatio, levenshtein, mulberry32, dailySeed } from "./util.js";
+import { $, escapeRegExp, escapeHtml, prefersReducedMotion, shuffle, chance, normalizeTitle, normalizeLyric, fuzzySubstringRatio, levenshtein, mulberry32, dailySeed, censorText } from "./util.js";
 import {
   TOTAL_ROUNDS, RECENT_WINDOW, DIFF_KEY, DEFAULT_SETTINGS,
   MODES, MODE_ORDER, MODE_COLORS,
@@ -285,7 +285,7 @@ function renderExcludedNote() {
   if (!titles.length) { el.style.display = "none"; el.innerHTML = ""; return; }
   const SHOWN = 3;
   const shown = titles.slice(0, SHOWN)
-    .map((t) => `<span class="ex-title">${escapeHtml(t)}</span>`);
+    .map((t) => `<span class="ex-title">${escapeHtml(censor(t))}</span>`);
   if (titles.length > SHOWN) shown.push(`<span class="ex-more">+${titles.length - SHOWN} more</span>`);
   const lead = titles.length === 1 ? "can’t be played — it’s in the title" : "can’t be played — they’re in the title";
   el.innerHTML = `<span class="ex-lead">${lead}</span>${shown.join("")}`;
@@ -305,8 +305,14 @@ function extractLineWithWord(lyrics, word, strict) {
   const line = lines.find((l) => rx.test(l)) || lines[0] || "";
   return line.trim();
 }
+// Mask explicit words for display. The racial slur is always masked; general
+// profanity only when the player turns on "censor explicit words". The prompt word
+// itself is never explicit (the one near-miss, "damn", is left uncensored), so
+// masking a line never touches the word we go on to highlight. See censorText (util.js).
+function censor(text) { return censorText(text, settings.censorExplicit === true); }
 function highlightWord(line, word, strict) {
   if (strict === undefined) strict = effectiveStrict();
+  line = censor(line);
   // Mark the real word when the line actually contains it; only fall back to the
   // looser stem variants when it doesn't, so "babe" never highlights "baby".
   let body;
@@ -532,7 +538,7 @@ function lifetimeStatsHTML() {
   const songCard = `
     <div class="cat-card" style="border-left-color:${songColor}">
       <div class="cat-card-head"><span class="cat-star">${STAR_SVG}</span>favourite song</div>
-      <div class="cat-card-val">${favSong ? escapeHtml(favSong.key) : "—"}</div>
+      <div class="cat-card-val">${favSong ? escapeHtml(censor(favSong.key)) : "—"}</div>
       <div class="cat-card-sub" style="color:${songColor}">${favSong ? (songAlbum ? escapeHtml(albumDisplayName(songAlbum)) + " · " : "") + "sung ×" + favSong.count : "play a game"}</div>
     </div>`;
   const albumCard = `
@@ -2392,7 +2398,7 @@ function renderDropdown() {
     const div = document.createElement("div");
     const off = isOffLimitsPick(song);
     div.className = "item" + (i === activeIndex ? " active" : "") + (off ? " off-limits" : "");
-    div.innerHTML = `${escapeHtml(song.title)}` + (off ? `<span class="dd-tag">in the title</span>` : "");
+    div.innerHTML = `${escapeHtml(censor(song.title))}` + (off ? `<span class="dd-tag">in the title</span>` : "");
     div.addEventListener("mousedown", (e) => {
       e.preventDefault();
       submitAnswer(song, false);   // off-limits picks route through the soft-reject in submitAnswer
@@ -2417,7 +2423,7 @@ function rejectOffLimits(song) {
   dropdownItems = []; activeIndex = -1;
   hideDropdown();
   const el = $("rejectFlash");
-  el.innerHTML = `<b>“${escapeHtml(song.title)}”</b> is in the title — try another`;
+  el.innerHTML = `<b>“${escapeHtml(censor(song.title))}”</b> is in the title — try another`;
   el.classList.remove("show");
   void el.offsetWidth;                 // restart the pop-in animation
   el.classList.add("show");
@@ -2732,7 +2738,7 @@ function submitAnswer(song, isTimeout) {
 function showCircledChoice(song, done) {
   $("feedback").innerHTML =
     `<div class="circled-choice"><span class="cc-box"${activePen ? ` data-pen="${activePen}"` : ""}>` +
-      `<span class="cc-text">${escapeHtml(song.title)}</span>` +
+      `<span class="cc-text">${escapeHtml(censor(song.title))}</span>` +
       `<svg viewBox="0 0 100 46" preserveAspectRatio="none" aria-hidden="true">` +
         `<path class="cc-ring" pathLength="1" d="M5,26 C2,12 30,3 54,4 C84,5 99,13 96,25 C93,39 64,44 42,43 C16,42 7,38 5,26"/>` +
       `</svg>` +
@@ -2753,7 +2759,7 @@ function lyricCard(song, word, isWrong, lineOverride) {
   const albumLabel = song.album ? `<span class="album-tag" style="--album-color:${color}">${escapeHtml(song.album)}</span>` : "";
   const cls = isWrong ? " wrong-card" : "";
   return `<div class="lyric-card${cls}" style="--album-color:${color}">
-    <div class="song-title">${escapeHtml(song.title)}${albumLabel}</div>
+    <div class="song-title">${escapeHtml(censor(song.title))}${albumLabel}</div>
     <div class="lyric-line">"${highlightWord(line, word)}"</div>
   </div>`;
 }
@@ -3644,6 +3650,7 @@ function renderSettingsBody() {
       setToggleHTML("showExamples", "Show example songs after a miss", "") +
       setToggleHTML("stemMatching", "Match word variants", "off = exact word only (love won’t match loving)") +
       setToggleHTML("enableHints", "Hints", "Easy &amp; Relaxed — Tab for a hint; a hinted run can’t set a personal best") +
+      setToggleHTML("censorExplicit", "Censor explicit words", "mask swearing in shown lyrics &amp; titles (f**k, s**t) — slurs are always masked") +
       setChoiceHTML("defaultGameType", "Default game type", "on launch", [{ val: "last", label: "Last" }, { val: "classic", label: "Classic" }, { val: "infinite", label: "Infinite" }]) +
       setChoiceHTML("defaultDifficulty", "Default difficulty", "on launch", diffOpts) +
       setChoiceHTML("defaultStatsTab", "Default stats tab", "which tab opens first", statsOpts)
