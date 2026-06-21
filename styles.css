@@ -115,6 +115,9 @@
   .card {
     position: relative;
     background:
+      /* red margin rule as a background layer so it spans the full scroll height
+         (the old absolute ::before stopped at the visible box in scrolling cards). */
+      linear-gradient(to right, transparent 44px, rgba(178, 58, 58, 0.38) 44px, rgba(178, 58, 58, 0.38) 46px, transparent 46px),
       linear-gradient(var(--page-wash), var(--page-wash)),
       repeating-linear-gradient(
         to bottom,
@@ -132,13 +135,6 @@
       0 2px 6px rgba(60, 50, 35, 0.18);
     /* deckled / torn-ish edge softness */
     transition: background 0.5s ease;
-  }
-  /* red margin rule */
-  .card::before {
-    content: "";
-    position: absolute; top: 0; bottom: 0; left: 44px;
-    width: 2px; background: var(--margin);
-    opacity: 0.8;
   }
   /* tension vignette — the room dims as the timer runs out */
   .card::after {
@@ -642,8 +638,9 @@
     transform: rotate(7deg) scale(1.35);
     box-shadow: inset 0 0 0 1px currentColor;
   }
-  .word-wrap[data-rarity="rare"]   .rarity-stamp { color: #b0512f; }
-  .word-wrap[data-rarity="scarce"] .rarity-stamp { color: #9e2b2b; }
+  .word-wrap[data-rarity="rare"]     .rarity-stamp { color: #b0512f; }
+  .word-wrap[data-rarity="scarce"]   .rarity-stamp { color: #9e2b2b; }
+  .word-wrap[data-rarity="singular"] .rarity-stamp { color: #7a1d1d; }
   .rarity-stamp.show { animation: stamp-in 0.45s cubic-bezier(.2,1.4,.4,1) forwards; }
   @keyframes stamp-in {
     0%   { opacity: 0;    transform: rotate(7deg) scale(1.6); }

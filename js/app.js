@@ -80,6 +80,8 @@ let timerId = null;
 let countdownId = null;
 let timerStart = 0;
 let roundLocked = false;
+let feedbackShownAt = 0;        // ms timestamp the verdict appeared — Enter-to-advance is held off for ENTER_SKIP_GRACE after it
+const ENTER_SKIP_GRACE = 500;   // so a held/late Enter from the answer screen can't instantly blow past the result
 let debounceId = null;
 let statsBackTarget = "start";
 let settings = { ...{} };       // populated from loadSettings() in init
@@ -489,7 +491,8 @@ function lifetimeStatsHTML() {
   if (!discovered && !nemesis) {
     return header + `<p class="stats-empty">no answers logged yet — play a game to start your catalogue!</p>`;
   }
-  const pct = Math.round((discovered / total) * 100);
+  // Floor, not round — 243/244 must read 99%, never a misleading 100% before completion.
+  const pct = Math.floor((discovered / total) * 100);
 
   // Distinct discovered songs per album → album-rainbow meter segments, drawn in the
   // chronological album order songs appear in allSongs (covers any pseudo-albums too).
@@ -518,7 +521,7 @@ function lifetimeStatsHTML() {
   // Words discovered — distinct prompt words answered correctly, out of the playable set.
   const wordsFound = Object.keys(t.words || {}).length;
   const wordTotal = playableWords.length || 1;
-  const wordPct = Math.round((wordsFound / wordTotal) * 100);
+  const wordPct = Math.floor((wordsFound / wordTotal) * 100);
   const wordMeter = `
     <div class="cat-meter">
       <div class="cat-meter-head"><span>words discovered</span><span>${wordPct}%</span></div>
@@ -2226,7 +2229,9 @@ function rarityTier(n) {
   if (n >= 12) return { name: "common",   t: 0,    stamp: "" };
   if (n >= 6)  return { name: "uncommon", t: 0.4,  stamp: "uncommon" };
   if (n >= 3)  return { name: "rare",     t: 0.75, stamp: "rare find" };
-  return { name: "scarce", t: 1, stamp: "scarce" };
+  if (n >= 2)  return { name: "scarce",   t: 0.9,  stamp: "scarce" };
+  // Lives in exactly one song — the rarest a prompt word can be.
+  return { name: "singular", t: 1, stamp: "one of one" };
 }
 
 // The valid song this round's hints zoom in on. Prefer one whose lyrics hold the
@@ -2681,7 +2686,7 @@ function submitAnswer(song, isTimeout) {
   // Diamonds Are Forever — three rare/scarce prompt words answered right in a row.
   // Disqualified in Ultra (its pool is the rarest words, so a streak there is trivial).
   const rar = rarityTier(currentSongs.length);
-  if (currentMode.id !== "ultra" && correct && (rar.name === "rare" || rar.name === "scarce")) {
+  if (currentMode.id !== "ultra" && correct && (rar.name === "rare" || rar.name === "scarce" || rar.name === "singular")) {
     rareStreak++;
     if (rareStreak >= 3) unlock("diamonds");
   } else {
@@ -2803,6 +2808,7 @@ function showCorrectFeedback(song, lyricMatch) {
     ${firstNote}
     ${card}
     ${advanceUI}`;
+  feedbackShownAt = Date.now();
   $(auto ? "skipBtn" : "continueBtn").addEventListener("click", advanceFromFeedback);
   celebrateCorrect(correctStreak, bonus);
   if (auto) runCountdown();
@@ -2823,6 +2829,7 @@ function showWrongFeedback(song, isTimeout) {
     <div class="banner bad">✗ ${reason}</div>
     ${help}
     <button id="continueBtn" class="btn-ghost">next page →</button>`;
+  feedbackShownAt = Date.now();
   $("continueBtn").addEventListener("click", advanceFromFeedback);
 }
 
@@ -3538,6 +3545,8 @@ function wireInput() {
     // Only once a verdict is actually on the page — not during the pen-circle
     // animation between submitting and the feedback appearing.
     if (!$("cd") && !$("continueBtn")) return;
+    // Brief grace so an Enter still held from submitting can't instantly skip the result.
+    if (Date.now() - feedbackShownAt < ENTER_SKIP_GRACE) return;
     // "Enter advances on a miss" off → require a click on the miss/answer screen.
     if (!settings.enterOnMiss && document.querySelector("#feedback .banner.bad")) return;
     e.preventDefault();
