@@ -1216,6 +1216,19 @@
     background: rgba(43,39,34,0.10);
   }
   .cat-seg { height: 100%; }
+  /* the songs-discovered meter doubles as a button into the songbook */
+  .cat-meter--btn {
+    display: block; width: 100%; text-align: left; cursor: pointer;
+    background: var(--page-wash); font: inherit; color: inherit;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .cat-meter--btn:hover { border-color: rgba(43,39,34,0.3); background: rgba(212,160,23,0.08); }
+  .cat-meter--btn:focus-visible { outline: 2px solid var(--ink-accent); outline-offset: 3px; }
+  .cat-meter-cta {
+    font-family: var(--type); font-size: 10px; letter-spacing: 0.5px;
+    color: var(--ink-accent); margin-top: 9px;
+  }
+  .cat-meter-cta span { font-family: var(--hand); font-size: 16px; }
   /* two keepsake cards */
   .cat-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
   .cat-card {
@@ -1553,9 +1566,79 @@
   .ach-group-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1px rgba(43,39,34,0.25); }
   .ach-group-dot--secret { background: var(--ink-soft); opacity: 0.5; }
 
+  /* the pinned "long game" quest card — catalogue completion ("I Hate It Here").
+     Harmonises with the page's panel system but lifted: a gold accent edge, a faint
+     wash, and the album-rainbow bar nothing else here carries. */
+  .ach-quest {
+    display: flex; gap: 16px; align-items: stretch; width: 100%; text-align: left;
+    cursor: pointer; font: inherit; color: inherit; margin: 12px 0 6px;
+    border: 2px solid var(--bead); border-radius: 3px; padding: 15px 17px;
+    background: var(--page-wash);
+    transition: border-color 0.15s ease, background 0.15s ease, transform 0.12s ease;
+  }
+  .ach-quest:hover { background: rgba(212,160,23,0.09); transform: translateY(-1px); }
+  .ach-quest:focus-visible { outline: 2px solid var(--ink-accent); outline-offset: 3px; }
+  .ach-quest-main { flex: 1; min-width: 0; }
+  .ach-quest-eyebrow {
+    font-family: var(--type); font-size: 9.5px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--ink-accent);
+  }
+  .ach-quest-name { font-family: var(--hand); font-weight: 700; font-size: 32px; color: var(--ink); line-height: 0.98; margin: 2px 0 1px; }
+  .ach-quest-desc { font-family: var(--type); font-size: 10.5px; color: var(--ink-soft); }
+  .ach-quest-meterhead {
+    display: flex; justify-content: space-between; align-items: baseline; margin-top: 11px;
+    font-family: var(--type); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-soft);
+  }
+  .ach-quest-meterhead b { font-family: var(--hand); font-size: 20px; text-transform: none; color: var(--ink); }
+  .ach-quest-bar { margin-top: 5px; }
+  .ach-quest-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 11px; flex-wrap: wrap; }
+  .ach-quest-note { font-family: var(--hand); font-size: 17px; color: var(--margin); }
+  .ach-quest.done .ach-quest-note { color: var(--ink-accent); }
+  .ach-quest-cta { font-family: var(--type); font-size: 10.5px; letter-spacing: 0.5px; color: var(--ink-accent); white-space: nowrap; }
+  .ach-quest-cta span { font-family: var(--hand); font-size: 16px; }
+  .ach-quest-aside { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; flex: none; }
+  .ach-quest-charm {
+    width: 54px; height: 54px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: rgba(43,39,34,0.05); border: 2px dashed rgba(43,39,34,0.28);
+  }
+  .ach-quest-charm.earned { background: var(--page-wash); border-style: solid; border-color: var(--bead); }
+  .ach-quest-charm .charm { display: block; width: 32px; height: 32px; color: var(--bead); opacity: 0.45; }
+  .ach-quest-charm.earned .charm { opacity: 1; }
+  .ach-quest-charm .charm svg { width: 100%; height: 100%; overflow: visible; }
+  .ach-quest-charm .charm .ink { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .ach-quest-charm .charm .ink-fill { fill: var(--bead); stroke: var(--ink); stroke-width: 1.2; }
+  .ach-quest-state { font-family: var(--type); font-size: 8.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-soft); }
+
+  /* Songbook — the per-album missing-songs checklist */
+  .sb-meter {
+    border: 1.5px solid rgba(43,39,34,0.12); border-radius: 3px;
+    padding: 14px 16px 16px; margin-bottom: 18px; background: var(--page-wash);
+  }
+  .sb-meter.done { border-color: var(--bead); }
+  .sb-sub { font-family: var(--hand); font-size: 19px; color: var(--margin); margin-top: 9px; line-height: 1; }
+  .sb-meter.done .sb-sub { color: var(--ink-accent); }
+  .sb-album { margin-bottom: 18px; }
+  .sb-album-head { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
+  .sb-spine { width: 5px; height: 19px; border-radius: 2px; flex: none; }
+  .sb-album-name { font-family: var(--type); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--ink); font-weight: 700; }
+  .sb-album-count { font-family: var(--hand); font-size: 19px; color: var(--ink-soft); margin-left: auto; }
+  .sb-done-tag { color: var(--ink-accent); font-weight: 700; }
+  .sb-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 2px 18px; }
+  .sb-song { display: flex; align-items: flex-start; gap: 9px; padding: 3px 0; min-width: 0; }
+  .sb-title {
+    font-family: var(--hand); font-size: 20px; line-height: 1.1; color: rgba(43,39,34,0.42); min-width: 0;
+  }
+  .sb-song.got .sb-title { color: var(--ink); }
+  .sb-hollow { width: 13px; height: 13px; border: 1.6px solid rgba(43,39,34,0.3); border-radius: 50%; flex: none; margin-top: 4px; }
+  .sb-tick { width: 15px; height: 15px; flex: none; color: var(--bead); margin-top: 3px; }
+  .sb-tick svg { width: 100%; height: 100%; display: block; }
+
   @media (max-width: 560px) {
     .ach-head-row { grid-template-columns: 1fr; }
     .ach-themes-grid { grid-template-columns: 1fr; }
+    .ach-quest { flex-direction: column; }
+    .ach-quest-aside { flex-direction: row; align-self: flex-start; }
+    .sb-list { grid-template-columns: 1fr; }
   }
 
   /* Daily Challenge — a pinned "second card" action: solid, denim-washed, lightly skewed

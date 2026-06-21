@@ -132,6 +132,7 @@ const screens = {
   stats: $("screen-stats"),
   records: $("screen-records"),
   achievements: $("screen-achievements"),
+  songbook: $("screen-songbook"),
 };
 function showScreen(name) {
   Object.values(screens).forEach((s) => s.classList.remove("active"));
@@ -460,6 +461,8 @@ function renderStats(lastScore, viewMode = defaultStatsView()) {
   el.innerHTML = tabs + body;
   el.querySelectorAll("[data-statmode]").forEach((b) =>
     b.addEventListener("click", () => renderStats(lastScore, b.dataset.statmode)));
+  el.querySelectorAll("[data-open-songbook]").forEach((b) =>
+    b.addEventListener("click", () => openSongbook(b.dataset.openSongbook)));
 }
 
 // Highest-count entry of a {key: count} map (first one wins ties), or null if empty.
@@ -517,12 +520,16 @@ function lifetimeStatsHTML() {
   const songAlbum = favSong ? albumOfTitle(favSong.key) : null;
   const albColor = favAlbum ? (albumColor(favAlbum.key) || "var(--ink-soft)") : "var(--ink-soft)";
 
+  // The meter doubles as the door into the songbook (the missing-songs checklist that
+  // backs the "I Hate It Here" charm) — same tally, drilled into per-album detail.
+  const remaining = total - discovered;
   const meter = `
-    <div class="cat-meter">
+    <button type="button" class="cat-meter cat-meter--btn" data-open-songbook="stats">
       <div class="cat-meter-head"><span>songs discovered</span><span>${pct}%</span></div>
       <div class="cat-meter-num"><b>${discovered}</b> / ${total} songs</div>
       <div class="cat-bar">${segs}</div>
-    </div>`;
+      <div class="cat-meter-cta">${remaining > 0 ? remaining + " still to find" : "every song found ★"} <span aria-hidden="true">→</span></div>
+    </button>`;
 
   // Words discovered — distinct prompt words answered correctly, out of the playable set.
   const wordsFound = Object.keys(t.words || {}).length;
@@ -1154,6 +1161,12 @@ function renderAchievementsPage() {
 
   html += `<div class="ach-head-row">${meter}${latestCard}</div>`;
 
+  // "The long game" — the catalogue-completion charm ("I Hate It Here") gets a pinned
+  // quest card above the grid: live song-completion progress (the album-rainbow bar) and
+  // a door into the songbook. It's the only charm with a browsable collection behind it,
+  // so it's promoted out of its theme grid (it still counts toward Catalogue below).
+  html += questCardHTML();
+
   // themed sections: earned (revealed, newest first) then visible locked targets.
   // Still-locked secrets are held back for the trailing Secret section.
   ACH_GROUPS.forEach((g) => {
@@ -1175,6 +1188,106 @@ function renderAchievementsPage() {
   }
 
   $("achievementsBody").innerHTML = html;
+  $("achievementsBody").querySelectorAll("[data-open-songbook]").forEach((b) =>
+    b.addEventListener("click", () => openSongbook(b.dataset.openSongbook)));
+}
+
+// Shared album-rainbow segments for a {album: discoveredCount} split out of total.
+// Drawn in the order albums first appear in allSongs (the catalogue rainbow).
+function albumRainbowSegs(byAlbum, total) {
+  const order = [];
+  for (const s of allSongs) if (s.album && !order.includes(s.album)) order.push(s.album);
+  return order.filter((a) => byAlbum[a]).map((a) =>
+    `<div class="cat-seg" style="width:${(byAlbum[a] / total) * 100}%;background:${albumColor(a) || "var(--ink-soft)"}" title="${escapeHtml(a)}: ${byAlbum[a]}"></div>`
+  ).join("");
+}
+
+// The pinned catalogue-completion quest card on the Charm Collection page.
+function questCardHTML() {
+  const a = ACH_BY_ID["i-hate-it-here"];
+  if (!a) return "";
+  const found = (loadSongTally().songs) || {};
+  const total = allSongs.length || 1;
+  const discovered = allSongs.filter((s) => found[s.title]).length;
+  const done = discovered >= total;
+  const byAlbum = {};
+  for (const s of allSongs) if (found[s.title] && s.album) byAlbum[s.album] = (byAlbum[s.album] || 0) + 1;
+  const note = done ? "every song found ★" : (total - discovered) + " still hiding from you";
+  return `<button type="button" class="ach-quest${done ? " done" : ""}" data-open-songbook="achievements">
+    <div class="ach-quest-main">
+      <div class="ach-quest-eyebrow">the long game · catalogue</div>
+      <div class="ach-quest-name">${escapeHtml(a.name)}</div>
+      <div class="ach-quest-desc">${escapeHtml(a.desc)}</div>
+      <div class="ach-quest-meterhead"><span>songs named</span><span><b>${discovered}</b> / ${total}</span></div>
+      <div class="cat-bar ach-quest-bar">${albumRainbowSegs(byAlbum, total)}</div>
+      <div class="ach-quest-foot">
+        <span class="ach-quest-note">${note}</span>
+        <span class="ach-quest-cta">see what's missing <span aria-hidden="true">→</span></span>
+      </div>
+    </div>
+    <div class="ach-quest-aside">
+      <span class="ach-quest-charm${done ? " earned" : ""}">${charmMarkup(a.icon)}</span>
+      <span class="ach-quest-state">${done ? "earned" : "locked"}</span>
+    </div>
+  </button>`;
+}
+
+/* ---------- Songbook — the missing-songs checklist (backs "I Hate It Here") ---------- */
+let songbookBackTarget = "stats";  // where the Songbook's ← back returns to
+function openSongbook(from) {
+  songbookBackTarget = from;
+  renderSongbook();
+  showScreen("songbook");
+}
+// A full per-album checklist of the catalogue: which songs you've named (gold star) and
+// which are still missing (hollow). Reads the lifetime tally, so it spans every mode.
+function renderSongbook() {
+  const found = (loadSongTally().songs) || {};
+  const total = allSongs.length || 1;
+  const discovered = allSongs.filter((s) => found[s.title]).length;
+  const remaining = total - discovered;
+  const complete = remaining <= 0;
+  const pct = Math.floor((discovered / total) * 100);
+
+  const byAlbum = {};
+  for (const s of allSongs) if (found[s.title] && s.album) byAlbum[s.album] = (byAlbum[s.album] || 0) + 1;
+
+  const sub = complete
+    ? "every song found — the whole catalogue, by heart ★"
+    : remaining + " song" + (remaining === 1 ? "" : "s") + " still hiding from you";
+
+  let html = `<div class="sb-meter${complete ? " done" : ""}">
+      <div class="cat-meter-head"><span>songs named correctly</span><span>${pct}%</span></div>
+      <div class="cat-meter-num"><b>${discovered}</b> / ${total} songs</div>
+      <div class="cat-bar">${albumRainbowSegs(byAlbum, total)}</div>
+      <div class="sb-sub">${sub}</div>
+    </div>`;
+
+  // Album order = first appearance in allSongs (the catalogue order).
+  const order = [];
+  for (const s of allSongs) if (s.album && !order.includes(s.album)) order.push(s.album);
+  html += order.map((album) => {
+    const songs = allSongs.filter((s) => s.album === album);
+    const got = songs.filter((s) => found[s.title]).length;
+    const albDone = got === songs.length;
+    const col = albumColor(album) || "var(--ink-soft)";
+    const items = songs.map((s) => {
+      const has = !!found[s.title];
+      return `<li class="sb-song${has ? " got" : ""}">` +
+        (has ? `<span class="sb-tick">${STAR_SVG}</span>` : `<span class="sb-hollow" aria-hidden="true"></span>`) +
+        `<span class="sb-title">${escapeHtml(censor(s.title))}</span></li>`;
+    }).join("");
+    return `<section class="sb-album${albDone ? " done" : ""}">
+      <div class="sb-album-head">
+        <span class="sb-spine" style="background:${col}"></span>
+        <span class="sb-album-name">${escapeHtml(album)}</span>
+        <span class="sb-album-count">${albDone ? `<span class="sb-done-tag">all found ✓</span>` : got + " / " + songs.length}</span>
+      </div>
+      <ul class="sb-list">${items}</ul>
+    </section>`;
+  }).join("");
+
+  $("songbookBody").innerHTML = html;
 }
 
 /* ---------- Personal records (your own best runs, per mode) ---------- */
@@ -3070,12 +3183,17 @@ function endGame() {
   // Lifetime per-song / per-word tally (every game type counts — it's a catalog
   // record, not a per-mode board). Powers Favourite Song, Songs Discovered,
   // Favourite Album, Nemesis Word.
-  if (!devNoLog) recordGameTally(roundResults.map((correct, i) => ({
-    correct,
-    title: roundSongs[i] || null,
-    album: roundAlbums[i] || null,
-    word: roundWords[i] || null,
-  })));
+  if (!devNoLog) {
+    const tally = recordGameTally(roundResults.map((correct, i) => ({
+      correct,
+      title: roundSongs[i] || null,
+      album: roundAlbums[i] || null,
+      word: roundWords[i] || null,
+    })));
+    // "I Hate It Here" — every song in the catalogue answered correctly at least once.
+    // Count discovered against allSongs (not raw tally keys) so it's exact.
+    if (allSongs.length && allSongs.every((s) => tally.songs[s.title])) unlock("i-hate-it-here");
+  }
 
   // Lifetime cross-game metrics (fastest/avg answer, accuracy, lyric lines, daily totals).
   const metrics = devNoLog ? { noTimeoutStreak: 0, versePerfect: 0 } : recordGameMetrics({
@@ -4262,6 +4380,11 @@ async function init() {
   $("viewAchievementsBtn").addEventListener("click", () => openAchievements("results"));
   $("achievementsBackBtn").addEventListener("click", () => {
     const prev = achievementsBackTarget;
+    showScreen(prev);
+    if (prev === "start") { $("startContent").style.display = ""; }
+  });
+  $("songbookBackBtn").addEventListener("click", () => {
+    const prev = songbookBackTarget;
     showScreen(prev);
     if (prev === "start") { $("startContent").style.display = ""; }
   });

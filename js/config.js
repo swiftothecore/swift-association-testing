@@ -232,6 +232,8 @@ export const ACH_ICONS = {
   quote:   `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M4 5 H10 V11 C10 14.5 8 16.5 4.5 17.5 L3.5 15 C5.5 14.4 6.6 13.4 7 12 H4 Z"/><path class="ink-fill" d="M14 5 H20 V11 C20 14.5 18 16.5 14.5 17.5 L13.5 15 C15.5 14.4 16.6 13.4 17 12 H14 Z"/></svg>`,
   // an umbrella — it's raining and it's Monday
   umbrella:`<svg viewBox="0 0 24 24"><path class="ink-fill" d="M12 2.2 C6 2.2 2 7 2 12 L22 12 C22 7 18 2.2 12 2.2 Z"/><g stroke="var(--paper)" stroke-width="1" fill="none"><path d="M7 12 C7 8 8.5 4 12 2.6"/><path d="M17 12 C17 8 15.5 4 12 2.6"/><path d="M12 2.6 V12"/></g><path class="ink" stroke-width="1.6" stroke-linecap="round" fill="none" d="M12 12 V19 a2.6 2.6 0 0 1 -5.2 0"/></svg>`,
+  // a ticked checklist page — every song in the catalogue, named (I Hate It Here)
+  checklist:`<svg viewBox="0 0 24 24"><rect class="ink-fill" x="4" y="2.5" width="16" height="19" rx="2"/><g stroke="var(--paper)" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 7.6 l1.3 1.3 L10.4 6.4"/><path d="M6.6 13.4 l1.3 1.3 L10.4 12.2"/><path d="M12.8 8 H17"/><path d="M12.8 13.8 H17"/></g></svg>`,
 };
 export const ACHIEVEMENTS = [
   { id: "enchanted",        name: "Enchanted",        desc: "Finish your first game",              secret: false, icon: "sparkle" },
@@ -289,6 +291,7 @@ export const ACHIEVEMENTS = [
   { id: "fav-song",         name: "Someone Has A Favourite Song", desc: "Answer three rounds with lyrics from the same song", secret: true, icon: "star" },
   { id: "eyes-closed",      name: "Eyes Closed",      desc: "10 fuzzy lyric matches in one Lyricist game", secret: true, icon: "eyeclosed" },
   { id: "paris",            name: "Paris",            desc: "Answer “Paris” when the word is “somewhere”", secret: true, icon: "tower" },
+  { id: "i-hate-it-here",   name: "I Hate It Here",   desc: "Answer every song in the catalogue at least once", secret: false, icon: "checklist" },
   { id: "raining-monday",   name: "It's Raining And It's Monday", desc: "Answer “rain” correctly on a Monday", secret: true, icon: "umbrella" },
   { id: "clean",            name: "Clean",            desc: "Win without hints or a single timeout",  secret: false, icon: "drop" },
   { id: "everything-nothing", name: "Everything & Nothing All At Once", desc: "Win a game in every difficulty", secret: false, icon: "yinyang" },
@@ -330,7 +333,7 @@ export const ACH_GROUP_OF = {
   "clearly-ready": "lyricist", "overachiever": "lyricist", "fav-song": "lyricist",
   "branch-out": "catalogue", "eras-tour": "catalogue", "the-triangle": "catalogue",
   "my-mind-is-alive": "catalogue", "thousand-cuts": "catalogue", "spicy-drama": "catalogue",
-  "diamonds": "catalogue", "paris": "catalogue",
+  "diamonds": "catalogue", "paris": "catalogue", "i-hate-it-here": "catalogue",
 };
 
 /* ---------- Easter-egg art ---------- */
