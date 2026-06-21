@@ -5,6 +5,7 @@ import {
   HS_KEY, RECORDS_KEY, HISTORY_KEY, STATS_KEY, ACH_KEY, DIFF_KEY,
   DAILY_KEY, DAILY_BOARD_KEY, DAILY_STREAK_KEY, TYPES_KEY, TALLY_KEY,
   SETTINGS_KEY, METRICS_KEY, APP_PREFIX, DEFAULT_SETTINGS,
+  CHALLENGES_KEY, CHALLENGE_TOKENS_KEY,
   MODES, MODE_ORDER, TOTAL_ROUNDS,
 } from "./config.js";
 
@@ -69,6 +70,44 @@ export function loadAchievements() {
 }
 export function saveAchievements(earned) {
   try { localStorage.setItem(ACH_KEY, JSON.stringify(earned)); } catch (e) { /* ignore */ }
+}
+
+/* ---------- Challenges mode (progress + tokens) ---------- */
+// Per-challenge progress, keyed by challenge id: { unlocked, defeated, attempts, best }.
+export function loadChallengeState() {
+  try {
+    const raw = localStorage.getItem(CHALLENGES_KEY);
+    if (raw) { const o = JSON.parse(raw); if (o && typeof o === "object") return o; }
+  } catch (e) { /* ignore */ }
+  return {};
+}
+export function saveChallengeState(o) {
+  try { localStorage.setItem(CHALLENGES_KEY, JSON.stringify(o)); } catch (e) { /* ignore */ }
+}
+// One challenge's record, with defaults filled in.
+export function challengeRecord(id) {
+  const e = loadChallengeState()[id] || {};
+  return { unlocked: !!e.unlocked, defeated: !!e.defeated, attempts: e.attempts || 0, best: e.best || 0 };
+}
+// Token wallet. Seeded with one starting token on first read (persisted on first save).
+export function loadChallengeTokens() {
+  try {
+    const raw = localStorage.getItem(CHALLENGE_TOKENS_KEY);
+    if (raw) {
+      const o = JSON.parse(raw);
+      if (o && typeof o.balance === "number") {
+        if (!Array.isArray(o.fromAchievements)) o.fromAchievements = [];
+        return o;
+      }
+    }
+  } catch (e) { /* ignore */ }
+  return { balance: 1, fromAchievements: [] };   // the starting token
+}
+export function saveChallengeTokens(o) {
+  try { localStorage.setItem(CHALLENGE_TOKENS_KEY, JSON.stringify(o)); } catch (e) { /* ignore */ }
+}
+export function resetChallenges() {
+  try { localStorage.removeItem(CHALLENGES_KEY); localStorage.removeItem(CHALLENGE_TOKENS_KEY); } catch (e) { /* ignore */ }
 }
 
 /* ---------- Game types ever played (for "Hits Different") ---------- */

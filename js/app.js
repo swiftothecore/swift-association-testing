@@ -6,6 +6,7 @@ import {
   ERAS, TENDER_ERAS, FINALE_ERAS,
   ALBUM_COLORS, CB_ALBUM_COLORS, STUDIO_ALBUMS, TITLE_ALIASES,
   ACHIEVEMENTS, ACH_ICONS, ACH_BY_ID, ACH_GROUPS, ACH_GROUP_COLORS, ACH_GROUP_OF,
+  CHALLENGES, CHALLENGE_BY_ID, CHALLENGE_ORDER,
   PEN_SVG, STAR_SVG, SPARKLE_SVG, DOODLE_SVG,
 } from "./config.js";
 import { buildBraceletSVG } from "./bracelet.js";
@@ -23,6 +24,8 @@ import {
   loadMetrics, recordGameMetrics,
   loadSettings, saveSettings,
   exportData, importData,
+  loadChallengeState, saveChallengeState, challengeRecord,
+  loadChallengeTokens, saveChallengeTokens, resetChallenges,
   resetRecords, resetStatsAll, resetAchievements, resetTally, resetDaily, clearAllData,
 } from "./storage.js";
 
@@ -943,6 +946,79 @@ function checkMetaAchievements() {
   if (hidden.length && hidden.every((a) => earnedAchievements[a.id])) unlock("is-it-over-now");
   const all = ACHIEVEMENTS.filter((a) => a.id !== "the-lucky-one");
   if (all.length && all.every((a) => earnedAchievements[a.id])) unlock("the-lucky-one");
+}
+
+/* ---------- Challenges mode: token wallet + progress mutators ----------
+   These run OUTSIDE the per-run fold (called from the page / endChallenge), so the
+   challenge achievements they unlock don't violate the run sandbox. */
+function tokenBalance() { return loadChallengeTokens().balance; }
+
+// Spend a token to unlock a challenge. Returns true on success.
+function unlockChallenge(id) {
+  const c = CHALLENGE_BY_ID[id];
+  if (!c) return false;
+  const st = loadChallengeState();
+  if (st[id] && st[id].unlocked) return true;       // already open
+  const wallet = loadChallengeTokens();
+  const cost = c.cost || 1;
+  if (wallet.balance < cost) return false;           // can't afford
+  wallet.balance -= cost;
+  saveChallengeTokens(wallet);
+  st[id] = { ...challengeRecord(id), unlocked: true };
+  saveChallengeState(st);
+  // Paper Rings — every challenge in the registry is now unlocked (free ones count).
+  if (CHALLENGES.every((ch) => ch.free || challengeRecord(ch.id).unlocked)) unlock("paper-rings");
+  return true;
+}
+
+// True if the player can start this challenge right now (free, already unlocked, or affordable).
+function challengeUnlocked(id) {
+  const c = CHALLENGE_BY_ID[id];
+  return !!c && (c.free || challengeRecord(id).unlocked);
+}
+
+// Bump the attempt counter (called when a challenge run starts).
+function recordChallengeAttempt(id) {
+  const st = loadChallengeState();
+  const rec = st[id] ? { ...challengeRecord(id) } : { ...challengeRecord(id), unlocked: !!CHALLENGE_BY_ID[id].free };
+  rec.attempts += 1;
+  st[id] = rec;
+  saveChallengeState(st);
+  return rec.attempts;
+}
+
+// Record a defeat. First-ever defeat awards a token and the milestone charms.
+function markChallengeDefeated(id, score) {
+  const st = loadChallengeState();
+  const rec = { ...challengeRecord(id) };
+  const firstTime = !rec.defeated;
+  rec.defeated = true;
+  if (score > rec.best) rec.best = score;
+  st[id] = rec;
+  saveChallengeState(st);
+  if (firstTime) {
+    const wallet = loadChallengeTokens();
+    wallet.balance += 1;                              // the self-feeding reward
+    saveChallengeTokens(wallet);
+    unlock("the-archer");                             // first challenge ever defeated
+    if (rec.attempts === 1) unlock("state-of-grace"); // beat it on the first try
+    if (rec.attempts >= 5) unlock("this-is-me-trying");
+    if (CHALLENGES.every((ch) => challengeRecord(ch.id).defeated)) unlock("the-alchemy");
+  }
+  return firstTime;
+}
+
+// Escape valve: convert an earned achievement into a token (max 5 ever).
+function convertAchievementToToken(achId) {
+  if (!earnedAchievements[achId]) return false;
+  const wallet = loadChallengeTokens();
+  if (wallet.fromAchievements.includes(achId)) return false;
+  if (wallet.fromAchievements.length >= 5) return false;
+  wallet.fromAchievements.push(achId);
+  wallet.balance += 1;
+  saveChallengeTokens(wallet);
+  unlock("castles-crumbling");
+  return true;
 }
 
 // "The Piano Was Hissing" — typing "rep tv" / "reputation tv" as an answer OR as your name.

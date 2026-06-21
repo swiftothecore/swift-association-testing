@@ -18,6 +18,8 @@ export const TYPES_KEY = "swiftSongAssociation.typesPlayed";   // {classic,infin
 export const TALLY_KEY = "swiftSongAssociation.songTally";     // lifetime per-song/per-word tally — Favourite Song, Songs Discovered, Nemesis Word, I Hate It Here
 export const SETTINGS_KEY = "swiftSongAssociation.settings";   // user preferences (see DEFAULT_SETTINGS)
 export const METRICS_KEY = "swiftSongAssociation.metrics";    // lifetime cross-game counters — fastest/avg answer, accuracy, lyric lines, daily totals
+export const CHALLENGES_KEY = "swiftSongAssociation.challenges";        // per-challenge progress — { [id]: {unlocked, defeated, attempts, best} }
+export const CHALLENGE_TOKENS_KEY = "swiftSongAssociation.challengeTokens"; // { balance, fromAchievements:[] } — tokens spent to unlock challenges
 
 // Every persisted key shares this namespace; export/import and "clear everything"
 // sweep all keys under it.
@@ -88,6 +90,28 @@ export const MODE_COLORS = {
   ultra:    "#5a5a66",   // graphite
   lyricist: "#8a78b0",   // lavender
 };
+
+/* Challenges mode — discrete rule-bending puzzles, unlocked with tokens and "defeated".
+   Pure data: each entry declares a `rule` token; app.js dispatches on it (round modifier,
+   per-answer judge, win check). Sandboxed like daily — a challenge run never folds into the
+   difficulty boards/stats/history/tally/achievements. `mode` fixes the MODES levers it runs
+   under (without persisting DIFF_KEY). `free` challenges start unlocked; the rest cost a token. */
+export const CHALLENGES = [
+  { id: "vanishing-word", name: "Vanishing Word", rule: "vanishing", mode: "medium",
+    free: true,  cost: 1, target: 10, revealMs: 1500, icon: "sparkle",
+    desc: "The word vanishes after a moment — answer from memory.",
+    win: "Score 10 / 13 with disappearing words." },
+  { id: "deep-cut", name: "Deep Cut", rule: "album5", mode: "easy",
+    free: false, cost: 1, album: null /* any single album */, icon: "star",
+    desc: "Pull five correct answers from a single album.",
+    win: "Answer 5 correct songs from one album." },
+  { id: "alphabetical", name: "From A to Z", rule: "alphabetical", mode: "medium",
+    free: false, cost: 1, target: 9, icon: "thirteen",
+    desc: "Each song's title must start no earlier than the last.",
+    win: "Land 9 correct answers in non-decreasing A→Z order." },
+];
+export const CHALLENGE_BY_ID = Object.fromEntries(CHALLENGES.map((c) => [c.id, c]));
+export const CHALLENGE_ORDER = CHALLENGES.map((c) => c.id);
 
 /* Era engine */
 export const ERAS = ["gold", "lavender", "red", "denim", "graphite", "midnight", "debut", "reputation", "lover", "evermore"];
@@ -299,6 +323,12 @@ export const ACHIEVEMENTS = [
   { id: "piano-was-hissing", name: "The Piano Was Hissing", desc: "Type “reputation tv” somewhere",    secret: true,  icon: "piano" },
   { id: "the-bolter",       name: "The Bolter",       desc: "Quit before typing anything in round 1", secret: true,  icon: "door" },
   { id: "no-closure",       name: "No Closure",       desc: "Give up after 12 — never answer the 13th", secret: true, icon: "lock" },
+  { id: "the-archer",       name: "The Archer",       desc: "Defeat your first challenge",           secret: false, icon: "target" },
+  { id: "the-alchemy",      name: "The Alchemy",      desc: "Defeat every challenge",                secret: false, icon: "crown" },
+  { id: "paper-rings",      name: "Paper Rings",      desc: "Unlock every challenge",                secret: false, icon: "diamond" },
+  { id: "state-of-grace",   name: "State Of Grace",   desc: "Defeat a challenge on the first try",   secret: true,  icon: "feather" },
+  { id: "this-is-me-trying", name: "This Is Me Trying", desc: "Defeat a challenge after 5+ attempts", secret: true, icon: "mountain" },
+  { id: "castles-crumbling", name: "Castles Crumbling", desc: "Trade an achievement for a token",    secret: true,  icon: "castle" },
   { id: "is-it-over-now",   name: "Is It Over Now?",  desc: "Earn every hidden achievement",         secret: true,  icon: "hourglass" },
   { id: "the-lucky-one",    name: "The Lucky One",    desc: "Earn every other achievement",          secret: true,  icon: "clover" },
 ];
@@ -312,6 +342,7 @@ export const ACH_GROUPS = [
   { id: "infinite",  label: "Infinite mode",          short: "Infinite" },
   { id: "lyricist",  label: "Lyricist & lyric lines", short: "Lyricist" },
   { id: "catalogue", label: "Catalogue knowledge",    short: "Catalogue" },
+  { id: "challenges", label: "Challenges",             short: "Challenge" },
 ];
 // One muted notebook hue per theme — the section dots and the by-theme breakdown bars.
 export const ACH_GROUP_COLORS = {
@@ -320,6 +351,7 @@ export const ACH_GROUP_COLORS = {
   infinite:  "#2f4d7a",
   lyricist:  "#9b6b9e",
   catalogue: "#b23a3a",
+  challenges: "#7d5ba6",
 };
 // Membership: only the non-core ids are listed; everything else defaults to "core"
 // (groupOf in app.js). Keeps this in sync without re-listing every achievement.
@@ -334,6 +366,8 @@ export const ACH_GROUP_OF = {
   "branch-out": "catalogue", "eras-tour": "catalogue", "the-triangle": "catalogue",
   "my-mind-is-alive": "catalogue", "thousand-cuts": "catalogue", "spicy-drama": "catalogue",
   "diamonds": "catalogue", "paris": "catalogue", "i-hate-it-here": "catalogue",
+  "the-archer": "challenges", "the-alchemy": "challenges", "paper-rings": "challenges",
+  "state-of-grace": "challenges", "this-is-me-trying": "challenges", "castles-crumbling": "challenges",
 };
 
 /* ---------- Easter-egg art ---------- */
