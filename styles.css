@@ -1902,7 +1902,9 @@
      name written large on a signature rule, and a heart-hands end-cap. The big line
      IS the input (id stays #set-playerName so the existing change handler is reused). */
   .nameplate {
-    position: relative; background: rgba(251, 247, 234, 0.93);
+    /* z-index lifts the whole bookplate above the card's ::after tension vignette
+       (z-index 5) so the signature can never be painted over. */
+    position: relative; z-index: 10; background: rgba(251, 247, 234, 0.93);
     border: 1px solid rgba(43, 39, 34, 0.16); border-radius: 3px;
     padding: 14px 18px 15px; margin: 2px 0 4px; transform: rotate(-0.4deg);
     box-shadow: 0 1px 0 rgba(43, 39, 34, 0.06);
@@ -1923,9 +1925,15 @@
     /* Caveat's exit strokes overhang the advance width — pad so the first/last
        glyph's flourish isn't clipped at the input's border box. */
     padding: 0 8px;
+    /* keep the name itself on the very top layer of the plate, above the
+       heart-hands sibling, so nothing can ever overlap or clip it. */
+    position: relative; z-index: 2;
   }
   .np-name-input::placeholder { color: var(--ink-soft); opacity: 0.55; }
-  .np-hands { flex: 0 0 auto; color: var(--ink-accent); margin-bottom: 3px; }
+  /* fixed-size decoration: the flex row always reserves its space so the name's input
+     box sits entirely to the left of it and can never be overlapped; it's also a layer
+     below the name as a belt-and-suspenders guard. */
+  .np-hands { flex: 0 0 auto; position: relative; z-index: 1; color: var(--ink-accent); margin-bottom: 3px; }
   .np-hint {
     font-family: var(--type); font-size: 10.5px; color: var(--ink-soft);
     margin: 7px 2px 0;
