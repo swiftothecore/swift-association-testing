@@ -272,7 +272,7 @@ export const ACHIEVEMENTS = [
   { id: "i-cant-see-you",   name: "I Can't See You",  desc: "Finish a game without answering once", secret: true, icon: "eyeoff" },
   { id: "thousand-cuts",    name: "Death By A Thousand Cuts", desc: "1,000 lifetime missed rounds", secret: true, icon: "scissors" },
   { id: "holy-ground",      name: "Holy Ground",      desc: "Reach round 13 from scratch in Infinite", secret: true, icon: "mountain" },
-  { id: "spicy-drama",      name: "Spicy Drama",      desc: "Answer a round with \"If This Was A Movie\"", secret: true, icon: "clapper" },
+  { id: "spicy-drama",      name: "Spicy Drama",      desc: "Answer with \"If This Was A Movie\" — Fearless or Speak Now? Fans still argue", secret: true, icon: "clapper" },
   { id: "word-for-word",    name: "Word For Word",    desc: "Recall a lyric line word-perfect",     secret: true,  icon: "quote" },
   { id: "i-look-in-windows", name: "I Look In People's Windows", desc: "Open the settings menu",      secret: true,  icon: "window" },
   { id: "look-what-you-made-me-do", name: "Look What You Made Me Do", desc: "Make the snake appear",  secret: true,  icon: "snake" },
