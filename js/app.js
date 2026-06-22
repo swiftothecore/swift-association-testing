@@ -2809,24 +2809,7 @@ function renderWildcardBanner(label) {
 // Soft reject for an answer that breaks the round's Wildcard rule — no burned round,
 // same flash vocabulary as the alphabetical / off-limits rejects.
 function rejectWildcard(label) {
-  const input = $("songInput");
-  input.value = "";
-  dropdownItems = []; activeIndex = -1;
-  hideDropdown();
-  const el = $("rejectFlash");
-  el.innerHTML = `breaks the rule — <b>${escapeHtml(label)}</b>`;
-  el.classList.remove("show");
-  void el.offsetWidth;
-  el.classList.add("show");
-  input.classList.remove("reject-pulse");
-  void input.offsetWidth;
-  input.classList.add("reject-pulse");
-  clearTimeout(rejectFlashTimer);
-  rejectFlashTimer = setTimeout(() => {
-    el.classList.remove("show");
-    input.classList.remove("reject-pulse");
-  }, 1700);
-  input.focus();
+  softRejectFlash(`breaks the rule — <b>${escapeHtml(label)}</b>`);
 }
 
 // Word Games (escalating distortion). DISPLAY-ONLY — matching reads currentWord from
@@ -3361,15 +3344,16 @@ function firstAlphaLetter(title) {
   const m = (title || "").toUpperCase().match(/[A-Z]/);
   return m ? m[0] : "";
 }
-// Soft reject for an out-of-order answer in the alphabetical challenge — same
-// no-burn flash as off-limits, just a different note.
-function rejectAlpha(letter) {
+// Shared soft-reject flash: wipe the line, pulse the input, show a red margin note,
+// and keep the clock running — the round is NOT burned. Used by the off-limits,
+// alphabetical, wildcard, and One Of A Kind rejects.
+function softRejectFlash(html) {
   const input = $("songInput");
   input.value = "";
   dropdownItems = []; activeIndex = -1;
   hideDropdown();
   const el = $("rejectFlash");
-  el.innerHTML = `out of order — start with <b>${escapeHtml(lastAlphaLetter)}</b> or later`;
+  el.innerHTML = html;
   el.classList.remove("show");
   void el.offsetWidth;
   el.classList.add("show");
@@ -3382,6 +3366,16 @@ function rejectAlpha(letter) {
     input.classList.remove("reject-pulse");
   }, 1700);
   input.focus();
+}
+// Soft reject for an out-of-order answer in the alphabetical challenge.
+function rejectAlpha(letter) {
+  softRejectFlash(`out of order — start with <b>${escapeHtml(lastAlphaLetter)}</b> or later`);
+}
+// One Of A Kind: the player tried their target song on a round where it doesn't fit
+// the prompt word. Don't burn the round — keep hunting for a word that lands it.
+function rejectNewSong() {
+  const t = challengeTargetSong ? challengeTargetSong.title : "your song";
+  softRejectFlash(`<b>“${escapeHtml(censor(t))}”</b> doesn't fit this word — keep looking`);
 }
 
 /* ---------- Lyric-line answering ---------- */
@@ -3601,6 +3595,16 @@ function submitAnswer(song, isTimeout) {
       && currentSongs.some((s) => s.title === song.title)) {
     const L = firstAlphaLetter(song.title);
     if (lastAlphaLetter && L && L < lastAlphaLetter) { rejectAlpha(L); return; }
+  }
+
+  // One Of A Kind: trying the named target song on a round where it doesn't fit the
+  // prompt word doesn't burn the round — the player keeps hunting for a word that lands
+  // it ("answer that song for at least one word"). When it DOES fit, it falls through
+  // and scores correct, satisfying the win check.
+  if (song && !isTimeout && currentChallenge && currentChallenge.rule === "newsong"
+      && challengeTargetSong && song.title === challengeTargetSong.title
+      && !currentSongs.some((s) => s.title === song.title)) {
+    rejectNewSong(); return;
   }
 
   // Wildcard: a song that's valid by lyrics but breaks this round's rule is soft-
