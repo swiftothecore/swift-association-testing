@@ -2580,7 +2580,47 @@ function applyChallengeRound(wrap) {
   if (currentChallenge.rule === "vanishing") {
     const ms = currentChallenge.revealMs || 1500;
     vanishTimer = setTimeout(() => { wrap.classList.add("vanished"); }, ms);
+  } else if (currentChallenge.rule === "wordfx") {
+    renderWordFx(wrap, currentWord, round);
   }
+}
+
+// Word Games (escalating distortion). DISPLAY-ONLY — matching reads currentWord from
+// state, never the DOM, so the warping never affects correctness. The level climbs by
+// round; rendered once per round (stable, so a reflow won't re-shuffle).
+function wordFxLevel(r) {
+  if (r <= 3) return 1;   // scramble interior letters
+  if (r <= 6) return 2;   // drop ~a third of the letters
+  if (r <= 9) return 3;   // reverse
+  return 4;               // scramble + drop + reverse + wobble
+}
+function scrambleWord(w) {
+  if (w.length < 4) return w;                 // too short to disguise — leave it
+  const a = w.slice(1, -1).split("");
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return w[0] + a.join("") + w[w.length - 1];
+}
+function dropLetters(w) {
+  return w.split("").map((ch, i) =>
+    (i > 0 && i < w.length - 1 && ch !== " " && Math.random() < 0.35 ? "_" : ch)).join("");
+}
+function renderWordFx(wrap, word, r) {
+  const level = wordFxLevel(r);
+  let text = word;
+  if (level === 1) text = scrambleWord(word);
+  else if (level === 2) text = dropLetters(word);
+  else if (level === 3) text = word.split("").reverse().join("");
+  else text = dropLetters(scrambleWord(word)).split("").reverse().join("");
+  wrap.dataset.fx = String(level);
+  const wobble = level === 4 && !prefersReducedMotion();
+  $("wordDisplay").innerHTML = text.split("").map((ch, i) => {
+    const rot = wobble ? (((i * 37) % 11) - 5) : 0;   // deterministic small per-letter tilt
+    const style = rot ? ` style="--fx-rot:${rot}deg"` : "";
+    return `<span class="fx-ch"${style}>${escapeHtml(ch)}</span>`;
+  }).join("");
 }
 
 // Did the finished run defeat the challenge?
@@ -2808,6 +2848,7 @@ function advanceRound() {
 
   $("wordDisplay").textContent = currentWord;
   wrap.classList.remove("vanished");          // clear any prior round's vanish
+  wrap.removeAttribute("data-fx");            // clear any prior round's Word Games distortion
   clearTimeout(vanishTimer);
   applyChallengeRound(wrap);                   // challenge per-round modifier (e.g. Vanishing Word)
   renderExcludedNote();

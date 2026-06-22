@@ -582,6 +582,19 @@
   }
   @media (prefers-reduced-motion: reduce) { .word-wrap.vanished #wordDisplay { transition: none; } }
 
+  /* Word Games challenge — the prompt word is distorted (display only; matching reads
+     state). Letters render as inline spans so each can tilt at the wobble tier. */
+  .word-wrap[data-fx] #wordDisplay .fx-ch { display: inline-block; transform: rotate(var(--fx-rot, 0deg)); }
+  .word-wrap[data-fx="2"] #wordDisplay .fx-ch,
+  .word-wrap[data-fx="4"] #wordDisplay .fx-ch { letter-spacing: 0.5px; }
+  @media (prefers-reduced-motion: no-preference) {
+    .word-wrap[data-fx="4"] #wordDisplay .fx-ch { animation: fx-wobble 1.6s ease-in-out infinite; }
+    @keyframes fx-wobble {
+      0%, 100% { transform: rotate(var(--fx-rot, 0deg)); }
+      50%      { transform: rotate(calc(var(--fx-rot, 0deg) * -1)) translateY(-1px); }
+    }
+  }
+
   /* Charm → token conversion (the escape valve) */
   .ach-page-tickets { font-family: var(--type); font-size: 10px; letter-spacing: 0.5px; color: #2b2722; margin-top: 4px; }
   .ach--earned { position: relative; }

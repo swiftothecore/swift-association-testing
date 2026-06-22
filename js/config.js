@@ -109,6 +109,10 @@ export const CHALLENGES = [
     free: false, cost: 1, target: 9, icon: "book",
     desc: "Each song's title must start no earlier than the last.",
     win: "Land 9 correct answers in non-decreasing A→Z order." },
+  { id: "word-modifiers", name: "Word Games", rule: "wordfx", mode: "medium",
+    free: false, cost: 1, target: 9, icon: "shake",
+    desc: "The word warps more each round — read it before it's gibberish.",
+    win: "Score 9 / 13 through the distortion." },
 ];
 export const CHALLENGE_BY_ID = Object.fromEntries(CHALLENGES.map((c) => [c.id, c]));
 export const CHALLENGE_ORDER = CHALLENGES.map((c) => c.id);
