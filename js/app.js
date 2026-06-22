@@ -2778,14 +2778,22 @@ function renderNewSongBanner() {
 function buildWildcardConstraints() {
   const rx = wordRegex(currentWord, false);
   const words = (s) => s.title.trim().split(/\s+/).length;
+  const firstCh = (s) => ((s.title || "").toUpperCase().match(/[A-Z]/) || [""])[0];
+  const isVowel = (c) => "AEIOU".includes(c);
   const albums = [...new Set(currentSongs.map((s) => s.album).filter(Boolean))];
   const album = albums.length ? shuffle(albums.slice())[0] : null;
   const cons = [
-    { id: "oneword", label: "only one-word titles",           accepts: (s) => words(s) === 1 },
-    { id: "long",    label: "only titles of 3+ words",        accepts: (s) => words(s) >= 3 },
-    { id: "notitle", label: "the word can't be in the title", accepts: (s) => !rx.test(s.title) },
-    { id: "vanish",  label: "vanishing word",                 accepts: null,
+    { id: "oneword",   label: "only one-word titles",            accepts: (s) => words(s) === 1 },
+    { id: "twoword",   label: "only two-word titles",            accepts: (s) => words(s) === 2 },
+    { id: "long",      label: "only titles of 3+ words",         accepts: (s) => words(s) >= 3 },
+    { id: "vowel",     label: "title must start with a vowel",   accepts: (s) => isVowel(firstCh(s)) },
+    { id: "consonant", label: "title must start with a consonant", accepts: (s) => { const c = firstCh(s); return !!c && !isVowel(c); } },
+    { id: "notitle",   label: "the word can't be in the title",  accepts: (s) => !rx.test(s.title) },
+    { id: "titleword", label: "the word must be in the title",   accepts: (s) => rx.test(s.title) },
+    { id: "vanish",    label: "the word vanishes",               accepts: null,
       display: (w) => { vanishTimer = setTimeout(() => w.classList.add("vanished"), 1500); } },
+    { id: "scramble",  label: "the word is scrambled",           accepts: null,
+      display: (w) => renderWordFx(w, currentWord, 1) },
   ];
   if (album) cons.push({ id: "album", label: `only from ${album}`, accepts: (s) => s.album === album });
   return cons;
@@ -3270,6 +3278,23 @@ function resetTension() {
   el.classList.remove("show");
 }
 
+// Whether a song satisfies the active challenge's per-round constraint — so the
+// suggestions never reveal an answer the rule would soft-reject (e.g. a multi-word
+// title under "only one-word titles", or an out-of-order title in From A to Z).
+// Non-constraint rules (and non-challenge play) accept everything.
+function roundAcceptsSong(song) {
+  if (gameType !== "challenge" || !currentChallenge) return true;
+  if (currentChallenge.rule === "wildcard") {
+    return !roundWildcard || !roundWildcard.accepts || roundWildcard.accepts(song);
+  }
+  if (currentChallenge.rule === "alphabetical") {
+    if (!lastAlphaLetter) return true;
+    const L = firstAlphaLetter(song.title);
+    return !L || L >= lastAlphaLetter;
+  }
+  return true;
+}
+
 /* ---------- Dropdown (searches whole catalog) ---------- */
 function rankMatches(query) {
   const q = normalizeTitle(query);
@@ -3279,6 +3304,7 @@ function rankMatches(query) {
     const t = song._norm;
     const idx = t.indexOf(q);
     if (idx === -1) continue;
+    if (!roundAcceptsSong(song)) continue;   // hide rule-breaking suggestions
     const rank = idx === 0 ? 0 : 1;
     scored.push({ song, rank, idx });
   }

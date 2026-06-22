@@ -122,7 +122,7 @@ export const CHALLENGES = [
     desc: "At forks in the run, pick a perk that reshapes the rest.",
     win: "Score 9 / 13 — your way." },
   { id: "wildcard", name: "Wildcard", rule: "wildcard", mode: "medium",
-    free: false, cost: 1, target: 9, icon: "mask",
+    free: false, cost: 1, target: 9, noTitle: false, icon: "mask",
     desc: "Every round changes the rule — keep up.",
     win: "Score 9 / 13 across shifting rules." },
 ];
