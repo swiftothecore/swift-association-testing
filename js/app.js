@@ -85,6 +85,12 @@ let challengeForcedWordVal = "";// One Of A Kind: the prompt word that surfaces 
 let extraSecondsPerRound = 0;   // Choose Your Path: bonus seconds added to every round's clock
 let skipTokens = 0;             // Choose Your Path: one-time word "swaps" earned at a fork
 let pathForksTaken = [];        // Choose Your Path: fork rounds whose perk has been chosen
+let perksTaken = [];            // Choose Your Path: perk ids already chosen (never re-offered)
+let pathMulligans = 0;          // Choose Your Path: wrong answers that can be retried (Second Chance)
+let perkReveals = new Set();    // Choose Your Path: active per-round reveals (letter/album/count/example)
+let perkPoolOverride = null;    // Choose Your Path: Crowd Pleaser → draw words from the common pool
+let perkNoTitleOff = false;     // Choose Your Path: Off The Record → allow the word in the title
+let perkCalm = false;           // Choose Your Path: Steady Hands → no timer tremor/tension
 let roundWildcard = null;       // Wildcard: this round's active sub-constraint
 let lastWildcardId = "";        // Wildcard: previous round's constraint id (no immediate repeat)
 let currentWord = "";
@@ -272,11 +278,13 @@ function effectiveStrict() { return currentMode.strict || settings.stemMatching 
 // From A to Z draws from the common pool so every round has options). Falls back to
 // the active mode for non-challenge runs / challenges that don't override.
 function effectiveNoTitle() {
+  if (perkNoTitleOff) return false;            // Choose Your Path: Off The Record
   if (gameType === "challenge" && currentChallenge && currentChallenge.noTitle !== undefined)
     return currentChallenge.noTitle;
   return currentMode.noTitle;
 }
 function effectivePool() {
+  if (perkPoolOverride) return perkPoolOverride;   // Choose Your Path: Crowd Pleaser
   if (gameType === "challenge" && currentChallenge && currentChallenge.pool)
     return currentChallenge.pool;
   return currentMode.pool;
@@ -2468,6 +2476,12 @@ function resetRunState() {
   extraSecondsPerRound = 0;
   skipTokens = 0;
   pathForksTaken = [];
+  perksTaken = [];
+  pathMulligans = 0;
+  perkReveals = new Set();
+  perkPoolOverride = null;
+  perkNoTitleOff = false;
+  perkCalm = false;
   roundWildcard = null;
   lastWildcardId = "";
   clearTimeout(vanishTimer);
@@ -2707,6 +2721,8 @@ function applyChallengeRound(wrap) {
     renderDeepCutCounter();
   } else if (currentChallenge.rule === "newsong") {
     renderNewSongBanner();
+  } else if (currentChallenge.rule === "path") {
+    renderPerkReveals();
   }
 }
 
@@ -3072,11 +3088,38 @@ function nextRound() {
   setTimeout(finish, 500 * animScale() || 250);
 }
 
-// Choose Your Path: a mid-run perk fork. Covers the answered page with two cards;
-// the pick adds a run-modifier (extra time or a word swap) for the rest of the run,
-// then resumes the page-turn. No scoring change — the win is still the score target.
+// Choose Your Path perk registry. Each perk's apply() mutates run state (time/swaps/
+// mulligans/reveals/pool/title/calm); at a fork the player is offered a random TWO of
+// the perks they haven't already taken, and picks one. 13 perks total, deliberately
+// spanning time, retries, reveals, and rule-relaxers so the two on offer feel distinct.
+const PERKS = [
+  { id: "slow",     icon: "+2s",  name: "Slow Down Time", desc: "two extra seconds on every remaining word", apply: () => { extraSecondsPerRound += 2; } },
+  { id: "encore",   icon: "+4s",  name: "Encore",          desc: "four extra seconds on every remaining word", apply: () => { extraSecondsPerRound += 4; } },
+  { id: "swap",     icon: "↻",    name: "Word Swap",       desc: "swap one word you don't know for a fresh one", apply: () => { skipTokens += 1; } },
+  { id: "doovers",  icon: "↻↻",   name: "Do-Overs",        desc: "swap two words you don't know for fresh ones", apply: () => { skipTokens += 2; } },
+  { id: "second",   icon: "♡",    name: "Second Chance",   desc: "a wrong answer can be retried once", apply: () => { pathMulligans += 1; } },
+  { id: "ninelives", icon: "♡♡",  name: "Nine Lives",      desc: "two wrong answers can be retried", apply: () => { pathMulligans += 2; } },
+  { id: "openbook", icon: "A·",   name: "Open Book",       desc: "see the first letter of a song that fits, every round", apply: () => { perkReveals.add("letter"); } },
+  { id: "liner",    icon: "♪",    name: "Liner Notes",     desc: "see the album of a song that fits, every round", apply: () => { perkReveals.add("album"); } },
+  { id: "tongue",   icon: "№",    name: "Tip Of My Tongue", desc: "see how many songs fit, every round", apply: () => { perkReveals.add("count"); } },
+  { id: "cheat",    icon: "👁",   name: "Cheat Sheet",     desc: "see one song that fits, every round", apply: () => { perkReveals.add("example"); } },
+  { id: "crowd",    icon: "★",    name: "Crowd Pleaser",   desc: "the rest of the words come from popular songs", apply: () => { perkPoolOverride = "easy"; } },
+  { id: "offrec",   icon: "✎",    name: "Off The Record",  desc: "the word is allowed to be in the title now", apply: () => { perkNoTitleOff = true; } },
+  { id: "steady",   icon: "≈",    name: "Steady Hands",    desc: "the page stops shaking as the clock runs down", apply: () => { perkCalm = true; } },
+];
+const PERK_BY_ID = Object.fromEntries(PERKS.map((p) => [p.id, p]));
+
+// Choose Your Path: a mid-run perk fork. Covers the answered page with a random two of
+// the not-yet-taken perks; the pick applies a run-modifier for the rest of the run, then
+// resumes the page-turn. No scoring change — the win is still the score target.
 function showPathFork(forkRound) {
   if (document.querySelector(".chall-path-overlay")) return;   // never stack two forks
+  // Offer two distinct perks the player hasn't taken yet (fall back to the full set if
+  // somehow exhausted — there are 13, far more than the two forks need).
+  let pool = PERKS.filter((p) => !perksTaken.includes(p.id));
+  if (pool.length < 2) pool = PERKS.slice();
+  const offer = shuffle(pool.slice()).slice(0, 2);
+
   const card = $("screen-game");
   const ov = document.createElement("div");
   ov.className = "chall-path-overlay";
@@ -3085,20 +3128,39 @@ function showPathFork(forkRound) {
     `<h3 class="chall-path-title">choose your path</h3>` +
     `<p class="chall-path-sub">page ${forkRound} cleared — pick a perk for the rest of the run</p>` +
     `<div class="chall-path-cards">` +
-    `<button class="chall-path-card" data-perk="time"><span class="cpc-icon">+2s</span>` +
-    `<span class="cpc-name">Slow Down Time</span><span class="cpc-desc">two extra seconds on every remaining word</span></button>` +
-    `<button class="chall-path-card" data-perk="skip"><span class="cpc-icon">↻</span>` +
-    `<span class="cpc-name">Mulligan</span><span class="cpc-desc">a one-time swap for a word you don't know</span></button>` +
+    offer.map((p) =>
+      `<button class="chall-path-card" data-perk="${p.id}"><span class="cpc-icon">${escapeHtml(p.icon)}</span>` +
+      `<span class="cpc-name">${escapeHtml(p.name)}</span><span class="cpc-desc">${escapeHtml(p.desc)}</span></button>`).join("") +
     `</div></div>`;
   card.appendChild(ov);
   ov.querySelectorAll("[data-perk]").forEach((b) => b.addEventListener("click", () => {
-    if (b.dataset.perk === "time") extraSecondsPerRound += 2;
-    else skipTokens += 1;
+    const perk = PERK_BY_ID[b.dataset.perk];
+    if (perk) { perk.apply(); perksTaken.push(perk.id); }
     pathForksTaken.push(forkRound);
     ov.remove();
     renderPathSkip();
     nextRound();   // fork is taken now — fall through to the normal advance
   }, { once: true }));
+}
+
+// Choose Your Path reveals (Open Book / Liner Notes / Tip Of My Tongue / Cheat Sheet):
+// a non-scoring hint line in the shared banner, derived from a fitting song. Re-rendered
+// each round; absent when no reveal perk is active.
+function renderPerkReveals() {
+  if (gameType !== "challenge" || !currentChallenge || currentChallenge.rule !== "path") return;
+  if (!perkReveals.size) { const b = $("challBanner"); if (b) b.remove(); return; }
+  const el = ensureChallBanner();
+  if (!currentSongs.length) { el.innerHTML = `<span class="chall-banner-tag">help</span> no song fits — swap it`; return; }
+  const sample = roundHintSong || currentSongs[0];
+  const parts = [];
+  if (perkReveals.has("count"))   parts.push(`${currentSongs.length} song${currentSongs.length === 1 ? "" : "s"} fit`);
+  if (perkReveals.has("letter"))  parts.push(`starts with “${escapeHtml((sample.title.match(/[A-Za-z]/) || ["?"])[0].toUpperCase())}”`);
+  if (perkReveals.has("album") && sample.album) {
+    const col = albumColor(sample.album) || "var(--ink-soft)";
+    parts.push(`from <span style="color:${col};font-weight:700">${escapeHtml(sample.album)}</span>`);
+  }
+  if (perkReveals.has("example")) parts.push(`e.g. <b>${escapeHtml(censor(sample.title))}</b>`);
+  el.innerHTML = `<span class="chall-banner-tag">help</span> ${parts.join(" · ")}`;
 }
 
 // Choose Your Path: spend a Mulligan to swap this round's word for a fresh one —
@@ -3249,8 +3311,9 @@ function clearTimer() {
 
 /* ---------- Timer tension ---------- */
 function setTension(t) {
-  // Timer-tension setting off → keep the vignette/tremor at rest.
-  document.body.style.setProperty("--tension", settings.timerTension ? String(t) : "0");
+  // Timer-tension setting off (or Choose Your Path's Steady Hands perk) → keep the
+  // vignette/tremor at rest.
+  document.body.style.setProperty("--tension", (settings.timerTension && !perkCalm) ? String(t) : "0");
 }
 function updateTally(remaining) {
   if (!settings.timerTension) return;
@@ -3651,6 +3714,18 @@ function submitAnswer(song, isTimeout) {
   $("playArea").style.display = "none";
 
   const correct = !!song && currentSongs.some((s) => s.title === song.title);
+  // Choose Your Path — Second Chance / Nine Lives: spend a mulligan to retry a miss
+  // (same word, fresh clock) instead of burning the round. Only kicks in on an actual
+  // miss while mulligans remain; correct answers and the other challenges are untouched.
+  if (!correct && currentChallenge && currentChallenge.rule === "path" && pathMulligans > 0) {
+    pathMulligans -= 1;
+    roundLocked = false;
+    $("songInput").disabled = false;
+    $("playArea").style.display = "";
+    softRejectFlash(`second chance — try again (${pathMulligans} left)`);
+    startTimer();
+    return;
+  }
   roundResults[round - 1] = correct;
   roundAlbums[round - 1] = song ? (song.album || null) : null;
   roundWords[round - 1] = currentWord;                 // prompt word — for Nemesis Word
