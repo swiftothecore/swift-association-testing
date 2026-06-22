@@ -85,6 +85,8 @@ let challengeForcedWordVal = "";// One Of A Kind: the prompt word that surfaces 
 let extraSecondsPerRound = 0;   // Choose Your Path: bonus seconds added to every round's clock
 let skipTokens = 0;             // Choose Your Path: one-time word "swaps" earned at a fork
 let pathForksTaken = [];        // Choose Your Path: fork rounds whose perk has been chosen
+let roundWildcard = null;       // Wildcard: this round's active sub-constraint
+let lastWildcardId = "";        // Wildcard: previous round's constraint id (no immediate repeat)
 let currentWord = "";
 let currentSongs = [];
 let dropdownItems = [];
@@ -2393,9 +2395,13 @@ function resetRunState() {
   extraSecondsPerRound = 0;
   skipTokens = 0;
   pathForksTaken = [];
+  roundWildcard = null;
+  lastWildcardId = "";
   clearTimeout(vanishTimer);
   const skipBtn = $("pathSkipBtn");
   if (skipBtn) skipBtn.remove();
+  const banner = $("challBanner");
+  if (banner) banner.remove();
   const wrap = $("wordDisplay") && $("wordDisplay").parentNode;
   if (wrap) wrap.classList.remove("vanished");
 }
@@ -2622,7 +2628,75 @@ function applyChallengeRound(wrap) {
     vanishTimer = setTimeout(() => { wrap.classList.add("vanished"); }, ms);
   } else if (currentChallenge.rule === "wordfx") {
     renderWordFx(wrap, currentWord, round);
+  } else if (currentChallenge.rule === "wildcard") {
+    applyWildcardRound(wrap);
   }
+}
+
+// Wildcard's rotating sub-constraints, rebuilt each round against the round's word /
+// valid songs so every choice is guaranteed solvable (e.g. album-only only picks an
+// album that actually appears in currentSongs). accepts(song) → false soft-rejects;
+// display(wrap) layers a visual gimmick (reusing the vanish modifier).
+function buildWildcardConstraints() {
+  const rx = wordRegex(currentWord, false);
+  const words = (s) => s.title.trim().split(/\s+/).length;
+  const albums = [...new Set(currentSongs.map((s) => s.album).filter(Boolean))];
+  const album = albums.length ? shuffle(albums.slice())[0] : null;
+  const cons = [
+    { id: "oneword", label: "only one-word titles",           accepts: (s) => words(s) === 1 },
+    { id: "long",    label: "only titles of 3+ words",        accepts: (s) => words(s) >= 3 },
+    { id: "notitle", label: "the word can't be in the title", accepts: (s) => !rx.test(s.title) },
+    { id: "vanish",  label: "vanishing word",                 accepts: null,
+      display: (w) => { vanishTimer = setTimeout(() => w.classList.add("vanished"), 1500); } },
+  ];
+  if (album) cons.push({ id: "album", label: `only from ${album}`, accepts: (s) => s.album === album });
+  return cons;
+}
+// Pick this round's Wildcard rule (solvable, no immediate repeat), show its banner,
+// and run any visual gimmick.
+function applyWildcardRound(wrap) {
+  const cons = buildWildcardConstraints();
+  const usable = cons.filter((c) => !c.accepts || currentSongs.some(c.accepts));
+  let pool = usable.filter((c) => c.id !== lastWildcardId);
+  if (!pool.length) pool = usable.length ? usable : cons;
+  roundWildcard = pool[Math.floor(Math.random() * pool.length)];
+  lastWildcardId = roundWildcard.id;
+  renderWildcardBanner(roundWildcard.label);
+  if (roundWildcard.display) roundWildcard.display(wrap);
+}
+// The margin banner naming the current Wildcard rule (created lazily above the word).
+function renderWildcardBanner(label) {
+  let el = $("challBanner");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "challBanner";
+    el.className = "chall-banner";
+    const anchor = document.querySelector("#screen-game .word-label");
+    anchor.parentNode.insertBefore(el, anchor);
+  }
+  el.innerHTML = `<span class="chall-banner-tag">rule</span> ${escapeHtml(label)}`;
+}
+// Soft reject for an answer that breaks the round's Wildcard rule — no burned round,
+// same flash vocabulary as the alphabetical / off-limits rejects.
+function rejectWildcard(label) {
+  const input = $("songInput");
+  input.value = "";
+  dropdownItems = []; activeIndex = -1;
+  hideDropdown();
+  const el = $("rejectFlash");
+  el.innerHTML = `breaks the rule — <b>${escapeHtml(label)}</b>`;
+  el.classList.remove("show");
+  void el.offsetWidth;
+  el.classList.add("show");
+  input.classList.remove("reject-pulse");
+  void input.offsetWidth;
+  input.classList.add("reject-pulse");
+  clearTimeout(rejectFlashTimer);
+  rejectFlashTimer = setTimeout(() => {
+    el.classList.remove("show");
+    input.classList.remove("reject-pulse");
+  }, 1700);
+  input.focus();
 }
 
 // Word Games (escalating distortion). DISPLAY-ONLY — matching reads currentWord from
@@ -3374,6 +3448,16 @@ function submitAnswer(song, isTimeout) {
       && currentSongs.some((s) => s.title === song.title)) {
     const L = firstAlphaLetter(song.title);
     if (lastAlphaLetter && L && L < lastAlphaLetter) { rejectAlpha(L); return; }
+  }
+
+  // Wildcard: a song that's valid by lyrics but breaks this round's rule is soft-
+  // rejected (no burned round) so the player can answer within the rule. Wrong songs
+  // fall through to score as wrong; a null-accepts rule (vanishing) never rejects.
+  if (song && !isTimeout && currentChallenge && currentChallenge.rule === "wildcard"
+      && roundWildcard && roundWildcard.accepts
+      && currentSongs.some((s) => s.title === song.title)
+      && !roundWildcard.accepts(song)) {
+    rejectWildcard(roundWildcard.label); return;
   }
 
   roundLocked = true;

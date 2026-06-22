@@ -121,6 +121,10 @@ export const CHALLENGES = [
     free: false, cost: 1, target: 9, forks: [4, 8], icon: "branch",
     desc: "At forks in the run, pick a perk that reshapes the rest.",
     win: "Score 9 / 13 — your way." },
+  { id: "wildcard", name: "Wildcard", rule: "wildcard", mode: "medium",
+    free: false, cost: 1, target: 9, icon: "mask",
+    desc: "Every round changes the rule — keep up.",
+    win: "Score 9 / 13 across shifting rules." },
 ];
 export const CHALLENGE_BY_ID = Object.fromEntries(CHALLENGES.map((c) => [c.id, c]));
 export const CHALLENGE_ORDER = CHALLENGES.map((c) => c.id);

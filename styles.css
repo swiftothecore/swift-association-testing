@@ -605,6 +605,17 @@
     .chall-path-card:hover { transform: none; }
   }
 
+  /* Wildcard — the per-round rule banner above the prompt word */
+  .chall-banner {
+    text-align: center; margin: 2px 0 6px; font-family: var(--type);
+    font-size: 12px; letter-spacing: 0.4px; color: var(--ink-soft);
+  }
+  .chall-banner-tag {
+    font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 1px;
+    color: #b23a3a; border: 1px solid rgba(178, 58, 58, 0.5); border-radius: 3px;
+    padding: 1px 5px; margin-right: 6px;
+  }
+
   /* Vanishing Word challenge — the prompt word fades out of view after a beat
      (still in state, so matching is unaffected). */
   .word-wrap.vanished #wordDisplay {
