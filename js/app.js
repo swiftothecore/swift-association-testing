@@ -3745,6 +3745,10 @@ function resetTension() {
 // Non-constraint rules (and non-challenge play) accept everything.
 function roundAcceptsSong(song) {
   if (gameType !== "challenge" || !currentChallenge) return true;
+  // noTitle challenges (e.g. Revolving Door): never suggest a song whose title
+  // contains the prompt word — the round would reject it.
+  if (effectiveNoTitle() && currentWord &&
+      wordRegex(currentWord, effectiveStrict()).test(song.title)) return false;
   if (currentChallenge.rule === "wildcard") {
     return !roundWildcard || !roundWildcard.accepts || roundWildcard.accepts(song);
   }
