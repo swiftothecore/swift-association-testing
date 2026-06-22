@@ -2488,6 +2488,7 @@ function resetRunState() {
   roundWildcard = null;
   lastWildcardId = "";
   clearTimeout(vanishTimer);
+  clearWildIntro();
   const skipBtn = $("pathSkipBtn");
   if (skipBtn) skipBtn.remove();
   const banner = $("challBanner");
@@ -2834,7 +2835,8 @@ function applyWildcardRound(wrap) {
   roundWildcard = pool[Math.floor(Math.random() * pool.length)];
   lastWildcardId = roundWildcard.id;
   renderWildcardBanner(roundWildcard.label);
-  if (roundWildcard.display) roundWildcard.display(wrap);
+  // NOTE: the visual gimmick (vanish/scramble) is NOT run here — it's deferred to
+  // beginRoundClock so its countdown doesn't burn behind the full-screen rule intro.
 }
 // The margin banner naming the current Wildcard rule (created lazily above the word).
 function renderWildcardBanner(label) {
@@ -3065,7 +3067,7 @@ function nextRound() {
   // "instant" animation speed, and the page-turn setting being off.
   if (round === 0 || motionReduced() || animInstant() || !settings.pageTurn) {
     advanceRound();
-    startTimer();
+    beginRoundClock();
     return;
   }
   // Clone the answered page as a sheet, swap the real page to the next round
@@ -3093,12 +3095,72 @@ function nextRound() {
     if (finished) return;
     finished = true;
     flip.remove();
-    startTimer();             // start the clock only after the page has turned
+    beginRoundClock();        // start the clock only after the page has turned
   };
   // Primary trigger is a timeout matched to the 0.5s flip (CSS .page-flip-sheet),
   // with animationend as a fast-path; whichever lands first wins.
   flip.addEventListener("animationend", (e) => { if (e.target === flip) finish(); });
   setTimeout(finish, 500 * animScale() || 250);
+}
+
+// Gate between a round being set up and its clock starting. For Wildcard, take over
+// the screen first to announce the round's rule (so the player reads the constraint
+// before the word appears), THEN run the rule's visual gimmick + start the timer.
+// Every other path just starts the clock immediately.
+function beginRoundClock() {
+  const isWild = gameType === "challenge" && currentChallenge
+    && currentChallenge.rule === "wildcard" && roundWildcard;
+  if (!isWild) { startTimer(); return; }
+  const wrap = $("wordDisplay").parentNode;
+  showWildcardIntro(roundWildcard, () => {
+    if (roundWildcard && roundWildcard.display) roundWildcard.display(wrap);
+    startTimer();
+  });
+}
+
+let wildIntroTimers = [];
+// Tear down any live Wildcard rule-intro overlay + its timers (called on quit/reset
+// so an abandoned run never leaves the curtain up or fires a stale onDone).
+function clearWildIntro() {
+  wildIntroTimers.forEach(clearTimeout);
+  wildIntroTimers = [];
+  const ov = document.querySelector(".wild-intro");
+  if (ov) ov.remove();
+}
+
+// Wildcard: a full-screen "here's the rule for this round" curtain over the game card.
+// Fades in, holds a beat, then lifts to reveal the word — onDone (gimmick + timer)
+// fires only once the curtain is gone, so none of the clock is spent reading the rule.
+// Tap to skip ahead. Reduced motion shows it briefly without animation.
+function showWildcardIntro(con, onDone) {
+  clearWildIntro();
+  const reduced = motionReduced();
+  const card = $("screen-game");
+  const ov = document.createElement("div");
+  ov.className = "wild-intro";
+  ov.innerHTML =
+    `<div class="wild-intro-card">` +
+    `<div class="wild-intro-kicker">page ${round} · wildcard</div>` +
+    `<div class="wild-intro-tag">the rule</div>` +
+    `<div class="wild-intro-rule">${escapeHtml(con.label)}</div>` +
+    `<div class="wild-intro-cue">the word is coming…</div>` +
+    `</div>`;
+  card.appendChild(ov);
+
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    clearWildIntro();
+    onDone();
+  };
+  const lift = () => {
+    if (done) return;
+    ov.classList.add("leaving");
+    wildIntroTimers.push(setTimeout(finish, reduced ? 0 : 360));
+  };
+  ov.addEventListener("click", lift);                       // tap to skip the wait
+  wildIntroTimers.push(setTimeout(lift, reduced ? 1000 : 1750));
 }
 
 // Choose Your Path perk registry. Each perk's apply() mutates run state (time/swaps/
@@ -4243,6 +4305,7 @@ function quitGame() {
   if (countdownId) { clearInterval(countdownId); countdownId = null; }
   clearTimeout(hintUrgeTimer);
   clearTimeout(vanishTimer);
+  clearWildIntro();
   challengeRunActive = false;
   resetTension();
   clearEggs();
