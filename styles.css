@@ -620,14 +620,15 @@
 
   /* Wildcard — the full-screen rule reveal that precedes each round's word. A paper
      curtain over the game card (position:relative): fades in, holds, lifts away. */
+  /* Opaque from frame one (no fade-in) so the round beneath is never glimpsed —
+     only the card's own contents animate in. */
   .wild-intro {
     position: absolute; inset: 0; z-index: 70;
     display: flex; align-items: center; justify-content: center;
-    background: rgba(245, 239, 225, 0.97);
-    cursor: pointer; animation: wild-in 0.32s ease both;
+    background: rgb(245, 239, 225);
+    cursor: pointer;
   }
   .wild-intro.leaving { animation: wild-out 0.34s ease both; }
-  @keyframes wild-in { from { opacity: 0; } to { opacity: 1; } }
   @keyframes wild-out { from { opacity: 1; } to { opacity: 0; } }
   .wild-intro-card {
     position: relative; text-align: center; max-width: 440px;

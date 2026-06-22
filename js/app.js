@@ -3089,6 +3089,9 @@ function nextRound() {
   card.parentNode.appendChild(flip);
 
   advanceRound();             // the next page is now in place under the flipping sheet
+  // Wildcard: mount the rule curtain NOW, hidden beneath the flip sheet, so the new
+  // word is already covered the instant the sheet rotates away (no flash of the round).
+  if (isWildcardRound()) mountWildIntro(roundWildcard);
 
   let finished = false;
   const finish = () => {
@@ -3103,19 +3106,10 @@ function nextRound() {
   setTimeout(finish, 500 * animScale() || 250);
 }
 
-// Gate between a round being set up and its clock starting. For Wildcard, take over
-// the screen first to announce the round's rule (so the player reads the constraint
-// before the word appears), THEN run the rule's visual gimmick + start the timer.
-// Every other path just starts the clock immediately.
-function beginRoundClock() {
-  const isWild = gameType === "challenge" && currentChallenge
-    && currentChallenge.rule === "wildcard" && roundWildcard;
-  if (!isWild) { startTimer(); return; }
-  const wrap = $("wordDisplay").parentNode;
-  showWildcardIntro(roundWildcard, () => {
-    if (roundWildcard && roundWildcard.display) roundWildcard.display(wrap);
-    startTimer();
-  });
+// Whether this round wants the Wildcard rule curtain.
+function isWildcardRound() {
+  return gameType === "challenge" && currentChallenge
+    && currentChallenge.rule === "wildcard" && !!roundWildcard;
 }
 
 let wildIntroTimers = [];
@@ -3128,15 +3122,15 @@ function clearWildIntro() {
   if (ov) ov.remove();
 }
 
-// Wildcard: a full-screen "here's the rule for this round" curtain over the game card.
-// Fades in, holds a beat, then lifts to reveal the word — onDone (gimmick + timer)
-// fires only once the curtain is gone, so none of the clock is spent reading the rule.
-// Tap to skip ahead. Reduced motion shows it briefly without animation.
-function showWildcardIntro(con, onDone) {
-  clearWildIntro();
-  const reduced = motionReduced();
-  const card = $("screen-game");
-  const ov = document.createElement("div");
+// Build the Wildcard rule curtain over the game card (idempotent — reuses an already
+// mounted one). The curtain is OPAQUE from its first painted frame (no fade-in), so the
+// round beneath it is never glimpsed; only the card's own contents animate in. In the
+// page-turn path this is mounted UNDER the flip sheet so the new word is already covered
+// when the sheet rotates away.
+function mountWildIntro(con) {
+  let ov = document.querySelector(".wild-intro");
+  if (ov) return ov;
+  ov = document.createElement("div");
   ov.className = "wild-intro";
   ov.innerHTML =
     `<div class="wild-intro-card">` +
@@ -3145,15 +3139,27 @@ function showWildcardIntro(con, onDone) {
     `<div class="wild-intro-rule">${escapeHtml(con.label)}</div>` +
     `<div class="wild-intro-cue">the word is coming…</div>` +
     `</div>`;
-  card.appendChild(ov);
+  $("screen-game").appendChild(ov);
+  return ov;
+}
 
-  let done = false;
-  const finish = () => {
-    if (done) return;
-    done = true;
-    clearWildIntro();
-    onDone();
+// Gate between a round being set up and its clock starting. For Wildcard, hold the
+// already-mounted rule curtain a beat (announcing the round's constraint), then lift it
+// to reveal the word — onDone (the rule's visual gimmick + the timer) fires only once the
+// curtain is gone, so none of the clock is spent reading the rule. Tap to skip ahead.
+// Reduced motion shows it briefly without animation. Every other path starts the clock
+// immediately.
+function beginRoundClock() {
+  if (!isWildcardRound()) { startTimer(); return; }
+  const wrap = $("wordDisplay").parentNode;
+  const onDone = () => {
+    if (roundWildcard && roundWildcard.display) roundWildcard.display(wrap);
+    startTimer();
   };
+  const ov = mountWildIntro(roundWildcard);   // usually already mounted (pre-flip)
+  const reduced = motionReduced();
+  let done = false;
+  const finish = () => { if (done) return; done = true; clearWildIntro(); onDone(); };
   const lift = () => {
     if (done) return;
     ov.classList.add("leaving");
