@@ -2956,12 +2956,15 @@ function endChallenge() {
       ...(verseBonus > 0 ? { v: verseBonus } : {}),
       ...(hintsUsed > 0 ? { h: 1 } : {}),
     });
-    recordGameTally(roundResults.map((correct, i) => ({
+    const tally = recordGameTally(roundResults.map((correct, i) => ({
       correct,
       title: roundSongs[i] || null,
       album: roundAlbums[i] || null,
       word: roundWords[i] || null,
     })));
+    // "I Hate It Here" — every catalogue song answered correctly at least once.
+    // challengeRunActive is already false above, so this unlock fires normally.
+    if (allSongs.length && allSongs.every((s) => tally.songs[s.title])) unlock("i-hate-it-here");
     recordGameMetrics({
       rounds: roundResults.length, correct: score,
       timeSumMs: gameTimeSum * 1000, timedRounds: gameTimedRounds,
