@@ -3455,6 +3455,130 @@ function showTimerFull() {
   label.textContent = total.toFixed(1);
 }
 
+/* ---------- Timer sparkler (a lit-fuse flourish at the draining edge) ---------- */
+// A small overlay canvas of additive light: tiny era-tinted sparks crackle off the
+// leading edge of the draining timer bar, growing from a faint flicker at full to a
+// busy sparkler as the clock runs out. The era hue is read live from `--bead`, the
+// emitter tracks the fill's right edge, and intensity ramps with the time elapsed.
+// Gated like the tension vignette (timerTension + motion). Purely decorative — it
+// never touches timing. The additive blending is *within* the canvas (so overlapping
+// sparks brighten each other); the canvas then composites over the paper normally,
+// which is what keeps the era colour readable on the cream background.
+const timerSpark = (() => {
+  let canvas, ctx, raf = 0, last = 0, burst = 0;
+  let W = 0, H = 0, dpr = 1, running = false;
+  const parts = [], MAX = 240, WHITE = [255, 255, 255];
+  let core = [255, 250, 242], body = [212, 114, 166], ember = [120, 70, 90];
+  const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t | 0, a[1] + (b[1] - a[1]) * t | 0, a[2] + (b[2] - a[2]) * t | 0];
+  const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+
+  function readEra() {
+    const v = getComputedStyle(document.body).getPropertyValue("--bead").trim();
+    const m = /^#?([0-9a-f]{6})$/i.exec(v);
+    const b = m ? [parseInt(m[1].slice(0, 2), 16), parseInt(m[1].slice(2, 4), 16), parseInt(m[1].slice(4, 6), 16)] : [200, 149, 31];
+    body = b; core = mix(b, [255, 252, 242], 0.72); ember = mix(b, [60, 40, 30], 0.45);
+  }
+  function resize() {
+    if (!canvas) return;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = canvas.clientWidth; H = canvas.clientHeight;
+    canvas.width = Math.max(1, W * dpr); canvas.height = Math.max(1, H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  function add(x, y, vx, vy, ttl, size, crackle) {
+    if (parts.length >= MAX) return;
+    parts.push({ x, y, vx, vy, age: 0, ttl, seed: Math.random() * 6.28, size, crackle, forked: false });
+  }
+  function emit(ex, ey, n, inten, boost) {
+    for (let i = 0; i < n; i++) {
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4;
+      const sp = (0.7 + Math.random() * (1.4 + inten * 1.8)) * (boost || 1);
+      add(ex, ey, Math.cos(a) * sp, Math.sin(a) * sp,
+        (12 + inten * 22) + Math.random() * 16, 0.7 + Math.random() * 0.6 * (0.6 + inten),
+        Math.random() < 0.22);
+    }
+  }
+  function frame(now) {
+    if (!running) return;
+    // toggling tension off (or the calm perk / reduced motion) stops it promptly
+    if (!settings.timerTension || perkCalm || motionReduced()) { stop(); return; }
+    const dt = Math.min(2.5, Math.max(0.5, (now - (last || now)) / 16.67)); last = now;
+    // keep the backing store in sync with layout — self-heals if the bar wasn't laid
+    // out (width 0) the instant start() ran, or after a resize/orientation change
+    if (canvas.clientWidth !== W || canvas.clientHeight !== H) resize();
+    if (!W || !H) { raf = requestAnimationFrame(frame); return; }
+    // locate the draining edge in the canvas's CSS-px space
+    const fill = $("timerFill"), cr = canvas.getBoundingClientRect();
+    let ex = W * 0.5, ey = H - 6, frac = 1;
+    if (fill && cr.width) {
+      const fr = fill.getBoundingClientRect();
+      ex = fr.right - cr.left; ey = (fr.top + fr.height / 2) - cr.top;
+      frac = Math.max(0, Math.min(1, ex / cr.width));
+    }
+    const inten = 0.16 + 0.84 * Math.pow(1 - frac, 1.45);  // small at full → big near zero
+
+    if (frac > 0.001) {
+      emit(ex, ey, Math.round((0.5 + inten * 3.2) * dt), inten);
+      burst -= dt;
+      if (burst <= 0) { burst = (26 - inten * 16) + Math.random() * 22; emit(ex, ey, 2 + (inten * 5 | 0), inten, 1.5); }
+    }
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const p = parts[i]; p.age += dt;
+      if (p.age >= p.ttl) { parts.splice(i, 1); continue; }
+      p.vy += 0.07 * dt; p.vx *= Math.pow(0.965, dt); p.vy *= Math.pow(0.985, dt);
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      const n = p.age / p.ttl;
+      if (p.crackle && !p.forked && n > 0.55 + Math.random() * 0.2) {  // the sparkler "pop"
+        p.forked = true;
+        const k = 2 + (Math.random() * 2 | 0);
+        for (let j = 0; j < k; j++) { const aa = Math.random() * 6.28, s = 0.5 + Math.random(); add(p.x, p.y, Math.cos(aa) * s, Math.sin(aa) * s - 0.3, 8 + Math.random() * 10, 0.7, false); }
+      }
+    }
+    ctx.clearRect(0, 0, W, H);
+    ctx.globalCompositeOperation = "lighter"; ctx.lineCap = "round";
+    if (frac > 0.001) {
+      const fl = 0.7 + 0.16 * Math.sin(now * 0.021) + 0.1 * Math.sin(now * 0.057 + 1.3) + 0.04 * Math.sin(now * 0.13);
+      const R = 5 + 11 * inten;
+      const rg = ctx.createRadialGradient(ex, ey, 0, ex, ey, R);
+      rg.addColorStop(0, rgba(core, 0.55 * fl)); rg.addColorStop(0.45, rgba(body, 0.3 * fl)); rg.addColorStop(1, rgba(body, 0));
+      ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(ex, ey, R, 0, 6.29); ctx.fill();
+      ctx.fillStyle = rgba(mix(core, WHITE, 0.55), 0.95 * fl);
+      ctx.beginPath(); ctx.arc(ex, ey, 1.5 + inten, 0, 6.29); ctx.fill();
+    }
+    for (const p of parts) {
+      const n = p.age / p.ttl;
+      let tw = 0.5 + 0.5 * Math.sin(now * 0.045 + p.seed * 11);
+      if (p.crackle && n > 0.6) tw = Math.max(tw, 0.4 + 0.6 * Math.abs(Math.sin(now * 0.09 + p.seed * 7)));
+      const bright = Math.max(0, 1 - n * n) * tw;
+      const col = n < 0.6 ? mix(core, body, n / 0.6) : mix(body, ember, (n - 0.6) / 0.4);
+      const tx = p.x - p.vx * 1.9, ty = p.y - p.vy * 1.9, mx = (p.x + tx) / 2, my = (p.y + ty) / 2;
+      ctx.strokeStyle = rgba(col, bright * 0.28); ctx.lineWidth = 0.7 * p.size;
+      ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(mx, my); ctx.stroke();
+      ctx.strokeStyle = rgba(mix(col, WHITE, 0.25), bright * 0.8); ctx.lineWidth = 1.05 * p.size;
+      ctx.beginPath(); ctx.moveTo(mx, my); ctx.lineTo(p.x, p.y); ctx.stroke();
+      ctx.fillStyle = rgba(mix(col, WHITE, 0.5), bright);
+      ctx.beginPath(); ctx.arc(p.x, p.y, 0.95 * p.size, 0, 6.29); ctx.fill();
+    }
+    ctx.globalCompositeOperation = "source-over";
+    raf = requestAnimationFrame(frame);
+  }
+  function start() {
+    if (motionReduced() || !settings.timerTension || perkCalm) { stop(); return; }
+    canvas = $("timerSpark"); if (!canvas) return;
+    ctx = canvas.getContext("2d"); if (!ctx) return;
+    readEra(); resize();                       // refresh era colour + size each round
+    if (!running) { running = true; last = 0; burst = 0; raf = requestAnimationFrame(frame); }
+  }
+  function stop() {
+    running = false;
+    if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    parts.length = 0;
+    if (ctx && W && H) ctx.clearRect(0, 0, W, H);
+  }
+  window.addEventListener("resize", () => { if (running) resize(); });
+  return { start, stop };
+})();
+
 // `resume` (seconds remaining) restarts a paused round mid-count instead of from
 // the full clock — used when closing the settings modal during play.
 function startTimer(resume) {
@@ -3476,6 +3600,7 @@ function startTimer(resume) {
   fill.style.width = (begin / total * 100) + "%";
   fill.classList.remove("low");
   label.textContent = begin.toFixed(1);
+  timerSpark.start();
 
   timerId = setInterval(() => {
     const elapsed = (performance.now() - timerStart) / 1000;
@@ -3500,6 +3625,7 @@ function startTimer(resume) {
 }
 function clearTimer() {
   if (timerId) { clearInterval(timerId); timerId = null; }
+  timerSpark.stop();
 }
 
 /* ---------- Timer tension ---------- */

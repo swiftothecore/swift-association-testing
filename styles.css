@@ -978,7 +978,14 @@
   }
 
   /* ---------- Timer (draining highlighter underline) ---------- */
-  .timer-wrap { max-width: 320px; margin: 0 auto 30px; }
+  .timer-wrap { max-width: 320px; margin: 0 auto 30px; position: relative; }
+  /* A flourish canvas riding above the bar: era-tinted sparks crackle off the
+     draining edge like a lit fuse. Decorative only (pointer-events:none); it
+     overlaps into the gap above the bar so sparks can rise. */
+  .timer-spark {
+    position: absolute; left: 0; top: -44px; width: 100%; height: 54px;
+    pointer-events: none;
+  }
   .timer-track {
     height: 8px; background: rgba(43,39,34,0.08); border-radius: 6px; overflow: hidden;
   }
