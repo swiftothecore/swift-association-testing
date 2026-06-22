@@ -614,7 +614,8 @@
     transition: color 0.45s ease, -webkit-text-fill-color 0.45s ease;
   }
   .word-wrap.vanished #wordDisplay::after {
-    content: "·  ·  ·"; position: absolute; left: 50%; transform: translateX(-50%);
+    content: "·  ·  ·"; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    white-space: nowrap;   /* the three dots always sit on a single line, never wrapping */
     color: var(--ink-soft); -webkit-text-fill-color: var(--ink-soft); opacity: 0.55; letter-spacing: 2px;
   }
   @media (prefers-reduced-motion: reduce) { .word-wrap.vanished #wordDisplay { transition: none; } }

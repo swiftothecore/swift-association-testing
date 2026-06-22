@@ -267,6 +267,20 @@ function wordVariants(word) {
 // matching even in lenient modes. NOT used for the rarity buckets/daily determinism
 // (those pass explicit strict args), only for judging/highlighting a round.
 function effectiveStrict() { return currentMode.strict || settings.stemMatching === false; }
+// Per-challenge lever overrides: a challenge entry may set `noTitle` / `pool` to
+// override the difficulty mode it borrows (e.g. Word Games allows title-word songs,
+// From A to Z draws from the common pool so every round has options). Falls back to
+// the active mode for non-challenge runs / challenges that don't override.
+function effectiveNoTitle() {
+  if (gameType === "challenge" && currentChallenge && currentChallenge.noTitle !== undefined)
+    return currentChallenge.noTitle;
+  return currentMode.noTitle;
+}
+function effectivePool() {
+  if (gameType === "challenge" && currentChallenge && currentChallenge.pool)
+    return currentChallenge.pool;
+  return currentMode.pool;
+}
 // Lenient (default) also matches the inflected forms above (cheat→cheats); strict
 // requires the exact word. Defaults to the active mode + the stem-matching opt-out.
 function wordRegex(word, strict) {
@@ -297,7 +311,7 @@ function titleSongsForWord(word, strict) {
 function renderExcludedNote() {
   const el = $("excludedNote");
   if (!el) return;
-  if (!currentMode.noTitle || currentMode.dropdown) { el.style.display = "none"; el.innerHTML = ""; return; }
+  if (!effectiveNoTitle() || currentMode.dropdown) { el.style.display = "none"; el.innerHTML = ""; return; }
   const titles = titleSongsForWord(currentWord, effectiveStrict()).map((s) => s.title);
   if (!titles.length) { el.style.display = "none"; el.innerHTML = ""; return; }
   const SHOWN = 3;
@@ -2769,16 +2783,36 @@ function wordFxLevel(r) {
 }
 function scrambleWord(w) {
   if (w.length < 4) return w;                 // too short to disguise — leave it
-  const a = w.slice(1, -1).split("");
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+  const interior = w.slice(1, -1);
+  // Shuffle the interior, retrying so the result is never identical to the original
+  // (a Fisher-Yates can legally produce the identity permutation, which read as "not
+  // jumbled at all" — the bug). After a few tries, force a swap of two interior chars.
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const a = interior.split("");
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    const out = a.join("");
+    if (out !== interior) return w[0] + out + w[w.length - 1];
   }
-  return w[0] + a.join("") + w[w.length - 1];
+  if (interior.length >= 2) {                 // last resort: swap first two interior chars
+    const a = interior.split("");
+    [a[0], a[1]] = [a[1], a[0]];
+    return w[0] + a.join("") + w[w.length - 1];
+  }
+  return w;
 }
 function dropLetters(w) {
-  return w.split("").map((ch, i) =>
-    (i > 0 && i < w.length - 1 && ch !== " " && Math.random() < 0.35 ? "_" : ch)).join("");
+  // Eligible interior positions (skip first/last char and spaces). Drop ~a third,
+  // but always at least one so the word is visibly altered (a 0-drop pass read as
+  // "not jumbled" — the round-4 bug).
+  const eligible = [];
+  for (let i = 1; i < w.length - 1; i++) if (w[i] !== " ") eligible.push(i);
+  if (!eligible.length) return w;
+  const drop = new Set(eligible.filter(() => Math.random() < 0.35));
+  if (!drop.size) drop.add(eligible[Math.floor(Math.random() * eligible.length)]);
+  return w.split("").map((ch, i) => (drop.has(i) ? "_" : ch)).join("");
 }
 function renderWordFx(wrap, word, r) {
   const level = wordFxLevel(r);
@@ -2787,6 +2821,9 @@ function renderWordFx(wrap, word, r) {
   else if (level === 2) text = dropLetters(word);
   else if (level === 3) text = word.split("").reverse().join("");
   else text = dropLetters(scrambleWord(word)).split("").reverse().join("");
+  // Safety net: if a short word slipped through unchanged (e.g. a 3-letter word at the
+  // scramble tier can't be shuffled), at least reverse it so it never shows un-warped.
+  if (text === word && word.length > 1) text = word.split("").reverse().join("");
   wrap.dataset.fx = String(level);
   const wobble = level === 4 && !prefersReducedMotion();
   $("wordDisplay").innerHTML = text.split("").map((ch, i) => {
@@ -2926,7 +2963,7 @@ function renderShareButton(dateStr, hidden) {
 }
 
 function pickWord() {
-  const bucket = wordBuckets[currentMode.pool] || playableWords;
+  const bucket = wordBuckets[effectivePool()] || playableWords;
   // No-repeat within a game: exclude every word already used this run. Buckets
   // are guaranteed ≥ TOTAL_ROUNDS words (see buildWordBuckets' MIN), so the pool
   // only empties on a degenerate list — fall back to the full bucket if so.
@@ -3074,7 +3111,7 @@ function advanceRound() {
   roundLocked = false;
   justEarnedIndex = -1;
   currentWord = challengeForcedWord(round) || pickWord();   // One Of A Kind forces its target word
-  currentSongs = validSongs(currentWord, effectiveStrict(), currentMode.noTitle);
+  currentSongs = validSongs(currentWord, effectiveStrict(), effectiveNoTitle());
   roundHintSong = pickHintSong();
   applyEra(pickEra());
 
@@ -3237,7 +3274,7 @@ function hideDropdown() { $("dropdown").classList.remove("show"); }
 // A pick is off-limits when the active mode bars title songs and the word sits in
 // this song's title — the exact condition validSongs() uses to exclude it.
 function isOffLimitsPick(song) {
-  return !!song && currentMode.noTitle && wordRegex(currentWord, effectiveStrict()).test(song.title);
+  return !!song && effectiveNoTitle() && wordRegex(currentWord, effectiveStrict()).test(song.title);
 }
 // Soft rejection: don't consume the round. Flash a red note, wipe the line, and
 // keep the clock running so the player can answer the same word with a valid song.
@@ -4747,7 +4784,7 @@ function devApplyWord(word) {
   if (!word) return;
   currentWord = word;
   if (!usedWords.includes(word)) usedWords.push(word);
-  currentSongs = validSongs(currentWord, effectiveStrict(), currentMode.noTitle);
+  currentSongs = validSongs(currentWord, effectiveStrict(), effectiveNoTitle());
   roundHintSong = pickHintSong();
   $("wordDisplay").textContent = currentWord;
   renderExcludedNote();
