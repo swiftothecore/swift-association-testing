@@ -175,7 +175,7 @@
   </header>
 
   <!-- START SCREEN -->
-  <section id="screen-start" class="screen card">
+  <section id="screen-start" class="screen card" tabindex="-1" aria-label="Home — choose a mode and play">
     <div id="loading" class="loading">opening the notebook…</div>
     <div id="startContent" style="display:none;">
       <button id="albumFocusBtn" class="album-focus-badge" type="button" title="Album focus — beat all 12" aria-label="Album focus — beat all 12">
@@ -289,7 +289,7 @@
   </section>
 
   <!-- STATS SCREEN -->
-  <section id="screen-stats" class="screen card">
+  <section id="screen-stats" class="screen card" tabindex="-1" aria-label="Statistics">
     <div class="stats-nav">
       <span class="stats-title">Stats</span>
       <button id="statsBackBtn" class="btn-link">← back</button>
@@ -298,7 +298,7 @@
   </section>
 
   <!-- GAME SCREEN -->
-  <section id="screen-game" class="screen card">
+  <section id="screen-game" class="screen card" tabindex="-1" aria-label="Song round">
     <button id="quitBtn" class="quit-btn" type="button" data-label="close the notebook">close the notebook</button>
     <div id="marginTally" class="margin-tally" aria-hidden="true"></div>
     <div id="livesTally" class="lives-tally" aria-hidden="true"></div>
@@ -314,7 +314,7 @@
     <p class="word-label">write a song with</p>
     <div class="word-wrap"><span id="wordDisplay" class="word" aria-live="polite" aria-atomic="true">—</span><span id="rarityStamp" class="rarity-stamp" aria-hidden="true"></span></div>
 
-    <div class="timer-wrap">
+    <div class="timer-wrap" role="timer" aria-live="off" aria-label="Time remaining">
       <canvas id="timerSpark" class="timer-spark" aria-hidden="true"></canvas>
       <div class="timer-track"><div id="timerFill" class="timer-fill"></div></div>
       <div class="timer-label"><span id="timerLabel">10.0</span>s</div>
@@ -323,9 +323,12 @@
     <div id="playArea">
       <div class="input-area">
         <input id="songInput" type="text" autocomplete="off" spellcheck="false"
-               placeholder="write the line…" />
+               placeholder="write the line…"
+               role="combobox" aria-expanded="false" aria-controls="dropdown"
+               aria-haspopup="listbox" aria-autocomplete="list"
+               aria-label="Type a song title or a lyric line" />
         <div id="rejectFlash" class="reject-flash" aria-live="assertive"></div>
-        <div id="dropdown" class="dropdown"></div>
+        <div id="dropdown" class="dropdown" role="listbox" aria-label="Matching songs"></div>
       </div>
       <div id="verseMeter" class="verse-meter" aria-hidden="true" hidden>
         <span class="vm-notch" data-tier="1"></span>
@@ -341,10 +344,15 @@
     </div>
 
     <div id="feedback" class="feedback" aria-live="polite"></div>
+
+    <!-- Screen-reader-only running status (page + score) and a low-time cue. The
+         visual bracelet/timer carry this for sighted players; these voice it. -->
+    <p id="srStatus" class="sr-only" aria-live="polite"></p>
+    <p id="srTimer" class="sr-only" aria-live="polite"></p>
   </section>
 
   <!-- RESULTS SCREEN -->
-  <section id="screen-results" class="screen card">
+  <section id="screen-results" class="screen card" tabindex="-1" aria-label="Results">
     <p class="word-label" style="text-align:center;">the final tally</p>
     <div class="final-score">
       <div class="big" id="finalScore">0</div>
@@ -360,7 +368,7 @@
 
     <div id="namePrompt" class="name-prompt" style="display:none;">
       <p>sign your notebook — you will be remembered</p>
-      <input id="nameInput" type="text" maxlength="20" placeholder="your name" />
+      <input id="nameInput" type="text" maxlength="20" placeholder="your name" aria-label="Your name" />
       <button id="saveNameBtn" class="btn-primary">Sign</button>
     </div>
 
@@ -441,7 +449,7 @@
   </section>
 
   <!-- RECORDS SCREEN -->
-  <section id="screen-records" class="screen card">
+  <section id="screen-records" class="screen card" tabindex="-1" aria-label="Records and history">
     <div class="stats-nav">
       <span class="stats-title">Records</span>
       <button id="recordsBackBtn" class="btn-link">← back</button>
@@ -450,7 +458,7 @@
   </section>
 
   <!-- ACHIEVEMENTS SCREEN -->
-  <section id="screen-achievements" class="screen card">
+  <section id="screen-achievements" class="screen card" tabindex="-1" aria-label="Charm collection">
     <div class="stats-nav">
       <span class="stats-title">Achievements</span>
       <button id="achievementsBackBtn" class="btn-link">← back</button>
@@ -459,7 +467,7 @@
   </section>
 
   <!-- CHALLENGES SCREEN — the unlock-and-defeat puzzle collection -->
-  <section id="screen-challenges" class="screen card">
+  <section id="screen-challenges" class="screen card" tabindex="-1" aria-label="Challenges">
     <div class="stats-nav">
       <span class="stats-title">Challenges</span>
       <button id="challengesBackBtn" class="btn-link">← back</button>
@@ -468,7 +476,7 @@
   </section>
 
   <!-- ALBUM FOCUS SCREEN — pick an album, pick a difficulty, beat all 12 -->
-  <section id="screen-albumfocus" class="screen card">
+  <section id="screen-albumfocus" class="screen card" tabindex="-1" aria-label="Album focus">
     <div class="stats-nav">
       <span class="stats-title">Album Focus</span>
       <button id="albumFocusBackBtn" class="btn-link">← back</button>
@@ -477,7 +485,7 @@
   </section>
 
   <!-- SONGBOOK SCREEN — the missing-songs checklist behind "I Hate It Here" -->
-  <section id="screen-songbook" class="screen card">
+  <section id="screen-songbook" class="screen card" tabindex="-1" aria-label="Songbook">
     <div class="stats-nav">
       <span class="stats-title">Songbook</span>
       <button id="songbookBackBtn" class="btn-link">← back</button>

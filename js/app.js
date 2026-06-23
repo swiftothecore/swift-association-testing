@@ -196,6 +196,15 @@ function showScreen(name) {
   // Re-scatter the keepsake-card tape each time its screen is shown, so the pinning
   // feels hand-done rather than templated.
   if (name === "start" || name === "results") scatterNavTape(name);
+  // Move keyboard/screen-reader focus onto the newly shown screen so the next Tab
+  // (and the SR reading position) start there, not on the now-hidden trigger. The
+  // game screen manages its own focus on #songInput, so don't steal it there.
+  if (name !== "game") {
+    const sec = screens[name];
+    if (sec && typeof sec.focus === "function") {
+      try { sec.focus({ preventScroll: true }); } catch (_) { sec.focus(); }
+    }
+  }
 }
 
 /* Side-to-side page turns for screen navigation. Where nextRound's flip lifts the answered
@@ -2307,10 +2316,19 @@ function renderBracelet() {
     ? { total: Math.max(round, 1), letterBead: false, colors: albumPalette(), hinted: roundHinted, verseTiers: roundVerseTier }
     : { colors: albumPalette(), hinted: roundHinted, verseTiers: roundVerseTier };
   $("bracelet").innerHTML = buildBraceletSVG(roundResults, round, justEarnedIndex, roundAlbums, opts);
-  $("charmCount").textContent = roundResults.filter(Boolean).length;
-  $("pageNum").textContent = gameType === "infinite"
+  const correct = roundResults.filter(Boolean).length;
+  $("charmCount").textContent = correct;
+  const pg = gameType === "infinite"
     ? Math.max(round, 1)
     : Math.min(Math.max(round, 1), TOTAL_ROUNDS);
+  $("pageNum").textContent = pg;
+  // Voice the progress the bracelet shows visually (the SVG is aria-hidden). Only
+  // re-announces when the text changes, so it fires on round advance and after a verdict.
+  const sr = $("srStatus");
+  if (sr) {
+    sr.textContent = (gameType === "infinite" ? `Round ${pg}. ` : `Page ${pg} of ${TOTAL_ROUNDS}. `)
+      + `${correct} correct so far.`;
+  }
 }
 
 // Pencil tally in the margin: one mark per starting life, spent ones struck out.
@@ -4276,6 +4294,11 @@ function startTimer(resume) {
   fill.style.width = (begin / total * 100) + "%";
   fill.classList.remove("low");
   label.textContent = begin.toFixed(1);
+  // Reset the screen-reader low-time cue for this round (cleared so the same words
+  // re-announce next round) — the per-tick label is silent to AT; this is the one cue.
+  let lowAnnounced = false;
+  const srTimer = $("srTimer");
+  if (srTimer) srTimer.textContent = "";
   timerSpark.start();
   startRevolve();   // Revolving Door: begin (or restart) the per-round word rotation, in sync with the clock
 
@@ -4286,6 +4309,11 @@ function startTimer(resume) {
     fill.style.width = pct + "%";
     label.textContent = remaining.toFixed(1);
     fill.classList.toggle("low", remaining <= 3);
+    // One spoken cue when the clock runs low (Relaxed has no clock and never reaches here).
+    if (!lowAnnounced && remaining <= 3 && total > 3) {
+      lowAnnounced = true;
+      if (srTimer) srTimer.textContent = "3 seconds left";
+    }
     // the bridge build: ramp tension over the final 4 seconds
     setTension(remaining >= 4 ? 0 : (4 - remaining) / 4);
     updateTally(remaining);
@@ -4411,12 +4439,17 @@ function updateDropdown() {
 }
 function renderDropdown() {
   const dd = $("dropdown");
+  const input = $("songInput");
   if (!dropdownItems.length) { hideDropdown(); return; }
   dd.innerHTML = "";
   dropdownItems.forEach((song, i) => {
     const div = document.createElement("div");
     const off = isOffLimitsPick(song);
     div.className = "item" + (i === activeIndex ? " active" : "") + (off ? " off-limits" : "");
+    // Combobox/listbox semantics so a screen reader can follow arrow-key selection.
+    div.id = "dd-opt-" + i;
+    div.setAttribute("role", "option");
+    div.setAttribute("aria-selected", i === activeIndex ? "true" : "false");
     div.innerHTML = `${escapeHtml(censor(song.title))}` + (off ? `<span class="dd-tag">in the title</span>` : "");
     div.addEventListener("mousedown", (e) => {
       e.preventDefault();
@@ -4425,8 +4458,16 @@ function renderDropdown() {
     dd.appendChild(div);
   });
   dd.classList.add("show");
+  input.setAttribute("aria-expanded", "true");
+  if (activeIndex >= 0) input.setAttribute("aria-activedescendant", "dd-opt-" + activeIndex);
+  else input.removeAttribute("aria-activedescendant");
 }
-function hideDropdown() { $("dropdown").classList.remove("show"); }
+function hideDropdown() {
+  $("dropdown").classList.remove("show");
+  const input = $("songInput");
+  input.setAttribute("aria-expanded", "false");
+  input.removeAttribute("aria-activedescendant");
+}
 
 // A pick is off-limits when the active mode bars title songs and the word sits in
 // this song's title — the exact condition validSongs() uses to exclude it.
@@ -6020,14 +6061,22 @@ function resumeFromSettings() {
   pausedRemaining = null;
   if (screens.game.classList.contains("active") && !roundLocked && currentMode.seconds > 0) startTimer(r);
 }
+// Element focused before the modal opened, so focus can be returned there on close
+// (usually #songInput mid-game or the gear) instead of being lost to the hidden page.
+let lastFocusedBeforeSettings = null;
 function openSettings() {
   unlock("i-look-in-windows");
+  lastFocusedBeforeSettings = document.activeElement;
   pauseForSettings();
   renderSettingsBody();
   const m = $("settingsModal");
   m.classList.add("open");
   m.setAttribute("aria-hidden", "false");
   document.body.classList.add("modal-open");   // freeze the page behind the modal
+  // Move focus into the dialog so keyboard/SR users land inside it (and the focus
+  // trap has somewhere to start). The close button is a safe, always-present target.
+  const close = $("settingsCloseBtn");
+  if (close) { try { close.focus({ preventScroll: true }); } catch (_) { close.focus(); } }
 }
 function closeSettings() {
   const m = $("settingsModal");
@@ -6036,6 +6085,11 @@ function closeSettings() {
   m.setAttribute("aria-hidden", "true");
   document.body.classList.remove("modal-open");
   resumeFromSettings();
+  // Restore focus to wherever it was before opening (falls back to the gear).
+  const back = lastFocusedBeforeSettings;
+  lastFocusedBeforeSettings = null;
+  const target = (back && typeof back.focus === "function" && document.contains(back)) ? back : $("settingsGear");
+  if (target) { try { target.focus({ preventScroll: true }); } catch (_) { target.focus(); } }
 }
 
 // Wheel over the dimmed backdrop (outside the dialog) still scrolls the dialog,
@@ -6345,6 +6399,19 @@ async function init() {
   $("settingsCloseBtn").addEventListener("click", closeSettings);
   $("settingsScrim").addEventListener("click", closeSettings);
   $("settingsModal").addEventListener("wheel", routeSettingsWheel, { passive: false });
+  // Focus trap: keep Tab/Shift+Tab cycling within the open dialog.
+  $("settingsModal").addEventListener("keydown", (e) => {
+    if (e.key !== "Tab" || !$("settingsModal").classList.contains("open")) return;
+    const card = document.querySelector(".settings-card");
+    if (!card) return;
+    const focusables = Array.from(
+      card.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+    ).filter((el) => !el.disabled && el.offsetParent !== null);
+    if (!focusables.length) return;
+    const first = focusables[0], last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
 
   // Leaving the page mid-game (reload / close) still banks the progress made so
   // far, exactly like the quit button. Skipped for bfcache restores (persisted),
