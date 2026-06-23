@@ -168,8 +168,8 @@ const screens = {
   songbook: $("screen-songbook"),
 };
 function showScreen(name) {
-  // Clear any one-shot inline enter-fade suppression a flip-in left behind (see
-  // flipInToScreen), so every screen animates normally on its next genuine show.
+  // Defensive: clear any stray inline animation a flip sheet helper might have left on a real
+  // screen, so every screen animates normally on its next genuine show.
   Object.values(screens).forEach((s) => { s.classList.remove("active"); s.style.animation = ""; });
   screens[name].classList.add("active");
   // Drop any lingering perfect-game shimmer; celebratePerfect re-adds it after
@@ -201,10 +201,15 @@ function showScreen(name) {
    offsets are real even when `src` is display:none). */
 function makeFlipSheet(src, at, sideClass, shadeClass) {
   const flip = src.cloneNode(true);
-  flip.removeAttribute("id");
-  flip.querySelectorAll("[id]").forEach((e) => e.removeAttribute("id"));
+  // Keep element ids on the clone: much of the look is keyed off ids (e.g. #playBtn's gold
+  // gradient + pencil ::before), so stripping them would render the sheet in an unstyled state.
+  // The real screens come earlier in the DOM, so getElementById still resolves to them; the
+  // clone carries no event listeners (cloneNode) and is pointer-events:none and short-lived.
   flip.classList.remove("screen", "active");
   flip.classList.add("page-flip-sheet", sideClass);
+  flip.style.animation = "";          // never inherit a one-off inline animation from the source
+  flip.style.opacity = "";
+  flip.style.transition = "";
   flip.style.top = at.offsetTop + "px";
   flip.style.left = at.offsetLeft + "px";
   flip.style.width = at.offsetWidth + "px";
@@ -237,24 +242,25 @@ function flipInToScreen(name) {
   const current = Object.values(screens).find((s) => s.classList.contains("active"));
   if (flipDisabled(name, current)) { showScreen(name); return; }
   const dest = screens[name];
-  // Clone the (still-inactive) destination, overlaid on the leaving screen, and let it swing in.
-  const flip = makeFlipSheet(dest, current, "page-flip-sheet--in", "flip-shade--in");
-  // Pages have variable height, so the destination is often SHORTER than the page we're
-  // leaving. Keep that page solid while the incoming sheet sweeps across it, then fade its
-  // lower (uncovered) half out in the final moments — so it dissolves into the desk instead
-  // of snapping out of existence the instant we swap to the shorter destination.
+  // 1. Freeze the page we're leaving as a static backdrop, so swapping the real screens
+  //    underneath it is invisible.
+  const backdrop = makeFlipSheet(current, current, "flip-static", "flip-shade--off");
+  // 2. Activate the destination beneath the backdrop NOW — so it's fully prepared (tape
+  //    re-scattered, etc.) before we clone it, and its enter-fade plays hidden under the
+  //    sheets (no blink, and no fade-suppression hack that could break the next flip).
+  showScreen(name);
+  // 3. Clone the now-final destination for the incoming sheet — so its tape and id-styled
+  //    buttons match the real screen exactly — and flip it in over the backdrop. (dest is the
+  //    visible active screen now, so its offsets are real.)
+  const incoming = makeFlipSheet(dest, dest, "page-flip-sheet--in", "flip-shade--in");
+  // 4. The destination is often SHORTER than the page we're leaving, so fade the backdrop's
+  //    lower (uncovered) half out near the end — it dissolves into the desk instead of snapping
+  //    away when the sheets are removed.
   const s = animScale() || 1;
-  current.style.transition = `opacity ${(0.16 * s).toFixed(3)}s linear ${(0.32 * s).toFixed(3)}s`;
-  current.style.opacity = "0";
-  scheduleFlipRemoval(flip, () => {
-    current.style.transition = "";
-    current.style.opacity = "";
-    showScreen(name);
-    // The sheet already presented the destination flat; kill the enter-fade it just started so
-    // the real screen doesn't re-fade and nudge up 8px (a blink) as it takes over. This stays
-    // inline until the next showScreen, which wipes it — so the fade returns on later visits.
-    dest.style.animation = "none";
-  });
+  backdrop.offsetHeight;                        // flush the opacity:1 baseline so the transition runs
+  backdrop.style.transition = `opacity ${(0.16 * s).toFixed(3)}s linear ${(0.32 * s).toFixed(3)}s`;
+  backdrop.style.opacity = "0";
+  scheduleFlipRemoval(incoming, () => backdrop.remove());
 }
 
 /* ---------- Random sticky-tape placement for the nav keepsake cards ----------

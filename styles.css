@@ -227,6 +227,10 @@
     background: linear-gradient(to left, rgba(38,24,10,0.42), rgba(38,24,10,0.06) 48%, rgba(255,255,255,0.10) 100%);
   }
   .flip-shade.flip-shade--in { animation-name: pageFlipShadeOut; }
+  /* A frozen, non-animating backdrop clone of the page being left, sitting beneath the
+     incoming sheet during a back/"in" turn (see flipInToScreen). Its shade is suppressed. */
+  .page-flip-sheet.flip-static { animation: none; box-shadow: none; }
+  .flip-shade.flip-shade--off { display: none; }
   @keyframes pageFlipSide {
     from { transform: rotateY(0deg); }
     to   { transform: rotateY(-104deg); }
