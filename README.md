@@ -14,6 +14,7 @@ Standout features:
 - Over 50 achievements
 - Daily challenge
 - Challenges mode — unlock rule-bending puzzles with tokens and defeat them
+- Album Focus mode — quiz yourself on one album at a time and try to beat all 12
 - Installable as an app — works offline once loaded
 
 With many features in the works as we speak:
