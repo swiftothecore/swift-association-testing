@@ -691,8 +691,33 @@
   }
   .chall-curtain.leaving { animation: curtain-out 0.34s ease both; }
   @keyframes curtain-out { from { opacity: 1; } to { opacity: 0; } }
+  /* The twinkling starfield painted behind the curtain card (curtainStarfieldHTML): ~30 faint
+     gold stars plus a hidden moon + Saturn. Sits behind the card; stars never catch taps. */
+  .chall-starfield {
+    position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0;
+  }
+  .chall-star, .chall-sky {
+    position: absolute; display: block; color: #d8a838;
+  }
+  .chall-star svg, .chall-sky svg { display: block; width: 100%; height: 100%; }
+  /* stars twinkle (opacity-only so the inline rotate is preserved) */
+  .chall-star {
+    opacity: 0;
+    animation: curtain-twinkle var(--dur, 3s) ease-in-out var(--delay, 0s) infinite;
+  }
+  @keyframes curtain-twinkle {
+    0%, 100% { opacity: var(--min, 0.12); }
+    50%      { opacity: var(--max, 0.55); }
+  }
+  /* the moon + Saturn sit steady and dim, fading in once */
+  .chall-sky {
+    opacity: 0; color: #c79a36;
+    animation: curtain-skyrise 0.9s ease 0.2s both;
+  }
+  @keyframes curtain-skyrise { from { opacity: 0; } to { opacity: 0.32; } }
+
   .chall-curtain-card {
-    position: relative; text-align: center; max-width: 460px;
+    position: relative; z-index: 1; text-align: center; max-width: 460px;
     padding: 26px 30px 24px 38px;
     background: var(--paper); border: 1px solid rgba(43, 39, 34, 0.18);
     border-radius: 4px; box-shadow: 3px 5px 0 rgba(43, 39, 34, 0.14);
@@ -771,6 +796,9 @@
     .chall-curtain-rule::after { transform: scaleX(1); }
     .chall-curtain-next { transform: none; }
     .chall-curtain-next:active { transform: translateY(1px); }
+    /* stars hold steady (no twinkle); the rotate set inline still applies */
+    .chall-star { animation: none; opacity: 0.32; }
+    .chall-sky { animation: none; opacity: 0.3; }
   }
 
   /* Vanishing Word challenge — the prompt word fades out of view after a beat
