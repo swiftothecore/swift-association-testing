@@ -8,7 +8,7 @@ import {
   ACHIEVEMENTS, ACH_ICONS, ACH_BY_ID, ACH_GROUPS, ACH_GROUP_COLORS, ACH_GROUP_OF,
   CHALLENGES, CHALLENGE_BY_ID, CHALLENGE_ORDER,
   ALBUM_FOCUS_DIFFS, ALBUM_FOCUS_TARGET,
-  PEN_SVG, STAR_SVG, SPARKLE_SVG, MOON_SVG, SATURN_SVG, DOODLE_SVG,
+  PEN_SVG, STAR_SVG, SPARKLE_SVG, DOODLE_SVG,
 } from "./config.js";
 import { buildBraceletSVG } from "./bracelet.js";
 import {
@@ -3777,38 +3777,6 @@ function isWildcardRound() {
 // The inner card markup for a curtain. `o.headline` is the big handwritten line; the
 // optional `o.sub` is trusted HTML (callers build it with escaped pieces) so it can carry
 // album-colour spans / bold.
-// A faint twinkling starfield painted behind a challenge curtain card: ~30 gold stars at
-// random positions/sizes/twinkle phases, with exactly one crescent moon and one ringed
-// Saturn hidden among them. Re-scattered (and the moon/Saturn re-placed) each mount.
-function curtainStarfieldHTML() {
-  const rnd = (a, b) => a + Math.random() * (b - a);
-  const STARS = 30;
-  // Two distinct slots among the stars become the moon and Saturn.
-  const moonAt = Math.floor(Math.random() * STARS);
-  let satAt = Math.floor(Math.random() * STARS);
-  if (satAt === moonAt) satAt = (satAt + 1) % STARS;
-  const pieces = [];
-  for (let i = 0; i < STARS; i++) {
-    const left = rnd(2, 98).toFixed(1), top = rnd(3, 95).toFixed(1);
-    if (i === moonAt || i === satAt) {
-      const moon = i === moonAt;
-      const sz = rnd(26, 36).toFixed(0);
-      const rot = (moon ? rnd(-25, 25) : rnd(-30, -12)).toFixed(0);
-      pieces.push(
-        `<span class="chall-sky" style="left:${left}%;top:${top}%;width:${sz}px;` +
-        `height:${sz}px;transform:rotate(${rot}deg)">${moon ? MOON_SVG : SATURN_SVG}</span>`);
-      continue;
-    }
-    const sz = rnd(7, 16).toFixed(0);
-    pieces.push(
-      `<span class="chall-star" style="left:${left}%;top:${top}%;width:${sz}px;height:${sz}px;` +
-      `transform:rotate(${rnd(-18, 18).toFixed(0)}deg);--dur:${rnd(2.2, 4.6).toFixed(2)}s;` +
-      `--delay:${rnd(0, 3).toFixed(2)}s;--min:${rnd(0.06, 0.18).toFixed(2)};` +
-      `--max:${rnd(0.42, 0.7).toFixed(2)}">${STAR_SVG}</span>`);
-  }
-  return `<div class="chall-starfield" aria-hidden="true">${pieces.join("")}</div>`;
-}
-
 function curtainCardHTML(o) {
   const ruleStyle = o.headlineColor ? ` style="color:${o.headlineColor}"` : "";
   return `<div class="chall-curtain-card">` +
@@ -3896,7 +3864,7 @@ function mountCurtain(innerHTML) {
   if (ov) return ov;
   ov = document.createElement("div");
   ov.className = "chall-curtain";
-  ov.innerHTML = curtainStarfieldHTML() + innerHTML;
+  ov.innerHTML = innerHTML;
   $("screen-game").appendChild(ov);
   return ov;
 }

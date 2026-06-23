@@ -463,9 +463,6 @@ export const PEN_SVG = {
 
 export const STAR_SVG = `<svg viewBox="0 0 24 24"><path d="M12 2 L14.6 9 L22 9.3 L16 14 L18 21.5 L12 17 L6 21.5 L8 14 L2 9.3 L9.4 9 Z" fill="currentColor"/></svg>`;
 export const SPARKLE_SVG = `<svg viewBox="0 0 24 24"><path d="M12 1 C13 8 16 11 23 12 C16 13 13 16 12 23 C11 16 8 13 1 12 C8 11 11 8 12 1 Z" fill="currentColor"/></svg>`;
-// A crescent moon and a ringed Saturn — hidden among the curtain starfield (see curtainStarfieldHTML).
-export const MOON_SVG = `<svg viewBox="0 0 24 24"><path d="M17 3 A10 10 0 1 0 17 21 A8 8 0 1 1 17 3 Z" fill="currentColor"/></svg>`;
-export const SATURN_SVG = `<svg viewBox="0 0 24 24"><g transform="rotate(-22 12 12)"><ellipse cx="12" cy="12" rx="11" ry="3.6" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="12" cy="12" r="5.6" fill="currentColor"/><path d="M1 12 a11 3.6 0 0 0 5.4 3.1" fill="none" stroke="currentColor" stroke-width="1.4"/></g></svg>`;
 
 export const DOODLE_SVG = {
   // a fence panel with 5 diamond cut-outs in a quincunx (Taylor's fence photo)
