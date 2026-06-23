@@ -517,9 +517,9 @@
   .chall-layout { display: grid; grid-template-columns: 208px 1fr; gap: 0; }
 
   /* ---- left: the contents list ---- */
-  .chall-list { padding-right: 16px; border-right: 1px solid rgba(60,40,18,0.16); }
+  .chall-list { padding-right: 16px; padding-left: 14px; border-right: 1px solid rgba(60,40,18,0.16); }
   .chall-item {
-    position: relative; display: grid; grid-template-columns: 18px 1fr auto 22px;
+    position: relative; display: grid; grid-template-columns: 1fr 22px;
     align-items: center; column-gap: 9px; width: 100%;
     padding: 8px 8px 8px 4px; min-height: 40px; cursor: pointer;
     background: none; border: none; border-radius: 2px; text-align: left;
@@ -537,10 +537,30 @@
   .chall-item-mark { display: flex; justify-content: center; }
   .chall-mark-svg { width: 20px; height: 20px; display: block; }
 
-  /* difficulty: a row of cassette tapes */
+  /* difficulty: cassette tapes, coloured by tier (green → orange → red) */
   .chall-tapes { display: inline-flex; align-items: center; gap: 3px; }
-  .tape-glyph { width: 18px; height: 12px; display: block; }
-  .chall-item.is-locked .chall-tapes { opacity: 0.5; }
+  .tape-glyph { width: 20px; height: 13px; display: block; }
+  .tape-glyph .tape-shell { fill: #2b2722; stroke: #211f1c; stroke-width: 1; }
+  .tape-glyph .tape-label { fill: #efe7d4; }
+  .tape-glyph .tape-reel  { fill: none; stroke: #efe7d4; stroke-width: 1.1; }
+  .chall-tapes.t1 .tape-shell { fill: #4f7a45; stroke: #38602f; }
+  .chall-tapes.t2 .tape-shell { fill: #cd8a2c; stroke: #9c6418; }
+  .chall-tapes.t3 .tape-shell { fill: #b23a3a; stroke: #872a2a; }
+
+  /* difficulty groups in the list */
+  .chall-group + .chall-group { margin-top: 14px; }
+  .chall-group-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 4px 5px; margin-bottom: 4px;
+    border-bottom: 1px dashed #c7ba9b;
+  }
+  .chall-group-label {
+    font-family: var(--type); font-size: 10px; letter-spacing: 1.6px;
+    text-transform: uppercase; color: var(--ink-soft);
+  }
+  .chall-group-count {
+    margin-left: auto; font-family: var(--type); font-size: 10px; color: #b3a584;
+  }
   .chall-item.is-locked .chall-item-name { color: var(--ink-soft); }
   .chall-item.is-locked .chall-item-num { color: #c7bfac; }
   .chall-item.is-locked .chall-item-mark { color: #c4bca9; }

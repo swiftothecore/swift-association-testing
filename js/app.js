@@ -2148,21 +2148,16 @@ const CHALL_RING = `<svg viewBox="0 0 20 20" class="chall-mark-svg" aria-hidden=
 const CHALL_LOCK = `<svg viewBox="0 0 20 20" class="chall-mark-svg" aria-hidden="true"><rect x="4.5" y="9" width="11" height="8" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6.8 9 V6.7 a3.2 3.2 0 0 1 6.4 0 V9" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>`;
 const CHALL_STAR = `<svg viewBox="0 0 24 24" class="chall-star-svg" aria-hidden="true"><path d="M12 2.5l2.7 6.2 6.8.5-5.2 4.4 1.6 6.6L12 17.1 6.1 20.8l1.6-6.6L2.5 9.2l6.8-.5z" fill="#e0a32f" stroke="#b9821f" stroke-width="0.8"/></svg>`;
 
-// Difficulty rating — a row of cassette tapes (1 easy → 3 hard). Echoes the
-// dark-shell + cream-label cassette desk prop. A filled tape counts; a hollow
-// tape marks the unused steps of the 3-tape scale.
-const TAPE_ON = `<svg viewBox="0 0 24 16" class="tape-glyph" aria-hidden="true"><rect x="1" y="1.6" width="22" height="12.8" rx="2.2" fill="#2b2722" stroke="#211f1c" stroke-width="1"/><rect x="5" y="3.3" width="14" height="3.2" rx="0.7" fill="#efe7d4"/><circle cx="8.5" cy="10.2" r="2.4" fill="none" stroke="#efe7d4" stroke-width="1.1"/><circle cx="15.5" cy="10.2" r="2.4" fill="none" stroke="#efe7d4" stroke-width="1.1"/></svg>`;
-const TAPE_OFF = `<svg viewBox="0 0 24 16" class="tape-glyph tape-off" aria-hidden="true"><rect x="1" y="1.6" width="22" height="12.8" rx="2.2" fill="none" stroke="#c4bca9" stroke-width="1"/><circle cx="8.5" cy="10.2" r="2.4" fill="none" stroke="#c4bca9" stroke-width="1"/><circle cx="15.5" cy="10.2" r="2.4" fill="none" stroke="#c4bca9" stroke-width="1"/></svg>`;
+// Difficulty rating — cassette tapes (1 easy → 3 hard). Echoes the dark-shell +
+// cream-label cassette desk prop; the shell is recoloured per tier by the
+// wrapper's t1/t2/t3 class (green → orange → red, set in CSS).
+const TAPE_GLYPH = `<svg viewBox="0 0 24 16" class="tape-glyph" aria-hidden="true"><rect class="tape-shell" x="1" y="1.6" width="22" height="12.8" rx="2.2"/><rect class="tape-label" x="5" y="3.3" width="14" height="3.2" rx="0.7"/><circle class="tape-reel" cx="8.5" cy="10.2" r="2.4"/><circle class="tape-reel" cx="15.5" cy="10.2" r="2.4"/></svg>`;
 const TAPE_WORD = { 1: "easy", 2: "tricky", 3: "tough" };
 
-// `n` filled tapes (clamped 1–3). withEmpty pads to 3 with hollow tapes so the
-// detail panel reads as "x of 3"; the list shows filled-only (the count alone
-// is the at-a-glance signal).
-function tapesMarkup(n, withEmpty) {
+// `n` tapes (clamped 1–3); the wrapper's t<n> class colours them by tier.
+function tapesMarkup(n) {
   const t = Math.max(1, Math.min(3, n || 1));
-  let out = TAPE_ON.repeat(t);
-  if (withEmpty) out += TAPE_OFF.repeat(3 - t);
-  return `<span class="chall-tapes" aria-label="difficulty ${t} of 3">${out}</span>`;
+  return `<span class="chall-tapes t${t}" aria-label="difficulty ${t} of 3">${TAPE_GLYPH.repeat(t)}</span>`;
 }
 
 function openChallenges(from) {
@@ -2182,19 +2177,30 @@ function renderChallengesPage() {
     challSelectedId = (firstOpen || CHALLENGES[0]).id;
   }
 
+  // Grouped by difficulty: three tape tiers (easy → tough), each a coloured
+  // header over its challenges (kept in registry order within the tier).
   let list = "";
-  CHALLENGES.forEach((c, idx) => {
-    const rec = challengeRecord(c.id);
-    const open = c.free || rec.unlocked;
-    let mark, stateCls;
-    if (rec.defeated)   { mark = CHALL_TICK; stateCls = "is-defeated"; }
-    else if (open)      { mark = CHALL_RING; stateCls = "is-open"; }
-    else                { mark = CHALL_LOCK; stateCls = "is-locked"; }
-    list += `<button type="button" class="chall-item ${stateCls}" data-id="${c.id}">` +
-      `<span class="chall-item-num">${idx + 1}</span>` +
-      `<span class="chall-item-name">${escapeHtml(c.name)}</span>` +
-      `${tapesMarkup(c.tapes)}` +
-      `<span class="chall-item-mark">${mark}</span></button>`;
+  [1, 2, 3].forEach((tier) => {
+    const inTier = CHALLENGES.filter((c) => (c.tapes || 1) === tier);
+    if (!inTier.length) return;
+    list += `<div class="chall-group">` +
+      `<div class="chall-group-head t${tier}">` +
+        `${tapesMarkup(tier)}` +
+        `<span class="chall-group-label">${TAPE_WORD[tier]}</span>` +
+        `<span class="chall-group-count">${inTier.length}</span>` +
+      `</div>`;
+    inTier.forEach((c) => {
+      const rec = challengeRecord(c.id);
+      const open = c.free || rec.unlocked;
+      let mark, stateCls;
+      if (rec.defeated)   { mark = CHALL_TICK; stateCls = "is-defeated"; }
+      else if (open)      { mark = CHALL_RING; stateCls = "is-open"; }
+      else                { mark = CHALL_LOCK; stateCls = "is-locked"; }
+      list += `<button type="button" class="chall-item ${stateCls}" data-id="${c.id}">` +
+        `<span class="chall-item-name">${escapeHtml(c.name)}</span>` +
+        `<span class="chall-item-mark">${mark}</span></button>`;
+    });
+    list += `</div>`;
   });
 
   const html =
@@ -2257,7 +2263,7 @@ function renderChallengeDetail(id) {
     `</div>` +
     `<div class="chall-diff">` +
       `<span class="chall-eyebrow">Difficulty</span>` +
-      `${tapesMarkup(c.tapes, true)}` +
+      `${tapesMarkup(c.tapes)}` +
       `<span class="chall-diff-word">${TAPE_WORD[Math.max(1, Math.min(3, c.tapes || 1))]}</span>` +
     `</div>` +
     `<div class="chall-sec">` +
