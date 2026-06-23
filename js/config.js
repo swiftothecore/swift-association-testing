@@ -149,6 +149,21 @@ export const CHALLENGES = [
     free: false, cost: 1, target: 4, icon: "quote",
     desc: "Answer by typing the lyric line — and recall it word-for-word.",
     win: "Recall 4 lines word-for-word (or better) — type the line exactly." },
+  { id: "wrapped-chain", name: "Wrapped Like A Chain", rule: "chain", mode: "medium",
+    free: false, cost: 1, target: 8, noTitle: false, pool: "easy", icon: "scarf",
+    blurb: "10s · suggestions · each title starts with the last letter of the one before",
+    desc: "Link the songs into a chain — each title must begin with the last letter of your previous answer.",
+    win: "Build a chain of 8 linked songs." },
+  { id: "on-tour", name: "On Tour!", rule: "setlist", mode: "medium",
+    free: false, cost: 1, target: 9, noTitle: false, icon: "ticket",
+    blurb: "10s · suggestions · each page wants a song from that night's album",
+    desc: "A setlist of albums, one per page — your answer must come from that night's album.",
+    win: "Score 9 / 13 playing each album on cue." },
+  { id: "its-a-clock", name: "It's A Clock!", rule: "combo", mode: "medium",
+    free: false, cost: 1, target: 9, noTitle: false, pool: "easy", icon: "bolt",
+    blurb: "one shared clock · every right answer winds it back up · run it dry and it's over",
+    desc: "Forget per-page timers — one shared clock drains across the whole run. Each correct answer winds it back up; let it hit zero and the run ends.",
+    win: "Score 9 / 13 before the shared clock runs out." },
 ];
 export const CHALLENGE_BY_ID = Object.fromEntries(CHALLENGES.map((c) => [c.id, c]));
 export const CHALLENGE_ORDER = CHALLENGES.map((c) => c.id);

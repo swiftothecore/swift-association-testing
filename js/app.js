@@ -59,6 +59,8 @@ let titleIndex = new Map();   // normalizeTitle(title|alias) -> song, built in l
 let spacelessIndex = new Map(); // titleIndex key with spaces removed -> song (space-error fallback)
 let playableWords = [];
 let titleWordList = [];  // playable words that appear in at least one song title (Title...? challenge pool)
+let albumWordMap = {};   // album -> playable words with a valid (lyrics) song in that album (On Tour! pool)
+let albumOrder = [];     // album names in canonical songs.json order (On Tour! setlist order)
 let score = 0;
 let round = 0;
 let usedWords = [];
@@ -83,6 +85,9 @@ let revolveId = null;           // Revolving Door: interval that swaps the word 
 let revolveIndex = 0;           // Revolving Door: how many times the word has revolved this round
 let lastAlphaLetter = "";       // From A to Z: first letter of the last accepted answer
 let roundSecondsOverride = null; // Shrinking Timer: per-round clock override (null = use the mode's seconds)
+let chainLetter = "";           // Wrapped Like A Chain: required first letter of the next title ("" = free)
+let tourSetlist = [];           // On Tour!: the album scheduled for each round (index = round-1)
+let comboClock = 0;             // It's A Clock!: seconds left on the single shared run clock
 let challengeTargetSong = null; // One Of A Kind: the never-before-answered song to surface
 let challengeForcedRound = 0;   // One Of A Kind: the round that forces challengeForcedWordVal
 let challengeForcedWordVal = "";// One Of A Kind: the prompt word that surfaces the target song
@@ -2179,6 +2184,14 @@ async function loadData() {
   // Title...? challenge pool: words that appear in at least one song title (so every
   // round can be won by naming a title that holds the word).
   titleWordList = playableWords.filter((w) => titleSongsForWord(w, false).length >= 1);
+  // On Tour! pools: for each album, the playable words that have a valid (lyrics) song
+  // in it, so each tour stop can be handed a winnable word. Plus the canonical album order.
+  albumOrder = grouped.map((g) => g.album);
+  albumWordMap = {};
+  for (const w of playableWords) {
+    for (const a of new Set(validSongs(w, false, false).map((s) => s.album)))
+      (albumWordMap[a] = albumWordMap[a] || []).push(w);
+  }
   buildWordBuckets();
 }
 
@@ -2484,6 +2497,9 @@ function resetRunState() {
   challengeRunActive = false;
   lastAlphaLetter = "";
   roundSecondsOverride = null;
+  chainLetter = "";
+  tourSetlist = [];
+  comboClock = 0;
   challengeTargetSong = null;
   challengeForcedRound = 0;
   challengeForcedWordVal = "";
@@ -2696,6 +2712,8 @@ function startChallenge(id) {
   currentChallenge = c;                          // set AFTER resetRunState (which nulls it)
   challengeRunActive = true;                     // start the achievement sandbox
   if (c.rule === "newsong") setupNewSongChallenge();
+  if (c.rule === "setlist") buildTourSetlist();
+  if (c.rule === "combo") comboClock = COMBO_START;
   recordChallengeAttempt(id);
   applyInputHints();
   updateTagline();
@@ -2731,6 +2749,61 @@ function challengeForcedWord(r) {
   return (challengeTargetSong && r === challengeForcedRound) ? challengeForcedWordVal : null;
 }
 
+// On Tour!: a setlist of one album per round. Cycle through albums with enough candidate
+// words (so each stop can be handed a winnable word), in shuffled canonical order — with
+// 16 album groups this almost always yields 13 distinct stops. Degenerate data falls back
+// to any album that has a candidate word.
+const TOUR_MIN_WORDS = 3;
+function buildTourSetlist() {
+  tourSetlist = [];
+  let eligible = albumOrder.filter((a) => (albumWordMap[a] || []).length >= TOUR_MIN_WORDS);
+  if (!eligible.length) eligible = albumOrder.filter((a) => (albumWordMap[a] || []).length);
+  if (!eligible.length) return;
+  eligible = shuffle(eligible.slice());
+  for (let i = 0; i < TOTAL_ROUNDS; i++) tourSetlist.push(eligible[i % eligible.length]);
+}
+// On Tour!: a winnable word for this round's scheduled album (one with a valid song in it).
+function pickTourWord() {
+  const album = tourSetlist[round - 1];
+  if (!album) return null;
+  const all = albumWordMap[album] || [];
+  const pool = all.filter((w) => !usedWords.includes(w));
+  const choices = pool.length ? pool : all;
+  if (!choices.length) return null;                 // degenerate — let pickWord fall back
+  const w = choices[Math.floor(Math.random() * choices.length)];
+  usedWords.push(w);
+  return w;
+}
+// Wrapped Like A Chain: a word whose valid set holds a song starting with the required
+// chain letter, so the chain can always be extended. Round 1 (chainLetter "") returns
+// null → the normal pool path runs. A true dead-end resets the chain to a free choice.
+function pickChainWord() {
+  if (!chainLetter) return null;
+  const bucket = wordBuckets[effectivePool()] || playableWords;
+  const fresh = shuffle(bucket.filter((w) => !usedWords.includes(w)));
+  for (const w of fresh) {
+    if (validSongs(w, effectiveStrict(), effectiveNoTitle())
+        .some((s) => firstAlphaLetter(s.title) === chainLetter)) {
+      usedWords.push(w);
+      return w;
+    }
+  }
+  chainLetter = "";   // no word can extend this letter — let the chain restart free
+  return null;
+}
+// It's A Clock!: one shared run clock. COMBO_START seconds to begin, +COMBO_BONUS per
+// correct answer, capped at COMBO_CAP. Hitting zero ends the run.
+const COMBO_START = 20, COMBO_BONUS = 5, COMBO_CAP = 30;
+function comboRuleActive() {
+  return gameType === "challenge" && currentChallenge && currentChallenge.rule === "combo";
+}
+// Seconds left on the shared clock right now, derived from the running timer (total is
+// scaled to COMBO_CAP, so remaining == the shared clock). Valid while/just after a combo
+// round's timer ran.
+function comboRemaining() {
+  return Math.max(0, COMBO_CAP - (performance.now() - timerStart) / 1000);
+}
+
 // Per-round modifier for the active challenge (called from advanceRound after the
 // word is written). Vanishing Word hides the prompt after a beat; matching is
 // unaffected (currentWord/currentSongs live in state, not the DOM).
@@ -2756,6 +2829,12 @@ function applyChallengeRound(wrap) {
     renderAccelBanner();
   } else if (currentChallenge.rule === "titleHas" || currentChallenge.rule === "shorttitle") {
     renderTitleRuleBanner();
+  } else if (currentChallenge.rule === "chain") {
+    renderChainBanner();
+  } else if (currentChallenge.rule === "setlist") {
+    renderTourBanner();
+  } else if (currentChallenge.rule === "combo") {
+    renderComboBanner();
   }
 }
 
@@ -2783,6 +2862,34 @@ function renderTitleRuleBanner() {
     ? "the word must be in the title"
     : "one- or two-word titles only";
   el.innerHTML = `<span class="chall-prog-name">${msg}</span>`;
+}
+// Wrapped Like A Chain: chain length so far + the letter the next title must start with.
+function renderChainBanner() {
+  if (gameType !== "challenge" || !currentChallenge || currentChallenge.rule !== "chain") return;
+  const el = ensureChallBanner();
+  const target = currentChallenge.target || 8;
+  const link = chainLetter ? `start with <b>${escapeHtml(chainLetter)}</b>` : "start anywhere";
+  el.innerHTML =
+    `<span class="chall-prog-name">chain ${score} / ${target}</span>` +
+    `<span class="chall-prog-count">${link}</span>`;
+}
+// On Tour!: tonight's album (in its colour) + which stop on the setlist this is.
+function renderTourBanner() {
+  if (gameType !== "challenge" || !currentChallenge || currentChallenge.rule !== "setlist") return;
+  const el = ensureChallBanner();
+  const album = tourSetlist[round - 1] || "";
+  const col = (album && albumColor(album)) || "var(--ink-soft)";
+  el.innerHTML =
+    `<span class="chall-prog-name" style="color:${col}">${escapeHtml(album)}</span>` +
+    `<span class="chall-prog-count">stop ${Math.min(round, TOTAL_ROUNDS)} / ${TOTAL_ROUNDS}</span>`;
+}
+// It's A Clock!: the shared clock's current reading + the per-correct bonus.
+function renderComboBanner() {
+  if (!comboRuleActive()) return;
+  const el = ensureChallBanner();
+  el.innerHTML =
+    `<span class="chall-prog-name">shared clock</span>` +
+    `<span class="chall-prog-count">${Math.max(0, comboClock).toFixed(0)}s · +${COMBO_BONUS}s per correct</span>`;
 }
 
 // The shared challenge-banner element above the word (reused across rules; cleaned
@@ -3037,7 +3144,8 @@ function challengeWinCheck(c) {
   }
   // Lyric Lover: recall a target number of word-perfect-or-better lines this run.
   if (c.rule === "verse") return gameVersePerfect >= (c.target || 4);
-  // vanishing / alphabetical / accelerate / titleHas / shorttitle (score-target rules).
+  // Score-target rules: vanishing / alphabetical / accelerate / titleHas / shorttitle /
+  // chain (chain length == score) / setlist / combo (reach the target before the clock dies).
   return score >= (c.target || TOTAL_ROUNDS);
 }
 
@@ -3191,6 +3299,12 @@ function renderShareButton(dateStr, hidden) {
 }
 
 function pickWord() {
+  // Some challenges force the word so the round is winnable within their rule (and push
+  // it onto usedWords themselves). A null return means "fall back to the normal pool".
+  if (gameType === "challenge" && currentChallenge) {
+    if (currentChallenge.rule === "setlist") { const w = pickTourWord(); if (w) return w; }
+    if (currentChallenge.rule === "chain") { const w = pickChainWord(); if (w) return w; }
+  }
   // Title...? draws only from words that appear in some song title, so each round is winnable.
   const bucket = (gameType === "challenge" && currentChallenge && currentChallenge.rule === "titleHas"
     && titleWordList.length)
@@ -3574,8 +3688,9 @@ function showTimerFull() {
   const fill = $("timerFill");
   const label = $("timerLabel");
   const wrap = document.querySelector(".timer-wrap");
-  const base = baseSeconds();
-  const total = base > 0 ? base + (extraSecondsPerRound || 0) : base;
+  // It's A Clock! uses one shared clock — paint it at its current reading, not "full".
+  const base = comboRuleActive() ? Math.max(0, comboClock) : baseSeconds();
+  const total = base > 0 ? base + (comboRuleActive() ? 0 : (extraSecondsPerRound || 0)) : base;
   if (!(total > 0)) { if (wrap) wrap.style.display = "none"; return; }
   if (wrap) wrap.style.display = "";
   fill.style.width = "100%";
@@ -3716,16 +3831,26 @@ function startTimer(resume) {
   // Choose Your Path's "Slow Down Time" perk adds seconds, but only where there's
   // already a clock (Relaxed stays clock-less). baseSeconds() applies Shrinking Timer's
   // per-round override.
-  const base = baseSeconds();
-  const total = base > 0 ? base + (extraSecondsPerRound || 0) : base;
   const wrap = document.querySelector(".timer-wrap");
-  // Relaxed mode (seconds <= 0): no clock at all — hide the bar and never time out.
-  if (!(total > 0)) {
-    if (wrap) wrap.style.display = "none";
-    return;
+  let total, begin;
+  if (comboRuleActive()) {
+    // It's A Clock!: one shared budget across the whole run. The bar is scaled to
+    // COMBO_CAP and begins wherever the shared clock stands; it never resets per round.
+    total = COMBO_CAP;
+    begin = Math.max(0, Math.min(COMBO_CAP, comboClock));
+    if (wrap) wrap.style.display = "";
+    if (begin <= 0) { comboClock = 0; roundLocked = true; resetTension(); endGame(); return; }
+  } else {
+    const base = baseSeconds();
+    total = base > 0 ? base + (extraSecondsPerRound || 0) : base;
+    // Relaxed mode (seconds <= 0): no clock at all — hide the bar and never time out.
+    if (!(total > 0)) {
+      if (wrap) wrap.style.display = "none";
+      return;
+    }
+    if (wrap) wrap.style.display = "";
+    begin = (resume != null && resume > 0 && resume < total) ? resume : total;
   }
-  if (wrap) wrap.style.display = "";
-  const begin = (resume != null && resume > 0 && resume < total) ? resume : total;
   timerStart = performance.now() - (total - begin) * 1000;
   fill.style.width = (begin / total * 100) + "%";
   fill.classList.remove("low");
@@ -3750,7 +3875,9 @@ function startTimer(resume) {
     }
     if (remaining <= 0) {
       label.textContent = "0.0";
-      submitAnswer(null, true);
+      // It's A Clock!: the shared clock running out ends the whole run, not just a round.
+      if (comboRuleActive()) { comboClock = 0; clearTimer(); resetTension(); roundLocked = true; endGame(); }
+      else submitAnswer(null, true);
     }
   }, 100);
 }
@@ -3824,6 +3951,10 @@ function roundAcceptsSong(song) {
     return wordRegex(currentWord, effectiveStrict()).test(song.title);
   if (currentChallenge.rule === "shorttitle")
     return titleWordCount(song.title) <= 2;
+  if (currentChallenge.rule === "chain")
+    return !chainLetter || firstAlphaLetter(song.title) === chainLetter;
+  if (currentChallenge.rule === "setlist")
+    return song.album === tourSetlist[round - 1];
   return true;
 }
 
@@ -3941,6 +4072,20 @@ function rejectTitleHas() {
 // Short n' Sweet: the named title is too long.
 function rejectShortTitle() {
   softRejectFlash(`too long — name a <b>one- or two-word</b> title`);
+}
+// Wrapped Like A Chain: the named title doesn't start with the required letter.
+function rejectChain() {
+  softRejectFlash(`off the chain — start with <b>${escapeHtml(chainLetter)}</b>`);
+}
+// On Tour!: the named song isn't from tonight's album.
+function rejectTour() {
+  const a = tourSetlist[round - 1] || "tonight's album";
+  softRejectFlash(`not on the setlist — name a <b>${escapeHtml(a)}</b> song`);
+}
+// The last A–Z letter of a title (Wrapped Like A Chain's link to the next answer).
+function lastChainLetter(title) {
+  const m = (title || "").toUpperCase().match(/[A-Z]/g);
+  return m ? m[m.length - 1] : "";
 }
 // One Of A Kind: the player tried their target song on a round where it doesn't fit
 // the prompt word. Costs a guess (so spamming the target every round can't brute-force
@@ -4216,6 +4361,23 @@ function submitAnswer(song, isTimeout) {
     rejectShortTitle(); return;
   }
 
+  // Wrapped Like A Chain: a valid-by-lyrics answer that doesn't start with the required
+  // letter is soft-rejected so the player can keep the chain going.
+  if (song && !isTimeout && currentChallenge && currentChallenge.rule === "chain"
+      && chainLetter
+      && currentSongs.some((s) => s.title === song.title)
+      && firstAlphaLetter(song.title) !== chainLetter) {
+    rejectChain(); return;
+  }
+
+  // On Tour!: a valid-by-lyrics answer from the wrong album is soft-rejected so the
+  // player keeps looking for one off tonight's album.
+  if (song && !isTimeout && currentChallenge && currentChallenge.rule === "setlist"
+      && currentSongs.some((s) => s.title === song.title)
+      && song.album !== tourSetlist[round - 1]) {
+    rejectTour(); return;
+  }
+
   roundLocked = true;
   clearTimer();
   resetTension();
@@ -4242,6 +4404,14 @@ function submitAnswer(song, isTimeout) {
   roundSongs[round - 1] = correct && song ? song.title : null;  // credited song — for the lifetime tally
   justEarnedIndex = correct ? round - 1 : -1;
   if (correct) score++;
+  // It's A Clock!: bank the time left on the shared clock; a correct answer winds it
+  // back up (capped). The timer is already cleared, so comboRemaining() is the reading
+  // at the moment of the answer. Next round's startTimer resumes from comboClock.
+  if (comboRuleActive()) {
+    comboClock = comboRemaining();
+    if (correct) comboClock = Math.min(COMBO_CAP, comboClock + COMBO_BONUS);
+    renderComboBanner();
+  }
   // Live challenge progress — refresh the banner the instant an answer is recorded
   // (Deep Cut's album tally / One Of A Kind's found-it stamp), before the page turns.
   if (gameType === "challenge" && currentChallenge) {
@@ -4251,6 +4421,11 @@ function submitAnswer(song, isTimeout) {
   // From A to Z: advance the alphabetical floor only on an accepted correct answer.
   if (correct && currentChallenge && currentChallenge.rule === "alphabetical") {
     lastAlphaLetter = firstAlphaLetter(song.title);
+  }
+  // Wrapped Like A Chain: the next title must start with this answer's LAST letter.
+  if (correct && currentChallenge && currentChallenge.rule === "chain") {
+    chainLetter = lastChainLetter(song.title);
+    renderChainBanner();
   }
   correctStreak = correct ? correctStreak + 1 : 0;
   if (gameType === "infinite" && !correct) { lives--; renderLives(); }
