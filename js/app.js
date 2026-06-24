@@ -1157,7 +1157,7 @@ function unlock(id) {
   // The flag is cleared before endChallenge folds, so post-run meta charms still fire.
   if (challengeRunActive && !CHALLENGE_ACH_IDS.has(id)) return;
   if (!ACH_BY_ID[id] || earnedAchievements[id] || burnedAchIds.has(id)) return; // burned = gone for good
-  earnedAchievements[id] = new Date().toISOString().slice(0, 10);
+  earnedAchievements[id] = new Date().toISOString();   // full ISO so same-day charms sort by earn time
   saveAchievements(earnedAchievements);
   newlyUnlocked.push(id);
   showToast(ACH_BY_ID[id]);
@@ -1681,8 +1681,9 @@ function renderSongbook() {
 
 /* ---------- Personal records (your own best runs, per mode) ---------- */
 function recordDateLabel(date) {
+  // Accepts both legacy date-only ("YYYY-MM-DD") and full ISO timestamps.
   return date
-    ? new Date(date + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
+    ? new Date(date.slice(0, 10) + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
     : "—";
 }
 // Completion time (seconds) → "m:ss". null when the mode has no clock.
