@@ -1254,6 +1254,19 @@
     color: var(--ink-soft); margin-top: 16px;
   }
 
+  /* ---------- Anniversary marginalia (start screen, milestone days only) ---------- */
+  .anniversary-note[hidden] { display: none; }
+  .anniversary-note {
+    font-family: var(--hand); font-size: 18px; line-height: 1.3;
+    color: var(--ink-accent); text-align: center;
+    max-width: 34ch; margin: 0 auto 14px; padding-top: 2px;
+    transform: rotate(-0.6deg); opacity: 0.88;
+  }
+  .anniversary-note::before {
+    content: "✶"; display: block; font-size: 13px; opacity: 0.5;
+    margin-bottom: 1px;
+  }
+
   /* ---------- Live verse-bonus gauge (climbs as you write more of the line) ---------- */
   .verse-meter[hidden] { display: none; }
   .verse-meter {

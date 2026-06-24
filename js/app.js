@@ -1,9 +1,9 @@
 "use strict";
-import { $, escapeRegExp, escapeHtml, prefersReducedMotion, shuffle, chance, normalizeTitle, normalizeLyric, fuzzySubstringRatio, levenshtein, mulberry32, dailySeed, censorText } from "./util.js";
+import { $, escapeRegExp, escapeHtml, prefersReducedMotion, shuffle, chance, normalizeTitle, normalizeLyric, fuzzySubstringRatio, levenshtein, mulberry32, dailySeed, censorText, anniversaryNote } from "./util.js";
 import {
   TOTAL_ROUNDS, RECENT_WINDOW, DIFF_KEY, DEFAULT_SETTINGS,
   MODES, MODE_ORDER, MODE_COLORS,
-  ERAS, TENDER_ERAS, FINALE_ERAS, ALBUM_ERA,
+  ERAS, TENDER_ERAS, FINALE_ERAS, ALBUM_ERA, TS_MILESTONES,
   ALBUM_COLORS, CB_ALBUM_COLORS, STUDIO_ALBUMS, TITLE_ALIASES,
   ACHIEVEMENTS, ACH_ICONS, ACH_BY_ID, ACH_GROUPS, ACH_GROUP_COLORS, ACH_GROUP_OF, ACH_NO_TRADE,
   CHALLENGES, CHALLENGE_BY_ID, CHALLENGE_ORDER,
@@ -2749,6 +2749,20 @@ function renderStartPickers() {
   renderModePicker();
   refreshStartBoard();
   renderDailyButtonState();
+  renderAnniversaryNote();
+}
+// Dated marginalia at the top of today's page: on a real Taylor milestone (an album
+// release or her birthday) a warm handwritten note appears, tinted to that era. Most
+// days it's silent (hidden). Keyed on todayKey() so it flips on the player's local day.
+function renderAnniversaryNote() {
+  const el = $("anniversaryNote");
+  if (!el) return;
+  const note = anniversaryNote(todayKey(), TS_MILESTONES);
+  if (!note) { el.hidden = true; el.textContent = ""; el.style.color = ""; return; }
+  el.textContent = note.text;
+  const colors = settings.colorBlindAlbums ? CB_ALBUM_COLORS : ALBUM_COLORS;
+  el.style.color = (note.album && colors[note.album]) || "";
+  el.hidden = false;
 }
 // The Daily Challenge button wears an obvious "not done yet" coat (a sketchy dashed
 // ink border, a pinned "today!" sticky note, and 13 twinkling margin stars — Taylor's

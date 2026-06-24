@@ -207,6 +207,32 @@ export const ALBUM_ERA = {
 export const TENDER_ERAS = ["lavender", "denim", "lover", "evermore"];   // round 5 (Track 5) leans tender
 export const FINALE_ERAS = ["gold", "midnight", "reputation"];           // round 13 leans grand
 
+/* ---------- Taylor milestones (the start-screen anniversary marginalia) ----------
+   Real release dates + her birthday. Matched on month-day (ignore year) so a note
+   recurs annually; the "Nth anniversary" is computed from the year. `album` keys into
+   ALBUM_ERA / ALBUM_COLORS so a milestone note can wear that era's colour (re-records
+   borrow their original album's era). Dec 13 doubles as the game's sacred 13.
+   ⚠ Verify every date before editing — fans catch a wrong one instantly. */
+export const TS_MILESTONES = [
+  { md: "12-13", year: 1989, kind: "birthday", title: "Taylor Swift",                  album: null },
+  { md: "10-24", year: 2006, kind: "album",    title: "Taylor Swift", aka: "the debut", album: "Taylor Swift" },
+  { md: "11-11", year: 2008, kind: "album",    title: "Fearless",                      album: "Fearless" },
+  { md: "10-25", year: 2010, kind: "album",    title: "Speak Now",                     album: "Speak Now" },
+  { md: "10-22", year: 2012, kind: "album",    title: "Red",                           album: "Red" },
+  { md: "10-27", year: 2014, kind: "album",    title: "1989",                          album: "1989" },
+  { md: "11-10", year: 2017, kind: "album",    title: "reputation",                    album: "reputation" },
+  { md: "08-23", year: 2019, kind: "album",    title: "Lover",                         album: "Lover" },
+  { md: "07-24", year: 2020, kind: "album",    title: "folklore",                      album: "folklore" },
+  { md: "12-11", year: 2020, kind: "album",    title: "evermore",                      album: "evermore" },
+  { md: "04-09", year: 2021, kind: "tv",       title: "Fearless (Taylor's Version)",   album: "Fearless" },
+  { md: "11-12", year: 2021, kind: "tv",       title: "Red (Taylor's Version)",        album: "Red" },
+  { md: "10-21", year: 2022, kind: "album",    title: "Midnights",                     album: "Midnights" },
+  { md: "07-07", year: 2023, kind: "tv",       title: "Speak Now (Taylor's Version)",  album: "Speak Now" },
+  { md: "10-27", year: 2023, kind: "tv",       title: "1989 (Taylor's Version)",       album: "1989" },
+  { md: "04-19", year: 2024, kind: "album",    title: "The Tortured Poets Department", album: "The Tortured Poets Department" },
+  { md: "10-03", year: 2025, kind: "album",    title: "The Life of a Showgirl",        album: "The Life of a Showgirl" },
+];
+
 /* ---------- Album colours (left-rule tint + tag on lyric cards) ---------- */
 // The 12 studio albums (explicit so future pseudo-album groups — singles, holiday,
 // features — don't dilute album-scoped achievements like The Eras Tour / Branch Out).
