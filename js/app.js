@@ -159,7 +159,81 @@ function applySettings() {
   body.setAttribute("data-anim-speed", settings.animSpeed || "normal");
   if (settings.highContrast) body.setAttribute("data-contrast", "high");
   else body.removeAttribute("data-contrast");
+  refreshSnow();   // December snowfall follows the reduce-motion setting live
 }
+
+/* ---------- December snowfall ---------- */
+// A full-viewport canvas of drifting flakes, decorative only. Active in December
+// (the player's active timezone, via todayKey — so it follows the same local
+// calendar as the daily reset) and only when motion is allowed.
+let snowRaf = null, snowFlakes = [], snowCanvas = null, snowCtx = null,
+    snowLast = 0, snowResizeT = null, snowResizeBound = false;
+function snowActive() { return todayKey().slice(5, 7) === "12" && !motionReduced(); }
+function sizeSnowCanvas() {
+  if (!snowCanvas) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = window.innerWidth, h = window.innerHeight;
+  snowCanvas.width = Math.max(1, Math.round(w * dpr));
+  snowCanvas.height = Math.max(1, Math.round(h * dpr));
+  snowCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // Flake count scales with viewport area, capped for performance. Depth is faked
+  // per flake (size/speed/opacity), so nearer flakes fall faster and brighter.
+  const target = Math.min(150, Math.round((w * h) / 13000));
+  if (snowFlakes.length > target) snowFlakes.length = target;
+  while (snowFlakes.length < target) {
+    const d = Math.random();
+    snowFlakes.push({ x: Math.random() * w, y: Math.random() * h,
+      r: 0.8 + d * 2.6, sp: 8 + d * 26, dr: 0.3 + d * 0.7,
+      ph: Math.random() * 6.2832, o: 0.3 + d * 0.55 });
+  }
+}
+function snowFrame(ts) {
+  if (!snowActive() || !snowCtx) { stopSnow(); return; }
+  const w = window.innerWidth, h = window.innerHeight;
+  let dt = snowLast ? (ts - snowLast) / 1000 : 0.016;
+  snowLast = ts;
+  if (dt > 0.05) dt = 0.05;   // clamp big jumps from a throttled/backgrounded tab
+  snowCtx.clearRect(0, 0, w, h);
+  snowCtx.fillStyle = "#ffffff";
+  for (const f of snowFlakes) {
+    f.y += f.sp * dt;
+    f.x += Math.sin(ts / 1000 + f.ph) * 13 * f.dr * dt;   // gentle lateral sway
+    if (f.y > h + 4) { f.y = -4; f.x = Math.random() * w; }
+    if (f.x > w + 4) f.x = -4; else if (f.x < -4) f.x = w + 4;
+    snowCtx.globalAlpha = f.o;
+    snowCtx.beginPath();
+    snowCtx.arc(f.x, f.y, f.r, 0, 6.2832);
+    snowCtx.fill();
+  }
+  snowCtx.globalAlpha = 1;
+  snowRaf = requestAnimationFrame(snowFrame);
+}
+function startSnow() {
+  if (!snowCanvas) {
+    snowCanvas = document.getElementById("snowfall");
+    if (!snowCanvas) return;
+    snowCtx = snowCanvas.getContext("2d");
+  }
+  if (!snowResizeBound) {
+    window.addEventListener("resize", () => {
+      clearTimeout(snowResizeT);
+      snowResizeT = setTimeout(() => { if (snowActive()) sizeSnowCanvas(); }, 150);
+    });
+    snowResizeBound = true;
+  }
+  sizeSnowCanvas();
+  snowCanvas.style.display = "block";
+  snowLast = 0;
+  if (!snowRaf) snowRaf = requestAnimationFrame(snowFrame);
+}
+function stopSnow() {
+  if (snowRaf) { cancelAnimationFrame(snowRaf); snowRaf = null; }
+  if (snowCanvas) {
+    snowCtx && snowCtx.clearRect(0, 0, snowCanvas.width, snowCanvas.height);
+    snowCanvas.style.display = "none";
+  }
+}
+function refreshSnow() { if (snowActive()) startSnow(); else stopSnow(); }
 // Remember the last-played type so defaultGameType:"last" can restore it next launch.
 function rememberGameType(t) {
   if (settings.lastGameType !== t) { settings.lastGameType = t; saveSettings(settings); }

@@ -62,6 +62,10 @@
      roughly half off the viewport so the desk reads as continuing past the
      window. Hidden on narrow screens where they'd crowd the notebook. */
   .desk-items { position: fixed; inset: 0; z-index: 0; pointer-events: none; display: none; overflow: hidden; }
+  /* December snowfall: full-viewport decorative canvas, above the notebook but
+     below the settings modal (z 200). Shown/hidden + animated by app.js, gated on
+     December (active timezone) and motion-allowed. */
+  #snowfall { position: fixed; inset: 0; z-index: 50; pointer-events: none; display: none; }
   .desk-item {
     position: absolute; opacity: 0.92;
     filter: drop-shadow(3px 7px 6px rgba(46,32,14,0.30)) saturate(0.88);
