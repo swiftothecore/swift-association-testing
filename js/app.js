@@ -478,8 +478,10 @@ function effectiveStrict() { return currentMode.strict || settings.stemMatching 
 // the active mode for non-challenge runs / challenges that don't override.
 function effectiveNoTitle() {
   if (perkNoTitleOff) return false;            // Choose Your Path: Off The Record
-  if (gameType === "challenge" && currentChallenge && currentChallenge.noTitle !== undefined)
-    return currentChallenge.noTitle;
+  if (gameType === "challenge" && currentChallenge) {
+    if (currentChallenge.rule === "devil" && devilNoTitle) return true;   // Devil's Path: No Giveaways
+    if (currentChallenge.noTitle !== undefined) return currentChallenge.noTitle;
+  }
   return currentMode.noTitle;
 }
 function effectivePool() {
@@ -3933,6 +3935,13 @@ function pickWord() {
     const enough = choices.filter((w) => validSongs(w, effectiveStrict(), effectiveNoTitle()).length >= need);
     if (enough.length) choices = enough;
   }
+  // Devil's Path: keep only words that still have a valid answer after the active curses
+  // (banned albums / forbidden initials / short-title-only). Fall back if none survive.
+  if (gameType === "challenge" && currentChallenge && currentChallenge.rule === "devil") {
+    const winnable = choices.filter((w) =>
+      validSongs(w, effectiveStrict(), effectiveNoTitle()).some(devilAllowsSong));
+    if (winnable.length) choices = winnable;
+  }
   const rng = dailyRng || Math.random;
   const word = choices[Math.floor(rng() * choices.length)];
   usedWords.push(word);
@@ -3962,11 +3971,13 @@ function pickAlbumWord() {
 }
 
 function nextRound() {
-  // Choose Your Path: pause at a fork (after rounds 4 / 8) to pick a perk before
-  // advancing. The overlay resumes nextRound once a card is chosen.
-  if (gameType === "challenge" && currentChallenge && currentChallenge.rule === "path"
+  // Choose Your Path / Devil's Path: pause at a fork (after rounds 4 / 8) to pick a
+  // perk (good) or a curse (evil) before advancing. The overlay resumes nextRound
+  // once a card is chosen.
+  if (gameType === "challenge" && currentChallenge
+      && (currentChallenge.rule === "path" || currentChallenge.rule === "devil")
       && (currentChallenge.forks || []).includes(round) && !pathForksTaken.includes(round)) {
-    showPathFork(round);
+    (currentChallenge.rule === "devil" ? showDevilFork : showPathFork)(round);
     return;
   }
   if (isGameOver()) { endGame(); return; }
@@ -4096,6 +4107,15 @@ function challengeIntroHTML(c) {
       sub: `clear pages to reach <b>${c.target}/13</b>` +
         (forks ? ` — and at pages ${forks} you'll pick a perk for the rest of the way` : ""),
       cue: "choose wisely", button: "let's go" });
+  }
+  // Devil's Path — warn that the forks hand you curses, not perks.
+  if (c.rule === "devil") {
+    const forks = (c.forks || []).map((f) => `<b>${f}</b>`).join(" & ");
+    return curtainCardHTML({ kicker: "devil's path", tag: "the bargain",
+      headline: "choose your curses",
+      sub: `reach <b>${c.target}/13</b>` +
+        (forks ? ` — but at pages ${forks} you must take the lesser of two evils` : ""),
+      cue: "no way out but through", button: "make the deal" });
   }
   // Every other challenge — name it, restate the rule and the win condition.
   return curtainCardHTML({ kicker: "challenge", tag: "the rule", headline: c.name,
@@ -4271,6 +4291,90 @@ function renderPathSkip() {
   btn.textContent = `↻ swap this word (${skipTokens} left)`;
 }
 
+/* ---------- Devil's Path: choose the lesser of two evils ---------- */
+// A studio album that still has playable words and isn't already banned (nor reserved
+// by the other card being offered at the same fork). null if none is available.
+function pickDevilAlbum(exclude) {
+  const banned = devilBannedAlbums.concat(exclude || []);
+  const opts = STUDIO_ALBUMS.filter((a) => (albumWordMap[a] || []).length && !banned.includes(a));
+  return opts.length ? shuffle(opts.slice())[0] : null;
+}
+// Whether a song clears the active answer-restriction curses (No Giveaways is handled
+// upstream by effectiveNoTitle). Shared by advanceRound's narrowing, the dropdown gate,
+// the per-answer soft-reject and pickWord's winnability guard.
+function devilAllowsSong(song) {
+  if (devilShortOnly && titleWordCount(song.title) > 2) return false;
+  if (devilBannedAlbums.includes(song.album)) return false;
+  if (devilBannedInitials.length && devilBannedInitials.includes(firstAlphaLetter(song.title))) return false;
+  return true;
+}
+// Soft-reject a curse-breaking pick with a message naming the curse it broke.
+function rejectDevil(song) {
+  if (devilShortOnly && titleWordCount(song.title) > 2) {
+    softRejectFlash(`too long — one- or two-word titles only`);
+  } else if (devilBannedAlbums.includes(song.album)) {
+    softRejectFlash(`<b>${escapeHtml(song.album)}</b> is off-limits`);
+  } else {
+    softRejectFlash(`no titles starting with <b>${escapeHtml(firstAlphaLetter(song.title))}</b>`);
+  }
+}
+
+// The 13 curses, mirroring PERKS — but each is a handicap you're forced to accept.
+// `build(reserved)` resolves any per-pick randomness (which album to ban) so the offered
+// card can name specifics; it returns the display + an apply() that mutates run state,
+// plus an optional `album` the fork reserves so two album-bans never collide.
+const DEVIL_CURSES = [
+  { id: "crunch",  build: () => ({ icon: "−2s", name: "Time Crunch", desc: "two fewer seconds on every remaining page", apply: () => { extraSecondsPerRound -= 2; } }) },
+  { id: "drain",   build: () => ({ icon: "−4s", name: "Time Drain",  desc: "four fewer seconds on every remaining page", apply: () => { extraSecondsPerRound -= 4; } }) },
+  { id: "dark",    build: () => ({ icon: "◐",   name: "In The Dark", desc: "no more suggestions for the rest of the run", apply: () => { devilDropOff = true; } }) },
+  { id: "vanish",  build: () => ({ icon: "…",   name: "Disappearing Ink", desc: "the word fades away after a moment each page", apply: () => { devilVanish = true; } }) },
+  { id: "scramble",build: () => ({ icon: "⤮",   name: "Word Salad",  desc: "the word's letters are scrambled each page", apply: () => { devilFx = "scramble"; } }) },
+  { id: "drop",    build: () => ({ icon: "_",   name: "Redacted",    desc: "some of the word's letters go missing each page", apply: () => { devilFx = "drop"; } }) },
+  { id: "reverse", build: () => ({ icon: "↔",   name: "Backwards",   desc: "the word is shown reversed each page", apply: () => { devilFx = "reverse"; } }) },
+  { id: "notitle", build: () => ({ icon: "✎",   name: "No Giveaways", desc: "the word can no longer be in your answer's title", apply: () => { devilNoTitle = true; } }) },
+  { id: "short",   build: () => ({ icon: "≤2",  name: "Keep It Short", desc: "only one- or two-word titles count", apply: () => { devilShortOnly = true; } }) },
+  { id: "ban1",    build: (reserved) => { const a = pickDevilAlbum(reserved); return { icon: "⊘", name: "Off Limits", desc: a ? `no answers from ${a}` : "an album is off-limits", album: a, apply: () => { if (a) devilBannedAlbums.push(a); } }; } },
+  { id: "ban2",    build: (reserved) => { const a = pickDevilAlbum(reserved); return { icon: "⊘", name: "Locked Out", desc: a ? `no answers from ${a}` : "an album is off-limits", album: a, apply: () => { if (a) devilBannedAlbums.push(a); } }; } },
+  { id: "initials",build: () => ({ icon: "T/S", name: "Forbidden Letters", desc: "no title that starts with T or S", apply: () => { devilBannedInitials = ["T", "S"]; } }) },
+  { id: "rarer",   build: () => ({ icon: "◆",   name: "Rarer Air",   desc: "the rest of the words get rarer", apply: () => { devilPoolHard = true; } }) },
+];
+
+// Devil's Path: a mid-run curse fork. Offers two not-yet-taken curses; the player MUST
+// take one (no escape) — it applies a permanent handicap, then resumes the page-turn.
+function showDevilFork(forkRound) {
+  if (document.querySelector(".chall-path-overlay")) return;   // never stack two forks
+  let pool = DEVIL_CURSES.filter((c) => !devilCursesTaken.includes(c.id));
+  if (pool.length < 2) pool = DEVIL_CURSES.slice();
+  const picks = shuffle(pool.slice()).slice(0, 2);
+  const reserved = [];                          // albums claimed by an already-built card
+  const offers = picks.map((c) => {
+    const built = c.build(reserved);
+    if (built.album) reserved.push(built.album);
+    return built;
+  });
+
+  const ov = document.createElement("div");
+  ov.className = "chall-path-overlay is-devil";
+  ov.innerHTML =
+    `<div class="chall-path-panel">` +
+    `<h3 class="chall-path-title">the devil's bargain</h3>` +
+    `<p class="chall-path-sub">page ${forkRound} cleared — take the lesser of two evils</p>` +
+    `<div class="chall-path-cards">` +
+    offers.map((o, i) =>
+      `<button class="chall-path-card" data-i="${i}"><span class="cpc-icon">${escapeHtml(o.icon)}</span>` +
+      `<span class="cpc-name">${escapeHtml(o.name)}</span><span class="cpc-desc">${escapeHtml(o.desc)}</span></button>`).join("") +
+    `</div></div>`;
+  $("screen-game").appendChild(ov);
+  ov.querySelectorAll("[data-i]").forEach((b) => b.addEventListener("click", () => {
+    const o = offers[Number(b.dataset.i)];
+    o.apply();
+    devilCursesTaken.push(picks[Number(b.dataset.i)].id);
+    pathForksTaken.push(forkRound);
+    ov.remove();
+    nextRound();                                // curse taken — fall through to the normal advance
+  }, { once: true }));
+}
+
 // How rare the round's word is, from its number of valid answers. Returns a
 // name (for data-rarity) and t in 0..1 (common→scarce) used to scale the
 // highlighter swipe's weight, so rarer words *feel* rarer without touching the
@@ -4319,6 +4423,12 @@ function advanceRound() {
   // Album Focus: the only valid answers are songs from the chosen album.
   if (gameType === "album" && focusAlbum)
     currentSongs = currentSongs.filter((s) => s.album === focusAlbum);
+  // Devil's Path: answer-restriction curses narrow the valid set so the rarity count,
+  // examples and dropdown all reflect what the curses actually allow. (No Giveaways is
+  // already folded in via effectiveNoTitle above.) currentLyricSongs keeps the broader
+  // lyrics-valid set so a curse-breaking pick can be soft-rejected rather than scored wrong.
+  if (gameType === "challenge" && currentChallenge && currentChallenge.rule === "devil")
+    currentSongs = currentSongs.filter(devilAllowsSong);
   roundHintSong = pickHintSong();
   applyEra(pickEra());
 
@@ -4380,7 +4490,8 @@ function showTimerFull() {
   const wrap = document.querySelector(".timer-wrap");
   // It's A Clock! uses one shared clock — paint it at its current reading, not "full".
   const base = comboRuleActive() ? Math.max(0, comboClock) : baseSeconds();
-  const total = base > 0 ? base + (comboRuleActive() ? 0 : (extraSecondsPerRound || 0)) : base;
+  // Floor a clocked page at 3s so stacked time penalties (Devil's Path) can't zero it.
+  const total = base > 0 ? Math.max(3, base + (comboRuleActive() ? 0 : (extraSecondsPerRound || 0))) : base;
   if (!(total > 0)) { if (wrap) wrap.style.display = "none"; return; }
   if (wrap) wrap.style.display = "";
   fill.style.width = "100%";
@@ -4532,7 +4643,8 @@ function startTimer(resume) {
     if (begin <= 0) { comboClock = 0; roundLocked = true; resetTension(); endGame(); return; }
   } else {
     const base = baseSeconds();
-    total = base > 0 ? base + (extraSecondsPerRound || 0) : base;
+    // Floor a clocked page at 3s so stacked time penalties (Devil's Path) can't zero it.
+    total = base > 0 ? Math.max(3, base + (extraSecondsPerRound || 0)) : base;
     // Relaxed mode (seconds <= 0): no clock at all — hide the bar and never time out.
     if (!(total > 0)) {
       if (wrap) wrap.style.display = "none";
@@ -4657,6 +4769,8 @@ function roundAcceptsSong(song) {
     return !chainLetter || firstAlphaLetter(song.title) === chainLetter;
   if (currentChallenge.rule === "setlist")
     return song.album === tourSetlist[round - 1];
+  if (currentChallenge.rule === "devil")
+    return devilAllowsSong(song);   // No Giveaways is already handled by the noTitle gate above
   return true;
 }
 
@@ -5102,6 +5216,14 @@ function submitAnswer(song, isTimeout) {
   // gated; this catches a deliberately typed off-album title.
   if (song && !isTimeout && gameType === "album" && focusAlbum && song.album !== focusAlbum) {
     rejectAlbumFocus(); return;
+  }
+
+  // Devil's Path: a song valid by lyrics but blocked by an active curse (banned album /
+  // forbidden initial / too-long title) is soft-rejected so the player keeps looking; a
+  // wholly unrelated song still falls through and scores wrong.
+  if (song && !isTimeout && currentChallenge && currentChallenge.rule === "devil"
+      && currentLyricSongs.some((s) => s.title === song.title) && !devilAllowsSong(song)) {
+    rejectDevil(song); return;
   }
 
   // Double Trouble: a page resolves only once `need` DIFFERENT valid songs are named.

@@ -696,6 +696,19 @@
     border-radius: 3px; padding: 3px 10px;
   }
   .path-skip-btn:hover { color: var(--ink); border-color: var(--ink); }
+  /* Devil's Path — the same fork overlay, but every choice is a curse: a darker,
+     red-tinted wash so a fork visibly reads as a threat, not a treat. */
+  .chall-path-overlay.is-devil { background: rgba(58, 30, 28, 0.93); }
+  .chall-path-overlay.is-devil .chall-path-title { color: #f3e9da; }
+  .chall-path-overlay.is-devil .chall-path-sub { color: #d9a59b; }
+  .chall-path-overlay.is-devil .chall-path-card {
+    background: #2c1f1c; border-color: #8a3a32;
+    box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.35);
+  }
+  .chall-path-overlay.is-devil .chall-path-card:hover { box-shadow: 3px 5px 0 rgba(0, 0, 0, 0.45); }
+  .chall-path-overlay.is-devil .cpc-icon { color: #e2725b; }
+  .chall-path-overlay.is-devil .cpc-name { color: #f3e9da; }
+  .chall-path-overlay.is-devil .cpc-desc { color: #c9a59c; }
   @media (prefers-reduced-motion: reduce) {
     .chall-path-overlay { animation: none; }
     .chall-path-card { transition: none; }

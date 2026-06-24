@@ -185,6 +185,11 @@ export const CHALLENGES = [
     blurb: "18s · suggestions · name TWO different songs each page · not in the title",
     desc: "One song isn't enough — each page needs two different songs that both use the word (and the word can't be in either title).",
     win: "Clear 8 pages, naming two different songs each." },
+  { id: "devils-path", name: "Devil's Path", rule: "devil", mode: "medium",
+    free: false, cost: 1, target: 9, forks: [4, 8], tapes: 2, icon: "triangle",
+    blurb: "10s · suggestions · at pages 4 & 8 you must take the lesser of two curses",
+    desc: "Choose Your Path's evil twin: at forks in the run you're handed two curses and must take the lesser of two evils. Whatever you pick haunts the rest of the run.",
+    win: "Score 9 / 13 despite the curses you take." },
 ];
 export const CHALLENGE_BY_ID = Object.fromEntries(CHALLENGES.map((c) => [c.id, c]));
 export const CHALLENGE_ORDER = CHALLENGES.map((c) => c.id);
