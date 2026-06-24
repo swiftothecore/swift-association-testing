@@ -613,6 +613,20 @@ function recentScores(viewMode, cap = 12) {
     viewMode === "all" ? e.t === "classic" : e.m === viewMode);
   return picked.slice(0, cap).map((e) => e.s).reverse();
 }
+// Rolling "forgiving form" average — the mean score of the last `cap` games for
+// this view (TypeRacer-style, so a bad month stops haunting the number). Same
+// scope as recentScores/the histogram (All = classic runs, a mode tab = that
+// mode); includes hinted runs, which is fine for recent *form*. Returns the
+// average and the actual sample size (< cap when there aren't `cap` games yet),
+// so the label can read "last 8" honestly instead of padding.
+function recentAverage(viewMode, cap = 20) {
+  const picked = loadHistory().filter((e) =>
+    viewMode === "all" ? e.t === "classic" : e.m === viewMode);
+  const window = picked.slice(0, cap);
+  const n = window.length;
+  if (n === 0) return { avg: null, n: 0 };
+  return { avg: window.reduce((a, e) => a + e.s, 0) / n, n };
+}
 // A small hand-inked sparkline of recent scores (0–TOTAL_ROUNDS), with a dotted
 // baseline at the window's average and a filled dot on the latest game.
 function sparklineSVG(scores) {
@@ -691,6 +705,12 @@ function renderStats(lastScore, viewMode = defaultStatsView()) {
       ? sparklineSVG(recent)
       : `<span class="statE-form-empty">— more games will draw your form —</span>`;
     const star = `<span class="statE-star">${STAR_SVG}</span>`;
+    // Rolling "forgiving form" — last-20 average, sitting beside the lifetime
+    // best/average so a gentle current number reads against the aspirational one.
+    const form = recentAverage(viewMode);
+    const formChip = form.avg === null
+      ? `<div class="statE-cell"><span class="statE-val statE-accent">–</span><span class="statE-lbl">Recent</span></div>`
+      : `<div class="statE-cell"><span class="statE-val statE-accent">${form.avg.toFixed(1)}</span><span class="statE-lbl">Last ${form.n}</span></div>`;
     body = `
       <div class="statE-top">
         <div class="statE-cell"><span class="statE-val">${s.played}</span><span class="statE-lbl">Played</span></div>
@@ -703,6 +723,7 @@ function renderStats(lastScore, viewMode = defaultStatsView()) {
           ${formPanel}
         </div>
         <div class="statE-chips">
+          ${formChip}
           <div class="statE-cell"><span class="statE-val statE-accent">${s.bestInRow || 0}</span><span class="statE-lbl">In a row</span></div>
           <div class="statE-cell"><span class="statE-val statE-accent">${s.scoreCounts[TOTAL_ROUNDS] || 0}</span>${star}<span class="statE-lbl">Perfect</span></div>
         </div>
