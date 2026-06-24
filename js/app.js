@@ -1307,6 +1307,7 @@ function positionTip(el, target) {
   el.style.top = top + "px";
 }
 function showTip(target) {
+  if (!target.isConnected) return;   // target removed before a delayed show fired
   const text = target.getAttribute("data-tip");
   if (!text) return;
   const el = ensureTipEl();
@@ -1377,6 +1378,8 @@ function scheduleToastDismiss() {
     bottom.classList.add("leaving");
     setTimeout(() => {
       bottom.remove();
+      hideTip();   // removal fires no mouseout, so a tooltip on this toast would otherwise linger
+
       // FLIP: the removal collapses the layout instantly, so smoothly animate the
       // toasts above from their old positions down into their new ones.
       if (!motionReduced()) {
