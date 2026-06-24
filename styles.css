@@ -2627,7 +2627,7 @@
   .about-note-lbl { font-family: var(--hand); font-weight: 700; font-size: 18px; line-height: 1.05; }
 
   /* GitHub — a near-black note, white octocat */
-  .about-note--gh { --note-arrow: rgba(255,255,255,0.72); }
+  .about-note--gh { --note-arrow: #f3f3f0; }
   .about-note--gh .about-note-paper { background: #0a0d12; }
   .about-note--gh .about-note-ico path { fill: #f3f3f0; }
   .about-note--gh .about-note-lbl { color: #f3f3f0; }
@@ -2635,7 +2635,7 @@
   /* Taylor's website — a warm orange note with an aquamarine signature + label.
      Flat (no glitter), softened orange + a gentle top-light so it sits with the set
      instead of shouting. */
-  .about-note--ts { --note-arrow: #0c5a4e; }
+  .about-note--ts { --note-arrow: #34dcc0; }
   .about-note--ts .about-note-paper {
     background: linear-gradient(160deg, #d9622f 0%, #c45324 58%, #b04a1f 100%);
   }
