@@ -3925,7 +3925,14 @@ function pickWord() {
   // are guaranteed ≥ TOTAL_ROUNDS words (see buildWordBuckets' MIN), so the pool
   // only empties on a degenerate list — fall back to the full bucket if so.
   const pool = bucket.filter((w) => !usedWords.includes(w));
-  const choices = pool.length ? pool : bucket;
+  let choices = pool.length ? pool : bucket;
+  // Double Trouble: a page is only winnable if the word has at least `need` valid
+  // songs (after the no-title rule). Keep only such words; fall back if none remain.
+  if (gameType === "challenge" && currentChallenge && currentChallenge.rule === "multi") {
+    const need = currentChallenge.need || 2;
+    const enough = choices.filter((w) => validSongs(w, effectiveStrict(), effectiveNoTitle()).length >= need);
+    if (enough.length) choices = enough;
+  }
   const rng = dailyRng || Math.random;
   const word = choices[Math.floor(rng() * choices.length)];
   usedWords.push(word);
@@ -4331,6 +4338,7 @@ function advanceRound() {
   clearTimeout(vanishTimer);
   if (revolveId) { clearInterval(revolveId); revolveId = null; }   // stop the prior round's rotation
   revolveIndex = 0;                            // Revolving Door: this round's word is slot 0
+  roundNamed = [];                             // Double Trouble: no songs named on the fresh page yet
   applyChallengeRound(wrap);                   // challenge per-round modifier (e.g. Vanishing Word)
   renderExcludedNote();
   $("feedback").innerHTML = "";
@@ -5094,6 +5102,26 @@ function submitAnswer(song, isTimeout) {
   // gated; this catches a deliberately typed off-album title.
   if (song && !isTimeout && gameType === "album" && focusAlbum && song.album !== focusAlbum) {
     rejectAlbumFocus(); return;
+  }
+
+  // Double Trouble: a page resolves only once `need` DIFFERENT valid songs are named.
+  // Each accepted valid song banks toward the pair without locking the page (the clock
+  // keeps running); a duplicate is soft-rejected; reaching `need` falls through to
+  // resolve the page correct. A wrong song falls through and scores the page wrong.
+  if (song && !isTimeout && currentChallenge && currentChallenge.rule === "multi"
+      && currentSongs.some((s) => s.title === song.title)) {
+    const need = currentChallenge.need || 2;
+    if (roundNamed.includes(song.title)) {
+      softRejectFlash(`already named <b>${escapeHtml(song.title)}</b> — name a different song`);
+      return;
+    }
+    roundNamed.push(song.title);
+    renderMultiBanner();
+    if (roundNamed.length < need) {
+      softRejectFlash(`✓ ${roundNamed.length} of ${need} — name another song with the word`);
+      return;
+    }
+    // `need` reached — fall through with this final song to resolve the page correct.
   }
 
   roundLocked = true;

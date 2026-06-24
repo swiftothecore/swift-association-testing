@@ -180,6 +180,11 @@ export const CHALLENGES = [
     blurb: "12s · each page wants EITHER a title OR a sung lyric line — it keeps switching",
     desc: "Every page flips the rules: sometimes name the song's title, sometimes sing a real lyric line. Read the switch before you answer.",
     win: "Score 9 / 13 as the answer type keeps switching." },
+  { id: "double-trouble", name: "Double Trouble", rule: "multi", mode: "medium",
+    free: false, cost: 1, target: 8, need: 2, pool: "easy", seconds: 18, tapes: 2, icon: "trio",
+    blurb: "18s · suggestions · name TWO different songs each page · not in the title",
+    desc: "One song isn't enough — each page needs two different songs that both use the word (and the word can't be in either title).",
+    win: "Clear 8 pages, naming two different songs each." },
 ];
 export const CHALLENGE_BY_ID = Object.fromEntries(CHALLENGES.map((c) => [c.id, c]));
 export const CHALLENGE_ORDER = CHALLENGES.map((c) => c.id);
