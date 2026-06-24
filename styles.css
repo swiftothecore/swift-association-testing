@@ -2572,50 +2572,87 @@
   .set-about a { color: var(--ink-accent); }
   .set-about p { margin: 4px 0; }
 
-  /* Three pinned sticky notes — quick links out (code / Taylor / ELLE). */
+  /* Three pinned sticky notes — quick links out (code / Taylor / ELLE).
+     The outer <a> carries the pin, the hover arrow and the drop-shadow; the inner
+     .about-note-paper carries the colour + an irregular torn-paper clip-path (so the
+     pin/arrow aren't clipped). filter:drop-shadow traces the wobbly silhouette. */
   .about-notes {
-    display: flex; flex-wrap: wrap; gap: 16px 14px;
-    justify-content: center; margin: 16px 4px 6px;
+    display: flex; flex-wrap: wrap; gap: 18px 16px;
+    justify-content: center; margin: 18px 4px 6px;
   }
   .about-note {
-    position: relative; flex: 0 1 132px; min-width: 116px;
-    display: flex; flex-direction: column; align-items: center; gap: 9px;
-    padding: 18px 12px 14px; border-radius: 1px; text-decoration: none;
-    text-align: center; box-shadow: 0 4px 9px rgba(0,0,0,0.24);
-    transition: transform 0.14s ease, box-shadow 0.14s ease;
+    position: relative; flex: 0 1 138px; min-width: 120px;
+    text-decoration: none; text-align: center;
+    filter: drop-shadow(1px 3px 4px rgba(0,0,0,0.34));
+    transition: transform 0.16s ease, filter 0.16s ease;
   }
-  /* a little gold pin head at the top of each note */
-  .about-note::before {
-    content: ""; position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
-    width: 11px; height: 11px; border-radius: 50%;
-    background: radial-gradient(circle at 36% 30%, #ffe08a, #d8a32f 60%, #9c6e14);
-    box-shadow: 0 2px 3px rgba(0,0,0,0.4);
+  .about-note--gh   { transform: rotate(-2.4deg); }
+  .about-note--ts   { transform: rotate(1.8deg); }
+  .about-note--elle { transform: rotate(-1deg); }
+  .about-note:hover {
+    transform: translateY(-3px) rotate(0deg);
+    filter: drop-shadow(2px 6px 8px rgba(0,0,0,0.36));
   }
-  .about-note:hover { transform: translateY(-2px) rotate(0deg) !important; box-shadow: 0 7px 14px rgba(0,0,0,0.3); }
-  .about-note:focus-visible { outline: 2px solid var(--ink-accent); outline-offset: 3px; }
-  .about-note-ico { width: 34px; height: 34px; display: block; }
-  .about-note-ico--txt {
-    display: flex; align-items: center; justify-content: center;
-    font-size: 26px; line-height: 1;
-  }
-  .about-note-lbl {
-    font-family: var(--hand); font-weight: 700; font-size: 18px; line-height: 1.05;
-  }
+  .about-note:focus-visible { outline: 2px solid var(--ink-accent); outline-offset: 4px; }
 
-  /* GitHub — a charcoal note, white octocat */
-  .about-note--gh { background: #24292f; transform: rotate(-2.2deg); }
-  .about-note--gh .about-note-ico path { fill: #fff; }
+  /* the paper itself — colour, padding, torn edges, a faint top-light/bottom-curl */
+  .about-note-paper {
+    display: flex; flex-direction: column; align-items: center; gap: 9px;
+    width: 100%; padding: 20px 12px 16px;
+    box-shadow: inset 0 2px 5px -3px rgba(255,255,255,0.45),
+                inset 0 -8px 12px -7px rgba(0,0,0,0.28);
+  }
+  .about-note--gh   .about-note-paper { clip-path: polygon(2% 2.5%, 30% 1%, 58% 2.2%, 99% 1.4%, 98% 30%, 99.5% 58%, 98.4% 99%, 60% 97.4%, 28% 99%, 1.5% 98%, 1% 62%, 2.6% 30%); }
+  .about-note--ts   .about-note-paper { clip-path: polygon(1% 1.5%, 28% 2.6%, 55% 0.8%, 98.6% 2.4%, 97.6% 33%, 99% 60%, 98% 98.6%, 62% 98%, 30% 99.2%, 2% 97.4%, 1.6% 64%, 0.8% 32%); }
+  .about-note--elle .about-note-paper { clip-path: polygon(2% 2%, 32% 0.8%, 60% 2.3%, 98% 1%, 99% 34%, 97.8% 62%, 99% 98%, 58% 99%, 27% 97.4%, 1.5% 98.8%, 2.2% 60%, 1% 33%); }
+
+  /* a little gold pin head pressed into the top of each note */
+  .about-note::before {
+    content: ""; position: absolute; top: -5px; left: 50%; transform: translateX(-50%);
+    width: 11px; height: 11px; border-radius: 50%; z-index: 3;
+    background: radial-gradient(circle at 36% 30%, #ffe08a, #d8a32f 60%, #9c6e14);
+    box-shadow: 0 2px 3px rgba(0,0,0,0.45);
+  }
+  /* a "↗" that slides in at the top-right on hover */
+  .about-note::after {
+    content: "\2197"; position: absolute; top: 6px; right: 9px; z-index: 3;
+    font-family: var(--type); font-weight: 700; font-size: 15px; line-height: 1;
+    color: var(--note-arrow, rgba(0,0,0,0.55));
+    opacity: 0; transform: translate(-3px, 3px);
+    transition: opacity 0.16s ease, transform 0.16s ease; pointer-events: none;
+  }
+  .about-note:hover::after { opacity: 1; transform: translate(0, 0); }
+
+  .about-note-ico { width: 32px; height: 32px; display: block; }
+  .about-note-lbl { font-family: var(--hand); font-weight: 700; font-size: 18px; line-height: 1.05; }
+
+  /* GitHub — a near-black note, white octocat */
+  .about-note--gh { --note-arrow: rgba(255,255,255,0.72); }
+  .about-note--gh .about-note-paper { background: #0a0d12; }
+  .about-note--gh .about-note-ico path { fill: #f3f3f0; }
   .about-note--gh .about-note-lbl { color: #f3f3f0; }
-  /* Taylor's website — a soft lavender note */
-  .about-note--ts { background: #e3d8f0; transform: rotate(1.6deg); }
-  .about-note--ts .about-note-ico--txt { color: #6b4ea0; }
-  .about-note--ts .about-note-lbl { color: #4a3570; }
-  /* ELLE's Song Association — a warm rose note (the YouTube play) */
-  .about-note--elle { background: #f0d3d3; transform: rotate(-1.2deg); }
-  .about-note--elle .about-note-ico--txt { color: #c0392b; }
+
+  /* Taylor's website — a warm orange note with an aquamarine signature + label.
+     Flat (no glitter), softened orange + a gentle top-light so it sits with the set
+     instead of shouting. */
+  .about-note--ts { --note-arrow: #0c5a4e; }
+  .about-note--ts .about-note-paper {
+    background: linear-gradient(160deg, #d9622f 0%, #c45324 58%, #b04a1f 100%);
+  }
+  .about-note--ts .about-note-sig {
+    width: 84px; height: auto; display: block; margin: 4px 0 2px;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3));
+  }
+  .about-note--ts .about-note-sig path { fill: #34dcc0; }
+  .about-note--ts .about-note-lbl { color: #34dcc0; text-shadow: 0 1px 2px rgba(0,0,0,0.25); }
+
+  /* ELLE's Song Association — a warm rose note with the YouTube logo */
+  .about-note--elle { --note-arrow: #8a2b22; }
+  .about-note--elle .about-note-paper { background: #f0d3d3; }
+  .about-note--elle .about-note-ico--yt path { fill: #d6342a; }
   .about-note--elle .about-note-lbl { color: #8a2b22; }
 
   @media (prefers-reduced-motion: reduce) {
-    .about-note { transition: none; }
+    .about-note, .about-note::after { transition: none; }
   }
   .set-note { font-family: var(--type); font-size: 10px; color: var(--ink-soft); font-style: italic; }
