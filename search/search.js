@@ -255,6 +255,7 @@ function renderInitial(q) {
   $("counter").innerHTML = "";
   $("bar").innerHTML = "";
   $("concord").innerHTML = "";
+  $("rail").innerHTML = "";
   setEraTint(null);
   const msg = q.length === 1
     ? "Keep going, type at least two letters."
@@ -283,6 +284,14 @@ function topAlbum(counts) {
 }
 // Tint the desk toward an album's colour for the current search (null clears it).
 function setEraTint(color) { document.body.style.setProperty("--era", color || "transparent"); }
+
+// Right-edge jump rail: a binder tab per album in the (grouped) results, ordered as they
+// appear, that scrolls to its block. Hidden for flat view or a single album.
+function renderRail(albums) {
+  if (!state.grouped || albums.length < 2) { $("rail").innerHTML = ""; return; }
+  $("rail").innerHTML = albums.map((al, i) =>
+    `<button type="button" data-al="${i}" style="--al:${ALBUM_COLORS[al] || "#999"}" title="${escapeHtml(al)}">${escapeHtml(al)}</button>`).join("");
+}
 
 function albumBar(counts) {
   const albums = [...counts.keys()].sort((a, b) => ALBUM_INDEX.get(a) - ALBUM_INDEX.get(b));
@@ -343,6 +352,7 @@ function render(terms, groups) {
     $("bar").innerHTML = "";
     $("concord").innerHTML = "";
     $("results").innerHTML = "";
+    $("rail").innerHTML = "";
     setEraTint(null);
     return;
   }
@@ -367,7 +377,7 @@ function render(terms, groups) {
       byAlbum.get(g.song.album).push(g);
     }
     const albums = [...byAlbum.keys()].sort((a, b) => ALBUM_INDEX.get(a) - ALBUM_INDEX.get(b));
-    $("results").innerHTML = albums.map((al) => {
+    $("results").innerHTML = albums.map((al, i) => {
       const color = ALBUM_COLORS[al] || "#999";
       const songs = byAlbum.get(al).map((g) => {
         const hits = g.hits.map((h) => hitHTML(h, null)).join("");
@@ -377,11 +387,13 @@ function render(terms, groups) {
             <span class="sx-song-count">${plural(g.hits.length, "line")}</span>
           </div>${hits}</div>`;
       }).join("");
-      return `<section class="sx-album" style="--album:${color}">
+      return `<section id="sx-al-${i}" class="sx-album" style="--album:${color}">
         <div class="sx-album-tab"><span class="sx-album-era">${escapeHtml(al)}</span></div>
         ${songs}</section>`;
     }).join("");
+    renderRail(albums);
   } else {
+    $("rail").innerHTML = "";
     const rows = [];
     for (const g of groups) {
       const color = ALBUM_COLORS[g.song.album] || "#999";
@@ -462,6 +474,11 @@ function init() {
   $("chips").addEventListener("click", (e) => {
     const x = e.target.closest(".sx-chip-x");
     if (x) removeTermAt(Number(x.dataset.i));
+  });
+  // Album rail: scroll to the chosen album's results block.
+  $("rail").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-al]");
+    if (b) document.getElementById("sx-al-" + b.dataset.al)?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
   for (const b of document.querySelectorAll("[data-mode]")) {
     b.addEventListener("click", () => { state.mode = b.dataset.mode; savePrefs(); syncToggles(); runSearch(); });
