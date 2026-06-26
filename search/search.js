@@ -146,16 +146,26 @@ function render(q, groups) {
   $("bar").innerHTML = albumBar(groups);
 
   if (state.grouped) {
-    $("results").innerHTML = groups.map((g) => {
-      const color = ALBUM_COLORS[g.song.album] || "#999";
-      const hits = g.hits.map((h) => hitHTML(h, null)).join("");
-      return `<section class="sx-song" style="--album:${color}">
-        <header class="sx-song-head">
-          <span class="sx-dot"></span>
-          <span class="sx-song-title">${escapeHtml(g.song.title)}</span>
-          <span class="sx-song-album">${escapeHtml(g.song.album)}</span>
-          <span class="sx-song-count">${plural(g.hits.length, "line")}</span>
-        </header>${hits}</section>`;
+    // Group by album (a binder divider per album), songs within. Albums in release order.
+    const byAlbum = new Map();
+    for (const g of groups) {
+      if (!byAlbum.has(g.song.album)) byAlbum.set(g.song.album, []);
+      byAlbum.get(g.song.album).push(g);
+    }
+    const albums = [...byAlbum.keys()].sort((a, b) => ALBUM_INDEX.get(a) - ALBUM_INDEX.get(b));
+    $("results").innerHTML = albums.map((al) => {
+      const color = ALBUM_COLORS[al] || "#999";
+      const songs = byAlbum.get(al).map((g) => {
+        const hits = g.hits.map((h) => hitHTML(h, null)).join("");
+        return `<div class="sx-song">
+          <div class="sx-song-head">
+            <span class="sx-song-title">${escapeHtml(g.song.title)}</span>
+            <span class="sx-song-count">${plural(g.hits.length, "line")}</span>
+          </div>${hits}</div>`;
+      }).join("");
+      return `<section class="sx-album" style="--album:${color}">
+        <div class="sx-album-tab"><span class="sx-album-era">${escapeHtml(al)}</span></div>
+        ${songs}</section>`;
     }).join("");
   } else {
     const rows = [];

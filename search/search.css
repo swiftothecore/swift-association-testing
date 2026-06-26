@@ -77,27 +77,46 @@ body {
 
 .sx-hint { font-family: var(--hand); font-size: 21px; color: var(--ink-faint); margin-top: 22px; }
 
-/* results — grouped by song */
-.sx-results { margin-top: 12px; }
-.sx-song { margin-top: 26px; }
-.sx-song-head { display: flex; align-items: baseline; gap: 9px; border-bottom: 1px solid #e3d9c2; padding-bottom: 3px; }
-.sx-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--album); flex: none; align-self: center; }
-.sx-song-title { font-family: var(--hand); font-size: 25px; color: var(--ink); line-height: 1.1; }
-.sx-song-album { font-family: var(--type); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); }
+/* results — a binder divider per album, songs within */
+.sx-results { margin-top: 14px; }
+.sx-album {
+  position: relative; margin-top: 30px; padding: 2px 8px 12px;
+  background: color-mix(in srgb, var(--album) 5%, var(--paper));
+  border-radius: 0 4px 4px 0;
+}
+.sx-album-tab {
+  display: inline-flex; align-items: center;
+  margin: 0 0 6px -56px; padding: 3px 15px 4px 11px;
+  background: var(--paper-edge); border: 1px solid #ddd2bb; border-left: 5px solid var(--album);
+  border-radius: 0 6px 6px 0;
+}
+.sx-album-era { font-family: var(--hand); font-size: 22px; line-height: 1.05; color: color-mix(in srgb, var(--album) 78%, #2b2722); }
+.sx-song { margin-top: 16px; }
+.sx-song:first-of-type { margin-top: 4px; }
+.sx-song-head { display: flex; align-items: baseline; gap: 10px; padding-bottom: 2px;
+  border-bottom: 1px solid color-mix(in srgb, var(--album) 24%, #e3d9c2); }
+.sx-song-title { font-family: var(--hand); font-size: 23px; line-height: 1.1;
+  color: color-mix(in srgb, var(--album) 68%, var(--ink)); }
 .sx-song-count { font-family: var(--type); font-size: 10px; color: var(--ink-faint); margin-left: auto; }
 
-/* a single hit */
-.sx-hit { display: grid; grid-template-columns: 52px 1fr; gap: 10px; padding: 7px 0; }
-.sx-ann { text-align: right; font-family: var(--type); padding-top: 5px; line-height: 1.5; }
-.sx-sec { display: block; font-size: 10px; color: var(--ink-soft); }
-.sx-ln { display: block; font-size: 10px; color: var(--pen); }
-.sx-lines { border-bottom: 1px solid var(--rule-line); padding-bottom: 4px; }
-.sx-main { font-family: var(--hand); font-size: 21px; color: var(--ink); line-height: 1.5; }
+/* a single hit — section jotted in the margin (hand), line number in typewriter */
+.sx-hit { display: grid; grid-template-columns: 56px 1fr; gap: 10px; padding: 6px 0; }
+.sx-ann { text-align: right; padding-top: 4px; }
+.sx-sec { display: block; font-family: var(--hand); font-size: 14px; color: var(--ink-soft); line-height: 1.15; }
+.sx-ln { display: block; font-family: var(--type); font-size: 10px; color: var(--pen); margin-top: 1px; }
+.sx-lines { padding-bottom: 4px; }
+.sx-main { font-family: var(--hand); font-size: 21px; color: var(--ink); line-height: 1.55; }
 .sx-ctx { font-family: var(--hand); font-size: 16px; color: var(--ink-faint); line-height: 1.45; }
-.sx-main mark { background: transparent; color: #1c1813; border-bottom: 2px solid var(--pen); padding: 0 1px; }
+/* the matched word, circled in red pen (a hand-drawn ellipse stretched over the word) */
+.sx-main mark {
+  background: transparent; color: #1c1813; padding: 2px 7px; margin: 0 -2px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40' preserveAspectRatio='none'%3E%3Cpath d='M50 5 C78 4 95 12 93 21 C91 31 64 36 40 35 C16 34 4 26 6 17 C8 8 31 4 55 5 C77 6 92 12 88 19' fill='none' stroke='%23b9402f' stroke-width='2.4' stroke-linecap='round' opacity='0.85'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-size: 100% 100%; background-position: center;
+}
 
 /* flat view */
 .sx-flat .sx-hit-flat { grid-template-columns: 1fr; gap: 4px; padding: 10px 0; border-bottom: 1px solid #ece3cd; }
+.sx-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--album); flex: none; }
 .sx-ann-flat { text-align: left; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 0; }
 .sx-ann-flat .sx-dot { align-self: center; }
 .sx-flat-title { font-family: var(--hand); font-size: 19px; color: var(--ink); }
