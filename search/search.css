@@ -1,0 +1,112 @@
+/* Swift To The Lyric — searcher styling. Self-contained: it mirrors the game's
+   notebook tokens (paper / ink / rule / margin) and fonts (Caveat for creative text,
+   Courier Prime for functional UI) without inheriting the whole game stylesheet. */
+:root {
+  --paper: #f5efe1;
+  --paper-edge: #efe7d4;
+  --ink: #2b2722;
+  --ink-soft: #6f675a;
+  --ink-faint: #a39c8e;
+  --rule-line: #d6e1ea;          /* faint blue rule under a lyric line */
+  --margin: rgba(178, 58, 58, 0.5);
+  --pen: #b9402f;                /* red pen — the matched word */
+  --desk: #b9a988;
+  --hand: "Caveat", cursive;
+  --type: "Courier Prime", "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--desk);
+  background-image: radial-gradient(140% 120% at 50% 0%, #c7b794 0%, #b09e7c 100%);
+  color: var(--ink);
+  font-family: var(--hand);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* top bar */
+.sx-top {
+  max-width: 820px; margin: 0 auto; padding: 14px 18px 0;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.sx-back {
+  font-family: var(--type); font-size: 12px; letter-spacing: .04em;
+  color: #efe7d4; text-decoration: none; opacity: .85;
+}
+.sx-back:hover { opacity: 1; text-decoration: underline; }
+.sx-mark { font-family: var(--type); font-size: 12px; letter-spacing: .18em; color: #efe7d4; opacity: .8; }
+
+/* the page */
+.sx-page {
+  max-width: 820px; margin: 14px auto 90px; padding: 26px 34px 54px 62px;
+  background-color: var(--paper);
+  background-image: linear-gradient(to right, transparent 46px, var(--margin) 46px, var(--margin) 47px,
+    rgba(178,58,58,.28) 47px, rgba(178,58,58,.28) 49px, transparent 49px);
+  border-radius: 3px 6px 6px 3px;
+  box-shadow: 0 14px 40px rgba(0,0,0,.32);
+}
+
+/* search field */
+.sx-search { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid #e0d6bf; padding-bottom: 6px; }
+.sx-search svg { width: 22px; height: 22px; color: var(--pen); flex: none; }
+#q {
+  flex: 1; border: 0; background: transparent; outline: none;
+  font-family: var(--hand); font-size: 36px; color: var(--ink); line-height: 1.1; padding: 2px 0;
+}
+#q::placeholder { color: var(--ink-faint); }
+
+/* controls */
+.sx-controls { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; align-items: center; }
+.sx-seg { display: inline-flex; gap: 4px; }
+.sx-seg button {
+  font-family: var(--type); font-size: 11px; letter-spacing: .03em; color: var(--ink-soft);
+  background: #f1ead9; border: 1px solid #cbbfa8; border-radius: 4px; padding: 4px 11px; cursor: pointer;
+}
+.sx-seg button:hover { border-color: var(--ink-soft); }
+.sx-seg button.on { color: #7a2f24; border-color: #c08274; background: #f3e2dc; }
+
+/* counter + album bar */
+.sx-counter { font-family: var(--type); font-size: 13px; color: var(--ink-soft); margin-top: 18px; min-height: 17px; }
+.sx-counter b { color: var(--ink); font-weight: 700; }
+.sx-none b { color: var(--pen); }
+.sx-bar { display: flex; height: 7px; border-radius: 3px; overflow: hidden; margin-top: 8px; }
+.sx-bar:empty { display: none; }
+.sx-bar span { min-width: 2px; }
+
+.sx-hint { font-family: var(--hand); font-size: 21px; color: var(--ink-faint); margin-top: 22px; }
+
+/* results — grouped by song */
+.sx-results { margin-top: 12px; }
+.sx-song { margin-top: 26px; }
+.sx-song-head { display: flex; align-items: baseline; gap: 9px; border-bottom: 1px solid #e3d9c2; padding-bottom: 3px; }
+.sx-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--album); flex: none; align-self: center; }
+.sx-song-title { font-family: var(--hand); font-size: 25px; color: var(--ink); line-height: 1.1; }
+.sx-song-album { font-family: var(--type); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); }
+.sx-song-count { font-family: var(--type); font-size: 10px; color: var(--ink-faint); margin-left: auto; }
+
+/* a single hit */
+.sx-hit { display: grid; grid-template-columns: 52px 1fr; gap: 10px; padding: 7px 0; }
+.sx-ann { text-align: right; font-family: var(--type); padding-top: 5px; line-height: 1.5; }
+.sx-sec { display: block; font-size: 10px; color: var(--ink-soft); }
+.sx-ln { display: block; font-size: 10px; color: var(--pen); }
+.sx-lines { border-bottom: 1px solid var(--rule-line); padding-bottom: 4px; }
+.sx-main { font-family: var(--hand); font-size: 21px; color: var(--ink); line-height: 1.5; }
+.sx-ctx { font-family: var(--hand); font-size: 16px; color: var(--ink-faint); line-height: 1.45; }
+.sx-main mark { background: transparent; color: #1c1813; border-bottom: 2px solid var(--pen); padding: 0 1px; }
+
+/* flat view */
+.sx-flat .sx-hit-flat { grid-template-columns: 1fr; gap: 4px; padding: 10px 0; border-bottom: 1px solid #ece3cd; }
+.sx-ann-flat { text-align: left; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 0; }
+.sx-ann-flat .sx-dot { align-self: center; }
+.sx-flat-title { font-family: var(--hand); font-size: 19px; color: var(--ink); }
+.sx-flat-album { font-family: var(--type); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); }
+.sx-flat-loc { font-family: var(--type); font-size: 10px; color: var(--ink-faint); margin-left: auto; }
+.sx-hit-flat .sx-lines { border-bottom: 0; }
+
+@media (max-width: 560px) {
+  .sx-page { padding: 22px 18px 40px 42px; background-image: linear-gradient(to right, transparent 28px, var(--margin) 28px, var(--margin) 29px, transparent 29px); }
+  #q { font-size: 28px; }
+  .sx-hit { grid-template-columns: 42px 1fr; gap: 7px; }
+}

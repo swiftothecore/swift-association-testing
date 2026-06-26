@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Swift To The Lyric — search Taylor Swift lyrics</title>
+<meta name="description" content="Search every line of Taylor Swift's lyrics. Type a word to see every song it appears in, with the section and line number. Works offline, no tracking." />
+<meta name="theme-color" content="#f5efe1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="search.css" />
+</head>
+<body>
+<header class="sx-top">
+  <a class="sx-back" href="../index.html">&larr; the game</a>
+  <span class="sx-mark">SWIFT TO THE LYRIC</span>
+</header>
+
+<main class="sx-page">
+  <div class="sx-search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="7" /><line x1="16.5" y1="16.5" x2="21" y2="21" />
+    </svg>
+    <input id="q" type="search" autocomplete="off" autocapitalize="off" spellcheck="false"
+      placeholder="search the lyrics&hellip;" aria-label="Search Taylor Swift lyrics" />
+  </div>
+
+  <div class="sx-controls">
+    <div class="sx-seg" role="group" aria-label="Match mode">
+      <button type="button" data-mode="stem" title="Match the word and its forms (love, lover, loved)">stem</button>
+      <button type="button" data-mode="exact" title="Match the exact word only">exact</button>
+      <button type="button" data-mode="fuzzy" title="Tolerate typos and near-spellings">fuzzy</button>
+    </div>
+    <div class="sx-seg" role="group" aria-label="Result layout">
+      <button type="button" data-view="grouped" title="Group hits by song">grouped</button>
+      <button type="button" data-view="flat" title="One flat list of every matching line">flat</button>
+    </div>
+  </div>
+
+  <div id="counter" class="sx-counter" aria-live="polite"></div>
+  <div id="bar" class="sx-bar" aria-hidden="true"></div>
+  <div id="results" class="sx-results"></div>
+</main>
+
+<script type="module" src="search.js"></script>
+</body>
+</html>
