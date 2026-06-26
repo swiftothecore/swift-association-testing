@@ -194,6 +194,7 @@ const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
 function renderInitial(q) {
   $("counter").innerHTML = "";
   $("bar").innerHTML = "";
+  $("concord").innerHTML = "";
   const msg = q.length === 1
     ? "Keep going, type at least two letters."
     : `Type a word to search every lyric line across ${SONGS.length} songs.`;
@@ -208,12 +209,46 @@ function renderInitial(q) {
   $("results").innerHTML = `<p class="sx-hint">${escapeHtml(msg)}</p>` + recentHTML;
 }
 
-function albumBar(groups) {
+// Lines-per-album for the current result set — drives both the rainbow bar and the
+// concordance breakdown, so they always agree.
+function albumLineCounts(groups) {
   const counts = new Map();
   for (const g of groups) counts.set(g.song.album, (counts.get(g.song.album) || 0) + g.hits.length);
+  return counts;
+}
+function albumBar(counts) {
   const albums = [...counts.keys()].sort((a, b) => ALBUM_INDEX.get(a) - ALBUM_INDEX.get(b));
   return albums.map((al) =>
     `<span style="flex:${counts.get(al)};background:${ALBUM_COLORS[al] || "#999"}" title="${escapeHtml(al)}: ${counts.get(al)}"></span>`).join("");
+}
+
+// A plain-language rarity read, echoing the game's difficulty bands (common ≥18 songs,
+// rare 3–9) so the searcher and the game describe a word the same way.
+function rarityNote(songCount) {
+  if (songCount >= 18) return "a common word";
+  if (songCount >= 8) return "fairly common";
+  if (songCount >= 3) return "a rare word";
+  return songCount === 1 ? "a one-song deep cut" : "a deep cut";
+}
+
+// The concordance strip: which album holds this word most, a rarity read, and a labeled
+// breakdown of the top albums — the readable counterpart to the rainbow bar above it.
+const CONCORD_TOP = 4;
+function renderConcord(groups, counts) {
+  const entries = [...counts.entries()]
+    .sort((a, b) => (b[1] - a[1]) || (ALBUM_INDEX.get(a[0]) - ALBUM_INDEX.get(b[0])));
+  if (!entries.length) { $("concord").innerHTML = ""; return; }
+  const [topAlbum, topCount] = entries[0];
+  const topColor = ALBUM_COLORS[topAlbum] || "#999";
+  const shown = entries.slice(0, CONCORD_TOP);
+  const more = entries.length - shown.length;
+  const legend = shown.map(([al, c]) =>
+    `<span class="sx-leg"><span class="sx-leg-dot" style="background:${ALBUM_COLORS[al] || "#999"}"></span>${escapeHtml(al)} <b>${c}</b></span>`).join("");
+  const moreTag = more > 0 ? `<span class="sx-leg-more">+${more} more album${more === 1 ? "" : "s"}</span>` : "";
+  $("concord").innerHTML =
+    `<div class="sx-concord-line">most in <b style="color:${topColor}">${escapeHtml(topAlbum)}</b> ` +
+    `(${plural(topCount, "line")}) &middot; <span class="sx-rarity">${rarityNote(groups.length)}</span></div>` +
+    `<div class="sx-concord-legend">${legend}${moreTag}</div>`;
 }
 
 function hitHTML(h, flatMeta) {
@@ -236,6 +271,7 @@ function render(q, groups) {
     const tip = state.mode !== "fuzzy" && !where.length ? " — try fuzzy for typos." : ".";
     $("counter").innerHTML = `<span class="sx-none">No lyrics match <b>${escapeHtml(q)}</b>${ctx}${tip}</span>`;
     $("bar").innerHTML = "";
+    $("concord").innerHTML = "";
     $("results").innerHTML = "";
     return;
   }
@@ -245,7 +281,9 @@ function render(q, groups) {
     ? ` <a class="sx-play" href="../index.html?word=${encodeURIComponent(q.toLowerCase())}" title="Start a game round on this word">play this word in the game &rarr;</a>`
     : "";
   $("counter").innerHTML = `found in <b>${plural(songs, "song")}</b> &middot; <b>${plural(lines, "line")}</b>${play}`;
-  $("bar").innerHTML = albumBar(groups);
+  const counts = albumLineCounts(groups);
+  $("bar").innerHTML = albumBar(counts);
+  renderConcord(groups, counts);
   pushRecent(q);
 
   if (state.grouped) {
