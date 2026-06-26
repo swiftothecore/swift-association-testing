@@ -36,6 +36,12 @@
       <button type="button" data-view="grouped" title="Group hits by song">grouped</button>
       <button type="button" data-view="flat" title="One flat list of every matching line">flat</button>
     </div>
+    <label class="sx-filter">in <select id="section" aria-label="Filter by section type"></select></label>
+    <label class="sx-filter">word <select id="pos" aria-label="Filter by where the word sits in the line">
+      <option value="any">anywhere</option>
+      <option value="start">starts the line</option>
+      <option value="end">ends the line</option>
+    </select></label>
   </div>
 
   <div id="counter" class="sx-counter" aria-live="polite"></div>

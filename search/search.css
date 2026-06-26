@@ -66,6 +66,13 @@ body {
 }
 .sx-seg button:hover { border-color: var(--ink-soft); }
 .sx-seg button.on { color: #7a2f24; border-color: #c08274; background: #f3e2dc; }
+.sx-filter { font-family: var(--type); font-size: 11px; color: var(--ink-soft); display: inline-flex; align-items: center; gap: 6px; }
+.sx-filter select {
+  font-family: var(--type); font-size: 11px; color: var(--ink-soft);
+  background: #f1ead9; border: 1px solid #cbbfa8; border-radius: 4px; padding: 4px 8px; cursor: pointer;
+}
+.sx-filter select:hover { border-color: var(--ink-soft); }
+.sx-filter select.active { color: #7a2f24; border-color: #c08274; background: #f3e2dc; }
 
 /* counter + album bar */
 .sx-counter { font-family: var(--type); font-size: 13px; color: var(--ink-soft); margin-top: 18px; min-height: 17px; }

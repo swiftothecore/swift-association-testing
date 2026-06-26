@@ -14,7 +14,12 @@ const FUZZY_MIN = 0.78;   // token similarity needed for a fuzzy hit (0..1)
 let SONGS = [];                  // flat: { title, album, sections:[{label, lines}] }
 const ALBUM_INDEX = new Map();   // album name -> release order (from songs.json order)
 
-const state = { q: "", mode: "stem", grouped: true };
+// Section TYPES present in the data (for the structural filter), in a sensible order.
+const SECTION_ORDER = ["(intro)", "Intro", "Verse", "Pre-Chorus", "Chorus", "Post-Chorus",
+  "Refrain", "Hook", "Bridge", "Outro", "Interlude", "Spoken", "Breakdown", "Coda"];
+let SECTION_TYPES = [];
+
+const state = { q: "", mode: "stem", grouped: true, section: "any", pos: "any" };
 
 /* ---------- data ---------- */
 async function loadData() {
@@ -25,10 +30,19 @@ async function loadData() {
   SONGS = grouped.flatMap(({ album, songs }) =>
     songs.map((s) => ({ title: s.title, album, sections: Array.isArray(s.sections) ? s.sections : [] }))
   );
+  const set = new Set();
+  for (const s of SONGS) for (const sec of s.sections) set.add(sectionType(sec.label));
+  SECTION_TYPES = SECTION_ORDER.filter((t) => set.has(t))
+    .concat([...set].filter((t) => !SECTION_ORDER.includes(t)).sort());
 }
 
 /* ---------- search ---------- */
 function sectionName(label) { return label && label.trim() ? label : "(intro)"; }
+// The bare section TYPE (drop the trailing number): "Verse 1" -> "Verse", "" -> "(intro)".
+function sectionType(label) {
+  const t = (label || "").replace(/\s*\d+\s*$/, "").trim();
+  return t || "(intro)";
+}
 
 // Per-section display labels, disambiguating repeats ("Chorus (2)") so a hit's
 // location is unambiguous when a section type recurs in a song.
@@ -55,12 +69,21 @@ function makeHit(sec, si, li, label, html) {
   };
 }
 
-function fuzzyHighlight(line, tok) {
-  if (!tok) return escapeHtml(line);
-  const idx = line.toLowerCase().indexOf(tok.toLowerCase());
+// Wrap the match at a known position (used by fuzzy, which already located its token).
+function markAt(line, idx, len) {
   if (idx < 0) return escapeHtml(line);
-  return escapeHtml(line.slice(0, idx)) + "<mark>" + escapeHtml(line.slice(idx, idx + tok.length)) +
-    "</mark>" + escapeHtml(line.slice(idx + tok.length));
+  return escapeHtml(line.slice(0, idx)) + "<mark>" + escapeHtml(line.slice(idx, idx + len)) +
+    "</mark>" + escapeHtml(line.slice(idx + len));
+}
+
+// Structural filters: restrict by section type and by the match's position in the line
+// ("starts the line" = only non-letters before it; "ends the line" = only non-letters,
+// e.g. punctuation/quotes, after it — a rhyme-position search).
+function passesFilters(secLabel, line, idx, len) {
+  if (state.section !== "any" && sectionType(secLabel) !== state.section) return false;
+  if (state.pos === "start" && !/^[^A-Za-z]*$/.test(line.slice(0, idx))) return false;
+  if (state.pos === "end" && !/^[^A-Za-z]*$/.test(line.slice(idx + len))) return false;
+  return true;
 }
 
 function searchSong(song, q, mode) {
@@ -70,21 +93,25 @@ function searchSong(song, q, mode) {
     const ql = q.toLowerCase();
     song.sections.forEach((sec, si) => {
       (sec.lines || []).forEach((line, li) => {
-        let best = 0, bestTok = null;
-        for (const tok of line.split(/[^A-Za-z']+/)) {
+        let best = 0, bestIdx = -1, bestLen = 0;
+        for (const m of line.matchAll(/[A-Za-z']+/g)) {
+          const tok = m[0];
           if (tok.length < 2 || Math.abs(tok.length - ql.length) > 2) continue;   // cheap length prefilter
           const r = fuzzySubstringRatio(ql, tok.toLowerCase());
-          if (r > best) { best = r; bestTok = tok; }
+          if (r > best) { best = r; bestIdx = m.index; bestLen = tok.length; }
         }
-        if (best >= FUZZY_MIN) hits.push(makeHit(sec, si, li, disp[si], fuzzyHighlight(line, bestTok)));
+        if (best >= FUZZY_MIN && passesFilters(sec.label, line, bestIdx, bestLen))
+          hits.push(makeHit(sec, si, li, disp[si], markAt(line, bestIdx, bestLen)));
       });
     });
   } else {
     const strict = mode === "exact";
-    const rx = wordRegex(q, strict);
+    const rx = wordRegex(q, strict);   // non-global: exec always returns the first match
     song.sections.forEach((sec, si) => {
       (sec.lines || []).forEach((line, li) => {
-        if (rx.test(line)) hits.push(makeHit(sec, si, li, disp[si], highlightWord(line, q, strict)));
+        const m = rx.exec(line);
+        if (m && passesFilters(sec.label, line, m.index, m[0].length))
+          hits.push(makeHit(sec, si, li, disp[si], highlightWord(line, q, strict)));
       });
     });
   }
@@ -137,7 +164,13 @@ function render(q, groups) {
   const songs = groups.length;
   const lines = groups.reduce((n, g) => n + g.hits.length, 0);
   if (!songs) {
-    $("counter").innerHTML = `<span class="sx-none">No lyrics match <b>${escapeHtml(q)}</b>${state.mode !== "fuzzy" ? " — try fuzzy for typos." : "."}</span>`;
+    const where = [];
+    if (state.section !== "any") where.push(state.section.toLowerCase());
+    if (state.pos === "start") where.push("at line start");
+    if (state.pos === "end") where.push("at line end");
+    const ctx = where.length ? ` (${where.join(", ")})` : "";
+    const tip = state.mode !== "fuzzy" && !where.length ? " — try fuzzy for typos." : ".";
+    $("counter").innerHTML = `<span class="sx-none">No lyrics match <b>${escapeHtml(q)}</b>${ctx}${tip}</span>`;
     $("bar").innerHTML = "";
     $("results").innerHTML = "";
     return;
@@ -186,12 +219,16 @@ function readHash() {
   if (p.get("q")) state.q = p.get("q");
   if (["stem", "exact", "fuzzy"].includes(p.get("mode"))) state.mode = p.get("mode");
   if (p.get("view") === "flat") state.grouped = false;
+  if (p.get("section") && SECTION_TYPES.includes(p.get("section"))) state.section = p.get("section");
+  if (["start", "end"].includes(p.get("pos"))) state.pos = p.get("pos");
 }
 function writeHash() {
   const p = new URLSearchParams();
   if (state.q.trim()) p.set("q", state.q.trim());
   if (state.mode !== "stem") p.set("mode", state.mode);
   if (!state.grouped) p.set("view", "flat");
+  if (state.section !== "any") p.set("section", state.section);
+  if (state.pos !== "any") p.set("pos", state.pos);
   history.replaceState(null, "", "#" + p.toString());
 }
 
@@ -199,12 +236,20 @@ function writeHash() {
 function syncToggles() {
   for (const b of document.querySelectorAll("[data-mode]")) b.classList.toggle("on", b.dataset.mode === state.mode);
   for (const b of document.querySelectorAll("[data-view]")) b.classList.toggle("on", (b.dataset.view === "flat") === !state.grouped);
+  $("section").classList.toggle("active", state.section !== "any");
+  $("pos").classList.toggle("active", state.pos !== "any");
 }
 
 function init() {
   readHash();
   const input = $("q");
   input.value = state.q;
+
+  // Populate the section-type filter from the types actually present in the data.
+  $("section").innerHTML = `<option value="any">any section</option>` +
+    SECTION_TYPES.map((t) => `<option value="${escapeHtml(t)}">${escapeHtml(t.toLowerCase())}</option>`).join("");
+  $("section").value = state.section;
+  $("pos").value = state.pos;
   syncToggles();
 
   let t;
@@ -219,6 +264,8 @@ function init() {
   for (const b of document.querySelectorAll("[data-view]")) {
     b.addEventListener("click", () => { state.grouped = b.dataset.view !== "flat"; syncToggles(); runSearch(); });
   }
+  $("section").addEventListener("change", (e) => { state.section = e.target.value; syncToggles(); runSearch(); });
+  $("pos").addEventListener("change", (e) => { state.pos = e.target.value; syncToggles(); runSearch(); });
   runSearch();
   if (!state.q) input.focus();
 }
