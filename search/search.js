@@ -255,6 +255,7 @@ function renderInitial(q) {
   $("counter").innerHTML = "";
   $("bar").innerHTML = "";
   $("concord").innerHTML = "";
+  setEraTint(null);
   const msg = q.length === 1
     ? "Keep going, type at least two letters."
     : `Type a word to search every lyric line across ${SONGS.length} songs.`;
@@ -276,6 +277,13 @@ function albumLineCounts(groups) {
   for (const g of groups) counts.set(g.song.album, (counts.get(g.song.album) || 0) + g.hits.length);
   return counts;
 }
+// The album holding the most matching lines (drives the era wash + leads the concordance).
+function topAlbum(counts) {
+  return [...counts.entries()].sort((a, b) => (b[1] - a[1]) || (ALBUM_INDEX.get(a[0]) - ALBUM_INDEX.get(b[0])))[0];
+}
+// Tint the desk toward an album's colour for the current search (null clears it).
+function setEraTint(color) { document.body.style.setProperty("--era", color || "transparent"); }
+
 function albumBar(counts) {
   const albums = [...counts.keys()].sort((a, b) => ALBUM_INDEX.get(a) - ALBUM_INDEX.get(b));
   return albums.map((al) =>
@@ -335,6 +343,7 @@ function render(terms, groups) {
     $("bar").innerHTML = "";
     $("concord").innerHTML = "";
     $("results").innerHTML = "";
+    setEraTint(null);
     return;
   }
   // "Play this word" — only for a SINGLE term that is a real prompt word the game can
@@ -346,6 +355,8 @@ function render(terms, groups) {
   const counts = albumLineCounts(groups);
   $("bar").innerHTML = albumBar(counts);
   renderConcord(groups, counts);
+  const top = topAlbum(counts);
+  setEraTint(top ? ALBUM_COLORS[top[0]] : null);
   pushRecent(terms.join(" "));
 
   if (state.grouped) {

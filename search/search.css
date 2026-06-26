@@ -17,6 +17,16 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; }
+
+/* Era wash: the desk subtly takes on the dominant album's colour for the current search,
+   a faint ambient tint behind the notebook (never over it). Sits below the static page
+   content (z-index:-1) so it only shows on the desk margins. */
+.sx-era {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(135% 105% at 50% -6%,
+    color-mix(in srgb, var(--era, transparent) 42%, transparent), transparent 58%);
+  transition: background 0.6s ease;
+}
 body {
   background: var(--desk);
   background-image: radial-gradient(140% 120% at 50% 0%, #c7b794 0%, #b09e7c 100%);
