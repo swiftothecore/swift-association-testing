@@ -49,13 +49,24 @@ body {
 }
 
 /* search field */
-.sx-search { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid #e0d6bf; padding-bottom: 6px; }
+.sx-search { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; border-bottom: 2px solid #e0d6bf; padding-bottom: 6px; }
 .sx-search svg { width: 22px; height: 22px; color: var(--pen); flex: none; }
 #q {
-  flex: 1; border: 0; background: transparent; outline: none;
+  flex: 1; min-width: 140px; border: 0; background: transparent; outline: none;
   font-family: var(--hand); font-size: 36px; color: var(--ink); line-height: 1.1; padding: 2px 0;
 }
 #q::placeholder { color: var(--ink-faint); }
+
+/* committed search-term chips (AND-ed together) */
+.sx-chips { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.sx-chips:empty { display: none; }
+.sx-chip {
+  display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+  font-family: var(--type); font-size: 14px; color: #7a2f24;
+  background: #f3e2dc; border: 1px solid #c08274; border-radius: 4px; padding: 3px 5px 3px 9px;
+}
+.sx-chip-x { font-family: var(--type); font-size: 15px; line-height: 1; color: #b9402f; background: none; border: 0; cursor: pointer; padding: 0 2px; }
+.sx-chip-x:hover { color: #8f2e20; }
 
 /* controls */
 .sx-controls { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; align-items: center; }

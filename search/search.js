@@ -4,8 +4,8 @@
 // search returns exactly the lines the game would count as a match. Loads songs.json
 // itself and works off the structured `sections` (label + lines) so every hit knows
 // its section and per-section line number without re-parsing strings.
-import { escapeHtml, fuzzySubstringRatio } from "../js/util.js";
-import { wordRegex, highlightWord } from "../js/match.js";
+import { escapeHtml, escapeRegExp, fuzzySubstringRatio } from "../js/util.js";
+import { wordRegex, wordVariants } from "../js/match.js";
 import { ALBUM_COLORS, SEARCH_KEY } from "../js/config.js";
 
 const $ = (id) => document.getElementById(id);
@@ -21,7 +21,9 @@ const SECTION_ORDER = ["(intro)", "Intro", "Verse", "Pre-Chorus", "Chorus", "Pos
   "Refrain", "Hook", "Bridge", "Outro", "Interlude", "Spoken", "Breakdown", "Coda"];
 let SECTION_TYPES = [];
 
-const state = { q: "", mode: "stem", grouped: true, section: "any", pos: "any" };
+// `terms` are committed search chips (AND-ed together); `q` is the live, not-yet-committed
+// word in the input. A line must hold every active term to count as a hit.
+const state = { q: "", terms: [], mode: "stem", grouped: true, section: "any", pos: "any" };
 
 /* ---------- persistence (shared-origin localStorage) ----------
    We remember the two "how to search" preferences (match mode + layout) across visits —
@@ -125,67 +127,125 @@ function makeHit(sec, si, li, label, html) {
   };
 }
 
-// Wrap the match at a known position (used by fuzzy, which already located its token).
-function markAt(line, idx, len) {
-  if (idx < 0) return escapeHtml(line);
-  return escapeHtml(line.slice(0, idx)) + "<mark>" + escapeHtml(line.slice(idx, idx + len)) +
-    "</mark>" + escapeHtml(line.slice(idx + len));
+// Wrap a set of match ranges in <mark> (used by fuzzy, which locates its tokens by
+// similarity rather than regex). Ranges may arrive unsorted or overlapping.
+function markRanges(line, ranges) {
+  const sorted = ranges.filter((r) => r.start >= 0).sort((a, b) => a.start - b.start);
+  let html = "", pos = 0;
+  for (const r of sorted) {
+    if (r.start < pos) continue;   // overlaps an earlier mark — skip
+    html += escapeHtml(line.slice(pos, r.start)) + "<mark>" +
+      escapeHtml(line.slice(r.start, r.start + r.len)) + "</mark>";
+    pos = r.start + r.len;
+  }
+  return html + escapeHtml(line.slice(pos));
 }
 
-// Structural filters: restrict by section type and by the match's position in the line
-// ("starts the line" = only non-letters before it; "ends the line" = only non-letters,
-// e.g. punctuation/quotes, after it — a rhyme-position search).
-function passesFilters(secLabel, line, idx, len) {
-  if (state.section !== "any" && sectionType(secLabel) !== state.section) return false;
-  if (state.pos === "start" && !/^[^A-Za-z]*$/.test(line.slice(0, idx))) return false;
-  if (state.pos === "end" && !/^[^A-Za-z]*$/.test(line.slice(idx + len))) return false;
+// Highlight every occurrence of every term in one pass (stem/exact). Mirrors the game's
+// highlightWord: prefer the exact word when the line holds it, else the stem variants, so
+// "babe" never circles "baby". One combined global regex marks all the terms at once.
+function termBody(line, term, strict) {
+  if (strict) return escapeRegExp(term);
+  const exactRx = new RegExp("\\b" + escapeRegExp(term) + "\\b", "i");
+  return exactRx.test(line) ? escapeRegExp(term) : wordVariants(term).join("|");
+}
+function highlightTerms(line, terms, strict) {
+  const body = terms.map((t) => termBody(line, t, strict)).join("|");
+  return escapeHtml(line).replace(new RegExp("\\b(" + body + ")\\b", "ig"), "<mark>$1</mark>");
+}
+
+// The best fuzzy token range for one term in a line, or null if nothing clears the bar.
+function fuzzyTermRange(line, term) {
+  const ql = term.toLowerCase();
+  let best = 0, bestIdx = -1, bestLen = 0;
+  for (const m of line.matchAll(/[A-Za-z']+/g)) {
+    const tok = m[0];
+    if (tok.length < 2 || Math.abs(tok.length - ql.length) > 2) continue;   // cheap length prefilter
+    const r = fuzzySubstringRatio(ql, tok.toLowerCase());
+    if (r > best) { best = r; bestIdx = m.index; bestLen = tok.length; }
+  }
+  return best >= FUZZY_MIN ? { start: bestIdx, len: bestLen } : null;
+}
+
+// Position filter against a single range ("starts the line" / "ends the line" = only
+// non-letters before / after it). With several terms it judges the first term's match.
+function passesPosition(line, range) {
+  if (state.pos === "start") return /^[^A-Za-z]*$/.test(line.slice(0, range.start));
+  if (state.pos === "end") return /^[^A-Za-z]*$/.test(line.slice(range.start + range.len));
   return true;
 }
 
-function searchSong(song, q, mode) {
+// One song's hits for an AND-list of terms: a line counts only if EVERY term matches it
+// (each per the active mode). Section filter is applied once per section; the position
+// filter against the first term's match.
+function searchSong(song, terms, mode) {
   const hits = [];
   const disp = sectionDisplays(song);
-  if (mode === "fuzzy") {
-    const ql = q.toLowerCase();
-    song.sections.forEach((sec, si) => {
-      (sec.lines || []).forEach((line, li) => {
-        let best = 0, bestIdx = -1, bestLen = 0;
-        for (const m of line.matchAll(/[A-Za-z']+/g)) {
-          const tok = m[0];
-          if (tok.length < 2 || Math.abs(tok.length - ql.length) > 2) continue;   // cheap length prefilter
-          const r = fuzzySubstringRatio(ql, tok.toLowerCase());
-          if (r > best) { best = r; bestIdx = m.index; bestLen = tok.length; }
+  const strict = mode === "exact";
+  song.sections.forEach((sec, si) => {
+    if (state.section !== "any" && sectionType(sec.label) !== state.section) return;
+    (sec.lines || []).forEach((line, li) => {
+      let ranges = [];
+      if (mode === "fuzzy") {
+        for (const term of terms) { const r = fuzzyTermRange(line, term); if (!r) { ranges = null; break; } ranges.push(r); }
+      } else {
+        for (const term of terms) {
+          const m = wordRegex(term, strict).exec(line);   // non-global: first match per line
+          if (!m) { ranges = null; break; }
+          ranges.push({ start: m.index, len: m[0].length });
         }
-        if (best >= FUZZY_MIN && passesFilters(sec.label, line, bestIdx, bestLen))
-          hits.push(makeHit(sec, si, li, disp[si], markAt(line, bestIdx, bestLen)));
-      });
+      }
+      if (!ranges || !passesPosition(line, ranges[0])) return;
+      const html = mode === "fuzzy" ? markRanges(line, ranges) : highlightTerms(line, terms, strict);
+      hits.push(makeHit(sec, si, li, disp[si], html));
     });
-  } else {
-    const strict = mode === "exact";
-    const rx = wordRegex(q, strict);   // non-global: exec always returns the first match
-    song.sections.forEach((sec, si) => {
-      (sec.lines || []).forEach((line, li) => {
-        const m = rx.exec(line);
-        if (m && passesFilters(sec.label, line, m.index, m[0].length))
-          hits.push(makeHit(sec, si, li, disp[si], highlightWord(line, q, strict)));
-      });
-    });
-  }
+  });
   return hits;
 }
 
+// The terms to search: committed chips plus the live input if it's a usable (2+ char) word.
+function activeTerms() {
+  const live = state.q.trim();
+  const terms = state.terms.slice();
+  if (live.length >= 2 && !terms.some((t) => t.toLowerCase() === live.toLowerCase())) terms.push(live);
+  return terms;
+}
+
 function runSearch() {
-  const q = state.q.trim();
   writeHash();
-  if (q.length < 2) { renderInitial(q); return; }
+  renderChips();
+  const terms = activeTerms();
+  if (!terms.length) { renderInitial(state.q.trim()); return; }
   const groups = [];
   for (const song of SONGS) {
-    const hits = searchSong(song, q, state.mode);
+    const hits = searchSong(song, terms, state.mode);
     if (hits.length) groups.push({ song, hits });
   }
   groups.sort((a, b) =>
     (ALBUM_INDEX.get(a.song.album) - ALBUM_INDEX.get(b.song.album)) || a.song.title.localeCompare(b.song.title));
-  render(q, groups);
+  render(terms, groups);
+}
+
+/* ---------- multi-term chips ---------- */
+function renderChips() {
+  $("chips").innerHTML = state.terms.map((t, i) =>
+    `<span class="sx-chip">${escapeHtml(t)}<button type="button" class="sx-chip-x" data-i="${i}" aria-label="Remove ${escapeHtml(t)}">&times;</button></span>`).join("");
+  $("q").placeholder = state.terms.length ? "and another word…" : "search the lyrics…";
+}
+function commitTerm() {
+  const t = state.q.trim();
+  if (t.length < 2) return;
+  if (!state.terms.some((x) => x.toLowerCase() === t.toLowerCase())) state.terms.push(t);
+  state.q = ""; $("q").value = "";
+  runSearch();
+}
+function removeTermAt(i) { state.terms.splice(i, 1); runSearch(); $("q").focus(); }
+// Load a stored / recent query string: 2+ tokens become chips, a single token stays editable.
+function applyQueryString(s) {
+  const tokens = String(s || "").trim().split(/\s+/).filter(Boolean);
+  if (tokens.length > 1) { state.terms = tokens; state.q = ""; }
+  else { state.terms = []; state.q = tokens[0] || ""; }
+  $("q").value = state.q;
 }
 
 /* ---------- render ---------- */
@@ -259,32 +319,34 @@ function hitHTML(h, flatMeta) {
   return `<div class="sx-hit${flatMeta ? " sx-hit-flat" : ""}">${ann}<div class="sx-lines">${ctx(h.prev)}<div class="sx-main">${h.html}</div>${ctx(h.next)}</div></div>`;
 }
 
-function render(q, groups) {
+function render(terms, groups) {
   const songs = groups.length;
   const lines = groups.reduce((n, g) => n + g.hits.length, 0);
+  const termLabels = terms.map((t) => `<b>${escapeHtml(t)}</b>`).join(", ");
   if (!songs) {
     const where = [];
     if (state.section !== "any") where.push(state.section.toLowerCase());
     if (state.pos === "start") where.push("at line start");
     if (state.pos === "end") where.push("at line end");
     const ctx = where.length ? ` (${where.join(", ")})` : "";
-    const tip = state.mode !== "fuzzy" && !where.length ? " — try fuzzy for typos." : ".";
-    $("counter").innerHTML = `<span class="sx-none">No lyrics match <b>${escapeHtml(q)}</b>${ctx}${tip}</span>`;
+    const tip = state.mode !== "fuzzy" && !where.length ? " Try fuzzy for typos." : "";
+    const lead = terms.length > 1 ? "No lyric line holds all of " : "No lyrics match ";
+    $("counter").innerHTML = `<span class="sx-none">${lead}${termLabels}${ctx}.${tip}</span>`;
     $("bar").innerHTML = "";
     $("concord").innerHTML = "";
     $("results").innerHTML = "";
     return;
   }
-  // "Play this word" — only offered when the query is a real prompt word the game
-  // can start a round on (gated by words.json), so the link never dead-ends.
-  const play = PROMPT_WORDS.has(q.toLowerCase())
-    ? ` <a class="sx-play" href="../index.html?word=${encodeURIComponent(q.toLowerCase())}" title="Start a game round on this word">play this word in the game &rarr;</a>`
+  // "Play this word" — only for a SINGLE term that is a real prompt word the game can
+  // start a round on (gated by words.json), so the link never dead-ends.
+  const play = (terms.length === 1 && PROMPT_WORDS.has(terms[0].toLowerCase()))
+    ? ` <a class="sx-play" href="../index.html?word=${encodeURIComponent(terms[0].toLowerCase())}" title="Start a game round on this word">play this word in the game &rarr;</a>`
     : "";
   $("counter").innerHTML = `found in <b>${plural(songs, "song")}</b> &middot; <b>${plural(lines, "line")}</b>${play}`;
   const counts = albumLineCounts(groups);
   $("bar").innerHTML = albumBar(counts);
   renderConcord(groups, counts);
-  pushRecent(q);
+  pushRecent(terms.join(" "));
 
   if (state.grouped) {
     // Group by album (a binder divider per album), songs within. Albums in release order.
@@ -324,7 +386,13 @@ function render(q, groups) {
 /* ---------- deep links ---------- */
 function readHash() {
   const p = new URLSearchParams(location.hash.slice(1));
-  if (p.get("q")) state.q = p.get("q");
+  const qp = p.get("q");
+  if (qp) {
+    // Space-separated terms: 2+ load as chips (a shared multi-term link), one stays editable.
+    const tokens = qp.trim().split(/\s+/).filter(Boolean);
+    if (tokens.length > 1) { state.terms = tokens; state.q = ""; }
+    else if (tokens.length === 1) { state.q = tokens[0]; }
+  }
   if (["stem", "exact", "fuzzy"].includes(p.get("mode"))) state.mode = p.get("mode");
   if (p.get("view") === "flat") state.grouped = false;
   else if (p.get("view") === "grouped") state.grouped = true;   // can override a saved "flat"
@@ -333,11 +401,14 @@ function readHash() {
 }
 function writeHash() {
   const p = new URLSearchParams();
-  const q = state.q.trim();
-  if (q) p.set("q", q);
-  // A real search encodes mode + layout explicitly so a shared link reproduces faithfully
-  // regardless of the recipient's saved prefs. A bare URL leaves them to the saved prefs.
-  if (q.length >= 2) { p.set("mode", state.mode); p.set("view", state.grouped ? "grouped" : "flat"); }
+  const terms = activeTerms();
+  if (terms.length) {
+    p.set("q", terms.join(" "));
+    // A real search encodes mode + layout explicitly so a shared link reproduces faithfully
+    // regardless of the recipient's saved prefs. A bare URL leaves them to the saved prefs.
+    p.set("mode", state.mode);
+    p.set("view", state.grouped ? "grouped" : "flat");
+  }
   if (state.section !== "any") p.set("section", state.section);
   if (state.pos !== "any") p.set("pos", state.pos);
   history.replaceState(null, "", "#" + p.toString());
@@ -356,6 +427,7 @@ function init() {
   readHash();
   const input = $("q");
   input.value = state.q;
+  renderChips();
 
   // Populate the section-type filter from the types actually present in the data.
   $("section").innerHTML = `<option value="any">any section</option>` +
@@ -370,6 +442,16 @@ function init() {
     clearTimeout(t);
     t = setTimeout(runSearch, state.mode === "fuzzy" ? 220 : 120);
   });
+  // Enter / comma commits the live word into a chip (AND-ed with the rest); Backspace on an
+  // empty input peels the last chip back off.
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === ",") { e.preventDefault(); commitTerm(); }
+    else if (e.key === "Backspace" && input.value === "" && state.terms.length) { e.preventDefault(); removeTermAt(state.terms.length - 1); }
+  });
+  $("chips").addEventListener("click", (e) => {
+    const x = e.target.closest(".sx-chip-x");
+    if (x) removeTermAt(Number(x.dataset.i));
+  });
   for (const b of document.querySelectorAll("[data-mode]")) {
     b.addEventListener("click", () => { state.mode = b.dataset.mode; savePrefs(); syncToggles(); runSearch(); });
   }
@@ -383,7 +465,7 @@ function init() {
   // #results is re-rendered on every search.
   $("results").addEventListener("click", (e) => {
     const item = e.target.closest(".sx-recent-item");
-    if (item) { input.value = item.dataset.q; state.q = item.dataset.q; runSearch(); input.focus(); return; }
+    if (item) { applyQueryString(item.dataset.q); runSearch(); input.focus(); return; }
     if (e.target.closest("#recentClear")) { clearRecent(); renderInitial(state.q.trim()); }
   });
 
