@@ -12,6 +12,7 @@ import {
   PEN_SVG, STAR_SVG, SPARKLE_SVG, DOODLE_SVG,
 } from "./config.js";
 import { buildBraceletSVG } from "./bracelet.js";
+import { wordRegex as wordRegexCore, extractLineWithWord as extractLineWithWordCore, highlightWord as highlightWordCore } from "./match.js";
 import {
   loadRecords, insertRecord, migrateRecordsFromStats, getPlayerName, setPlayerName,
   getAvatar, setAvatar,
@@ -455,26 +456,10 @@ function pickEra() {
 function applyEra(era) { document.body.setAttribute("data-era", era); }
 
 /* ---------- Matching helpers ---------- */
-// Prefix-stem match: the word as the start of a token, plus any trailing letters,
-// so "gold" matches "golden", "dream" matches "dreamer". The leading \b keeps it
-// safe (e.g. "love" won't match "glove"/"clover"; "rain" won't match "train").
-// The plain [a-z']* tail only catches forms that ADD letters (love→lover/loved/loves,
-// gold→golden). These are the common inflections that CHANGE the stem first and so
-// slip past it: silent-e drop (love→loving), consonant+y→i (city→cities), and
-// final-consonant doubling (run→running). Each mutated stem is followed by a BOUNDED
-// inflectional suffix set (not [a-z']*), so time→timing matches but "timber" never does.
-// Bare "in" (not "in'") so it still matches before a trailing apostrophe — \bin'\b
-// can't (the apostrophe is non-word, killing the closing boundary), but \bin\b
-// backtracks onto the "n" inside "lovin'". Covers g-dropped forms either way.
-const INFLECT = "(?:ing|in|ings|ed|er|ers|es|y|ies|ied|ier|iest|able)";
-function wordVariants(word) {
-  const w = word.toLowerCase();
-  const alts = [escapeRegExp(w) + "[a-z']*"];   // base: word + any added tail (unchanged behaviour)
-  if (w.length >= 4 && w.endsWith("e")) alts.push(escapeRegExp(w.slice(0, -1)) + INFLECT);
-  if (w.length >= 3 && /[^aeiou]y$/.test(w)) alts.push(escapeRegExp(w.slice(0, -1) + "i") + INFLECT);
-  if (w.length >= 3 && /[^aeiou][aeiou][^aeiouwxy]$/.test(w)) alts.push(escapeRegExp(w + w.slice(-1)) + INFLECT);
-  return alts;
-}
+// The pure matching core (wordVariants/wordRegex/extractLineWithWord/highlightWord)
+// lives in js/match.js so the searcher reuses the exact same logic. The wrappers below
+// add the game's defaults — strictness from effectiveStrict() and display censoring —
+// then delegate to that core.
 // The strictness used for gameplay matching: the active mode's strict flag (no mode
 // sets it currently — every difficulty is stem-lenient, incl. Ultra), OR the player's
 // global "stem matching off" opt-out (Settings → Gameplay) which forces exact-word
@@ -522,8 +507,7 @@ function lyricModeNow() {
 // requires the exact word. Defaults to the active mode + the stem-matching opt-out.
 function wordRegex(word, strict) {
   if (strict === undefined) strict = effectiveStrict();
-  if (strict) return new RegExp("\\b" + escapeRegExp(word) + "\\b", "i");
-  return new RegExp("\\b(?:" + wordVariants(word).join("|") + ")\\b", "i");
+  return wordRegexCore(word, strict);
 }
 function songsContainingWord(word, strict) {
   const rx = wordRegex(word, strict);
@@ -560,18 +544,8 @@ function renderExcludedNote() {
   el.style.display = "";
 }
 function extractLineWithWord(lyrics, word, strict) {
-  const lines = lyrics.split("\n");
-  // Prioritise a line bearing the *exact* prompt word over a looser stem variant
-  // (e.g. "babe" shouldn't surface a line whose only match is "baby"). Only the
-  // lenient paths fall back; an explicitly strict caller already wants exact-only.
-  if (!strict) {
-    const exactRx = new RegExp("\\b" + escapeRegExp(word) + "\\b", "i");
-    const exactLine = lines.find((l) => exactRx.test(l));
-    if (exactLine) return exactLine.trim();
-  }
-  const rx = wordRegex(word, strict);
-  const line = lines.find((l) => rx.test(l)) || lines[0] || "";
-  return line.trim();
+  if (strict === undefined) strict = effectiveStrict();
+  return extractLineWithWordCore(lyrics, word, strict);
 }
 // Mask explicit words for display. The racial slur is always masked; general
 // profanity only when the player turns on "censor explicit words". The prompt word
@@ -580,17 +554,7 @@ function extractLineWithWord(lyrics, word, strict) {
 function censor(text) { return censorText(text, settings.censorExplicit === true); }
 function highlightWord(line, word, strict) {
   if (strict === undefined) strict = effectiveStrict();
-  line = censor(line);
-  // Mark the real word when the line actually contains it; only fall back to the
-  // looser stem variants when it doesn't, so "babe" never highlights "baby".
-  let body;
-  if (strict) body = escapeRegExp(word);
-  else {
-    const exactRx = new RegExp("\\b" + escapeRegExp(word) + "\\b", "i");
-    body = exactRx.test(line) ? escapeRegExp(word) : wordVariants(word).join("|");
-  }
-  const rx = new RegExp("\\b(" + body + ")\\b", "ig");
-  return escapeHtml(line).replace(rx, "<mark>$1</mark>");
+  return highlightWordCore(censor(line), word, strict);
 }
 
 /* ---------- Stats ---------- */
