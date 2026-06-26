@@ -10,7 +10,7 @@
  * Paths are relative so the worker works under the project subpath
  * (…github.io/swift-association-testing/).
  */
-const CACHE = "stta-v5";
+const CACHE = "stta-v6";
 const ASSETS = [
   "./",
   "index.html",
@@ -18,10 +18,17 @@ const ASSETS = [
   "js/app.js",
   "js/util.js",
   "js/config.js",
+  "js/match.js",
   "js/bracelet.js",
   "js/storage.js",
   "songs.json",
   "words.json",
+  // Swift To The Lyric searcher — precached (incl. the "search/" navigate path) so it
+  // works offline on a fresh install, not just after a runtime-cached visit.
+  "search/",
+  "search/index.html",
+  "search/search.css",
+  "search/search.js",
   "icons/favicon.svg",
   "manifest.webmanifest",
   "icons/icon-192.png",
