@@ -691,7 +691,7 @@
 
   .af-detail-spine { width: 7px; align-self: stretch; min-height: 30px; border-radius: 2px; box-shadow: inset 0 0 0 1px rgba(43,39,34,0.2); }
   .af-stamp { color: rgba(60,90,70,0.85); border-color: rgba(60,90,70,0.55); }
-  .af-diffs { display: flex; gap: 8px; margin-top: 10px; }
+  .af-diffs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
   .af-diff {
     font-family: var(--type); font-size: 12px; font-weight: 700; color: var(--ink-soft);
     background: rgba(236,227,208,0.5); border: 1.5px solid #c7ba9b; border-radius: 2px;

@@ -98,11 +98,15 @@ export const MODE_COLORS = {
    "Quiz me on one album": every prompt word and valid answer come from a single studio
    album, played at a chosen difficulty. Sandboxed in its own board (ALBUM_FOCUS_KEY).
    The album list is STUDIO_ALBUMS (the 12 — pseudo-groups are never offered). */
-export const ALBUM_FOCUS_DIFFS = ["easy", "medium", "hard"];   // MODES ids the sub-picker offers
+// Every playable mode is offered (in MODE_ORDER). Ultra's rarity bucket can be thin within a
+// single album, but pickAlbumWord falls back to the album's full word list, so a 13-round run
+// always fills; lyricist answers by lyric line and is album-gated by the soft-reject path.
+export const ALBUM_FOCUS_DIFFS = ["relaxed", "easy", "medium", "hard", "ultra", "lyricist"]; // MODES ids the sub-picker offers
 export const ALBUM_FOCUS_TARGET = 9;                           // score ≥ this beats an album; === TOTAL_ROUNDS perfects it
 // Hardness ranking — the completed-album look scales with the toughest difficulty it was
-// beaten/perfected at, so re-beating on Hard upgrades the keepsake (see recordAlbumFocusRun).
-export const DIFF_RANK = { easy: 1, medium: 2, hard: 3 };
+// beaten/perfected at, so re-beating on a harder mode upgrades the keepsake (see
+// recordAlbumFocusRun). Lyricist (recall by lyric line) ranks top as the "by heart" flex.
+export const DIFF_RANK = { relaxed: 0, easy: 1, medium: 2, hard: 3, ultra: 4, lyricist: 5 };
 
 /* ---------- Adaptive mode ----------
    A third gameType beside Classic and Infinite. A fixed 13-round run where word RARITY
