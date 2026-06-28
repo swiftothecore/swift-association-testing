@@ -51,7 +51,7 @@ export const DEFAULT_SETTINGS = {
   enableHints: true,        // show progressive hints in Easy/Normal/Relaxed (a hinted run can't set a personal best)
   censorExplicit: false,    // mask general profanity (fuck→f**k) in shown lyrics/titles; the racial slur is always masked regardless
 
-  defaultGameType: "last",  // "last" | "classic" | "infinite"
+  defaultGameType: "last",  // "last" | "classic" | "infinite" | "adaptive"
   defaultDifficulty: "last",// "last" | a MODES id
   defaultStatsTab: "all",   // which Stats tab opens first: "all" | "last" | a MODES id
   // display & accessibility
@@ -62,7 +62,7 @@ export const DEFAULT_SETTINGS = {
   weekStart: "mon",         // first row/column of week-based views (the records calendar): "mon" | "sun"
   // meta
   sound: false,             // placeholder — no audio wired yet
-  lastGameType: "classic",  // runtime memory backing defaultGameType: "last" (not shown in UI)
+  lastGameType: "classic",  // runtime memory backing defaultGameType: "last" — the last type clicked (not shown in UI)
   playerName: "",           // notebook signature — set once, reused on every personal record
   avatar: "",               // profile polaroid — a center-cropped data-URL, stays on this device
 };

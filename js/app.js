@@ -257,7 +257,7 @@ function stopSnow() {
   }
 }
 function refreshSnow() { if (snowActive()) startSnow(); else stopSnow(); }
-// Remember the last-played type so defaultGameType:"last" can restore it next launch.
+// Remember the last type clicked so defaultGameType:"last" can restore it next launch.
 function rememberGameType(t) {
   if (settings.lastGameType !== t) { settings.lastGameType = t; saveSettings(settings); }
 }
@@ -2983,6 +2983,7 @@ function stopResetCountdown() {
 }
 function setGameType(g) {
   gameType = GAME_TYPES.includes(g) ? g : "classic";
+  rememberGameType(gameType);   // "last" tracks the last type clicked, not the last played
   applyTypeLayout();
   renderTypePicker();
   updateBlurb();
@@ -3254,7 +3255,6 @@ function useHint() {
 
 function startGame(opts) {
   gameType = "classic";
-  rememberGameType("classic");
   resetRunState();
   if (opts && opts.word) forcedFirstWord = opts.word;   // "Play this word" from the searcher
   applyInputHints();
@@ -3297,7 +3297,6 @@ function maybeStartFromWordParam() {
 function startInfinite(variant, opts) {
   infiniteVariant = variant === "sudden" ? "sudden" : "3lives";
   gameType = "infinite";
-  rememberGameType("infinite");
   lives = startingLives();
   const carry = !!(opts && opts.carry);
   if (!carry) resetRunState();
@@ -3318,7 +3317,6 @@ function startInfinite(variant, opts) {
 function startAdaptive() {
   gameType = "adaptive";
   currentMode = { ...MODES.medium };   // baseline levers (10s · suggestions · not-in-title), not persisted via DIFF_KEY
-  rememberGameType("adaptive");
   resetRunState();                     // sets adaptiveLevel/Peak = ADAPT_START_LEVEL, promo = 0
   applyInputHints();
   updateTagline();
@@ -6615,7 +6613,7 @@ function renderSettingsBody() {
       setToggleHTML("stemMatching", "Match word variants", "off = exact word only (love won’t match loving)") +
       setToggleHTML("enableHints", "Hints", "Easy &amp; Relaxed; a hinted run can’t set a personal best") +
       setToggleHTML("censorExplicit", "Censor explicit words", "mask swearing in shown lyrics &amp; titles (f**k, s**t)") +
-      setChoiceHTML("defaultGameType", "Default game type", "on launch", [{ val: "last", label: "Last" }, { val: "classic", label: "Classic" }, { val: "infinite", label: "Infinite" }]) +
+      setChoiceHTML("defaultGameType", "Default game type", "on launch", [{ val: "last", label: "Last" }, { val: "classic", label: "Classic" }, { val: "infinite", label: "Infinite" }, { val: "adaptive", label: "Adaptive" }]) +
       setChoiceHTML("defaultDifficulty", "Default difficulty", "on launch", diffOpts) +
       setChoiceHTML("defaultStatsTab", "Default stats tab", "which tab opens first", statsOpts)
     ) +
@@ -7049,9 +7047,8 @@ async function init() {
   migrateRecordsFromStats();   // seed records from pre-existing stats once, before any game runs
   console.log("%c♡ written in the margins · 13 pages of you ♡", "font-size:14px;color:#a9791f;font-family:cursive;");
   currentMode = loadMode();
-  // Default game type on launch (or restore the last one played).
-  gameType = settings.defaultGameType === "infinite" ? "infinite"
-           : settings.defaultGameType === "classic" ? "classic"
+  // Default game type on launch (or restore the last one clicked).
+  gameType = GAME_TYPES.includes(settings.defaultGameType) ? settings.defaultGameType
            : (GAME_TYPES.includes(settings.lastGameType) ? settings.lastGameType : "classic");
   renderStartPickers();
   const titleEl = document.querySelector("header.title h1");
