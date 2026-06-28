@@ -649,6 +649,12 @@
     font-family: var(--type); font-size: 11px; color: #5a5042; text-align: center;
     border: 1px dashed #b3a584; border-radius: 1px; padding: 9px 18px; background: rgba(236,227,208,0.5);
   }
+  .chall-token-link {
+    font-family: var(--type); font-size: 10px; letter-spacing: 0.8px; color: var(--ink-soft);
+    background: transparent; border: none; border-bottom: 1px solid rgba(43,39,34,0.28);
+    padding: 2px 0; cursor: pointer; white-space: nowrap;
+  }
+  .chall-token-link:hover, .chall-token-link:focus-visible { color: var(--ink); border-bottom-color: var(--ink); }
 
   /* primary action — the gold "Start writing" sticker, reused */
   .chall-go {
@@ -940,6 +946,10 @@
   .ach-cashin:hover { background: #2b2722; color: #fff; border-color: #2b2722; }
   /* armed (second-tap confirms): always shown, red, can't be missed */
   .ach-cashin.is-armed { opacity: 1; background: #b23a3a; color: #fff; border-color: #b23a3a; }
+  .ach-cashin--disabled {
+    cursor: help; border-style: dashed; color: rgba(43,39,34,0.55); background: rgba(43,39,34,0.03);
+  }
+  .ach-cashin--disabled:hover { background: rgba(43,39,34,0.03); color: rgba(43,39,34,0.55); border-color: rgba(43,39,34,0.5); }
   @media (hover: none) { .ach-cashin { opacity: 1; } }
 
   /* a sacrificed charm — faded, struck through, given up for good */
@@ -2526,7 +2536,7 @@
   .settings-scrim { position: absolute; inset: 0; background: rgba(34, 24, 12, 0.5); animation: fade 0.25s ease; }
   .settings-card {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    width: min(540px, calc(100vw - 28px)); max-height: calc(100vh - 40px); overflow-y: auto;
+    width: min(594px, calc(100vw - 28px)); max-height: calc(100vh - 40px); overflow-y: auto;
     overscroll-behavior: contain;   /* don't chain scroll to the page behind */
     padding: 22px 24px 28px 48px;
     --rule-x: 34px;   /* nudge the red margin rule left so it isn't squished against the text */

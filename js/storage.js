@@ -324,7 +324,7 @@ export function migrateRecordsFromStats() {
   const tokens = MODE_ORDER.slice();
   for (const v of ["3lives", "sudden"]) for (const m of MODE_ORDER) tokens.push("inf-" + v + "-" + m);
   for (const mode of tokens) {
-    if (localStorage.getItem(recordsKey(mode)) != null) continue;   // already has records
+    if (loadRecords(mode).length) continue;   // already has records
     const best = loadStats(mode).best;
     if (best > 0) saveRecords([{ score: best, date: null }], mode);
   }

@@ -21,6 +21,7 @@ export const INFLECT = "(?:ing|in|ings|ed|er|ers|es|y|ies|ied|ier|iest|able)";
 export function wordVariants(word) {
   const w = word.toLowerCase();
   const alts = [escapeRegExp(w) + "[a-z']*"];   // base: word + any added tail (unchanged behaviour)
+  if (w.length >= 5 && w.endsWith("ing")) alts.push(escapeRegExp(w.slice(0, -1)) + "'?");
   if (w.length >= 4 && w.endsWith("e")) alts.push(escapeRegExp(w.slice(0, -1)) + INFLECT);
   if (w.length >= 3 && /[^aeiou]y$/.test(w)) alts.push(escapeRegExp(w.slice(0, -1) + "i") + INFLECT);
   if (w.length >= 3 && /[^aeiou][aeiou][^aeiouwxy]$/.test(w)) alts.push(escapeRegExp(w + w.slice(-1)) + INFLECT);

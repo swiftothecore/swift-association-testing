@@ -1502,8 +1502,9 @@ function renderVerseAnthology() {
 function renderResultRecap() {
   const el = $("resultAchievements");
   if (!el) return;
-  if (!newlyUnlocked.length) { el.style.display = "none"; el.innerHTML = ""; return; }
-  const chips = newlyUnlocked.map((id) => {
+  const ids = [...new Set(newlyUnlocked)].filter((id) => ACH_BY_ID[id] && earnedAchievements[id]);
+  if (!ids.length) { el.style.display = "none"; el.innerHTML = ""; return; }
+  const chips = ids.map((id) => {
     const a = ACH_BY_ID[id];
     return `<button type="button" class="ach-chip" data-tip="${escapeHtml(a.desc)}" data-tip-delay="120">${charmMarkup(a.icon)}<span class="nm">${escapeHtml(a.name)}</span></button>`;
   }).join("");
@@ -1520,7 +1521,7 @@ function achSacrificeMarkup(a) {
   const w = loadChallengeTokens();
   if ((w.fromAchievements || []).includes(a.id)) // grandfathered legacy cash-in
     return `<span class="ach-ticket" title="cashed in for a challenge token">🎟</span>`;
-  if (!isTradeableAch(a)) return "";   // only skill charms qualify
+  if (!isTradeableAch(a)) return `<span class="ach-cashin ach-cashin--disabled" title="only visible non-challenge skill charms can be sacrificed">keepsake</span>`;
   if (armedSacrifice === a.id)
     return `<button type="button" class="ach-cashin is-armed" data-sacrifice="${a.id}" title="this can't be undone">give up for good?</button>`;
   return `<button type="button" class="ach-cashin" data-sacrifice="${a.id}" title="sacrifice this charm toward a challenge token — permanent">sacrifice ✦</button>`;
@@ -1555,18 +1556,15 @@ function renderAchievementsPage() {
   const burnedCount = (wallet.burnedAchievements || []).length;
   const tradeableLeft = ACHIEVEMENTS.filter((a) => achEarned(a.id) && isTradeableAch(a)).length;
   const needNext = burnedNeededForNextToken(burnedCount) - burnedCount; // charms until the next token
-  // Only surface the escape valve once there's something to trade or something already given up.
   const noteLine = sacrificeNote ? `<div class="ach-sacrifice-note">${escapeHtml(sacrificeNote)}</div>` : ``;
   sacrificeNote = "";   // one-shot
-  const convoLine = (tradeableLeft || burnedCount)
-    ? noteLine + `<div class="ach-page-tickets">` +
-      (burnedCount ? `🎟 charms given up: ${burnedCount} · ` : ``) +
-      (tradeableLeft
-        ? `next challenge token after ${needNext} more sacrifice${needNext === 1 ? "" : "s"} ` +
-          `<span class="ach-trade-note">(the price doubles each time — and a given-up charm is gone for good)</span>`
-        : `no skill charms left to trade`) +
-      `</div>`
-    : ``;
+  const convoLine = noteLine + `<div class="ach-page-tickets">` +
+    (burnedCount ? `🎟 charms given up: ${burnedCount} · ` : ``) +
+    (tradeableLeft
+      ? `next challenge token after ${needNext} more sacrifice${needNext === 1 ? "" : "s"} ` +
+        `<span class="ach-trade-note">(the price doubles each time, and a given-up charm is gone for good)</span>`
+      : `earn a visible skill charm to sacrifice it for challenge tokens`) +
+    `</div>`;
   let html = `<div class="ach-page-head"><div class="ach-page-title">Charm Collection</div>` +
     `<div class="ach-page-sub">${earnedCount} / ${total} charms collected</div>` +
     convoLine +
@@ -1791,7 +1789,11 @@ const isAdaptiveToken = (token) => token === "adaptive";
 // Compact "your best" line for a single mode (start screen + results). Shows the
 // mode's top personal record, or a target line if you've never finished a run in it.
 function renderBestLine(el, mode) {
-  const rec = loadRecords(mode)[0];
+  let rec = loadRecords(mode)[0];
+  if (!rec && !isInfiniteToken(mode) && MODES[mode]) {
+    const best = loadStats(mode).best;
+    if (best > 0) rec = { score: best, date: null };
+  }
   if (!rec) {
     el.innerHTML = `<div class="best-empty">no runs yet — set your first record ★</div>`;
     return;
@@ -2406,7 +2408,8 @@ function renderChallengeDetail(id) {
   if (!open) {
     action = tk >= cost
       ? `<button type="button" class="chall-go is-unlock" data-unlock="${id}">unlock · 🎟 ${cost}</button>`
-      : `<div class="chall-need">need a token · 🎟 ${cost}</div>`;
+      : `<div class="chall-need">need a token · 🎟 ${cost}</div>` +
+        `<button type="button" class="chall-token-link" data-open-charms>get tokens from charms</button>`;
   } else {
     action = `<button type="button" class="chall-go" data-play="${id}">${rec.defeated ? "Play again" : "Play"}</button>`;
   }
@@ -2441,6 +2444,8 @@ function renderChallengeDetail(id) {
 
   const ub = el.querySelector("[data-unlock]");
   if (ub) ub.addEventListener("click", () => { if (unlockChallenge(ub.dataset.unlock)) renderChallengesPage(); });
+  const cb = el.querySelector("[data-open-charms]");
+  if (cb) cb.addEventListener("click", () => openAchievements("challenges"));
   const pb = el.querySelector("[data-play]");
   if (pb) pb.addEventListener("click", () => startChallenge(pb.dataset.play));
 }
@@ -3481,8 +3486,7 @@ function comboRemaining() {
 function applyChallengeRound(wrap) {
   if (gameType !== "challenge" || !currentChallenge || !wrap) return;
   if (currentChallenge.rule === "vanishing") {
-    const ms = currentChallenge.revealMs || 1500;
-    vanishTimer = setTimeout(() => { wrap.classList.add("vanished"); }, ms);
+    return;
   } else if (currentChallenge.rule === "wordfx") {
     renderWordFx(wrap, currentWord, round);
   } else if (currentChallenge.rule === "revolving") {
@@ -4448,10 +4452,18 @@ function beginRoundClock() {
   // again on the next genuine flip. Committed after roundCurtainHTML so the pre-flip mount
   // (nextRound) and this call agree on the same round's curtain.
   if (gameType === "adaptive") adaptiveDropAnnounced = effectiveDropdown();
-  if (!html) { startTimer(); return; }
-  showTimerFull();   // pin the clock at a paused full bar beneath the curtain — no leftover time shows through the lift
   const wrap = $("wordDisplay").parentNode;
+  const beginTimedRoundEffects = () => {
+    if (gameType === "challenge" && currentChallenge && currentChallenge.rule === "vanishing") {
+      clearTimeout(vanishTimer);
+      const ms = currentChallenge.revealMs || 1500;
+      vanishTimer = setTimeout(() => { wrap.classList.add("vanished"); }, ms);
+    }
+  };
+  if (!html) { beginTimedRoundEffects(); startTimer(); return; }
+  showTimerFull();   // pin the clock at a paused full bar beneath the curtain — no leftover time shows through the lift
   const onDone = () => {
+    beginTimedRoundEffects();
     if (isWildcardRound() && roundWildcard.display) roundWildcard.display(wrap);
     startTimer();
   };
@@ -5570,6 +5582,7 @@ function submitAnswer(song, isTimeout) {
   roundSongs[round - 1] = correct && song ? song.title : null;  // credited song — for the lifetime tally
   justEarnedIndex = correct ? round - 1 : -1;
   if (correct) score++;
+  if (correct && song && song.title === "If This Was A Movie") unlock("spicy-drama");
   // It's A Clock!: bank the time left on the shared clock; a correct answer winds it
   // back up (capped). The timer is already cleared, so comboRemaining() is the reading
   // at the moment of the answer. Next round's startTimer resumes from comboClock.
@@ -5912,7 +5925,6 @@ function endGame() {
   if (currentMode.lyricOnly && gameFuzzyMatches >= 10) unlock("eyes-closed");
   if (recoveryCount(roundResults) >= 3) unlock("shake-it-off");
   if (hasTriangle(roundSongs)) unlock("the-triangle");
-  if (roundSongs.includes("If This Was A Movie")) unlock("spicy-drama");
   if (longestBTitleRun(roundResults, roundSongs) >= 3) unlock("my-mind-is-alive");
   if (totalLifetimeMisses() >= 1000) unlock("thousand-cuts");
   if (new Date().getHours() === 0) unlock("midnights");   // played in the midnight hour
@@ -5933,7 +5945,6 @@ function endGame() {
   $("finalSub").textContent = (isInfinite ? "rounds · " + score + " correct" : "out of " + TOTAL_ROUNDS) + timeSuffix + bonusSuffix;
   $("keepGoingBtn").style.display = (isInfinite || isDaily) ? "none" : "";
   renderVerseAnthology();
-  renderResultRecap();
   if (!isInfinite && score === TOTAL_ROUNDS) celebratePerfect();
 
   // Daily: persist the result, lock to one play/day, show streak + share (no board).
@@ -5945,6 +5956,7 @@ function endGame() {
     if (score === TOTAL_ROUNDS) unlock("daylight");
     if (streak.current >= 7) unlock("story-of-us");
     if (streak.current >= 30) unlock("evermore");
+    renderResultRecap();
     dailyRng = null;   // back to Math.random() for any subsequent Classic game
     if (settings.hideDailyScore) $("finalScore").textContent = "?";
     $("namePrompt").style.display = "none";
@@ -5954,6 +5966,8 @@ function endGame() {
     renderShareButton(dateStr, settings.hideDailyScore);
     return;
   }
+
+  renderResultRecap();
 
   // Reset any daily-only chrome left over from a previous daily results view.
   document.querySelector("#screen-results .podium-title").textContent = "Your best";
