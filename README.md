@@ -7,6 +7,7 @@ The game is still a work in progress and is by no means 'done'.
 Standout features:
 
 - Five difficulty options
+- Lyricist mode, where you answer by typing a lyric line instead of a song title
 - Hints for those that need them
 - Endless mode
 - Adaptive mode, where the word difficulty climbs and falls with how you play

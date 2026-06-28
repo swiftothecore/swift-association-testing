@@ -83,6 +83,13 @@ export const MODES = {
   relaxed: { id: "relaxed", label: "Relaxed", seconds: 0, dropdown: true, pool: "all", strict: false, noTitle: false, examples: 3, hint: true,  blurb: "no timer · suggestions & hints · all words" },
 };
 export const MODE_ORDER = ["relaxed", "easy", "medium", "hard", "ultra", "lyricist"];
+// The start-screen picker presents two groups. The ladder (relaxed→ultra) is one axis —
+// naming the song, tuned harder or softer. Lyricist is a different MODALITY (answer by a
+// lyric line, not a title), so the main picker sets it apart rather than implying it's a
+// sixth, "harder than Ultra" rung. MODE_ORDER keeps all six for stats, records, and Album
+// Focus, where lyricist legitimately ranks as the top "by heart" tier.
+export const DIFFICULTY_LADDER = ["relaxed", "easy", "medium", "hard", "ultra"];
+export const MODALITY_MODES = ["lyricist"];
 // Per-mode accent for the index-card record tiles (label + tape tint). Keyed by mode id;
 // infinite tokens borrow the colour of their underlying difficulty.
 export const MODE_COLORS = {

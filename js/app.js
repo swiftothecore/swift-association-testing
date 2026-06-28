@@ -2,7 +2,7 @@
 import { $, escapeRegExp, escapeHtml, prefersReducedMotion, shuffle, chance, normalizeTitle, normalizeLyric, fuzzySubstringRatio, levenshtein, mulberry32, dailySeed, censorText, anniversaryNote } from "./util.js";
 import {
   TOTAL_ROUNDS, RECENT_WINDOW, DIFF_KEY, DEFAULT_SETTINGS,
-  MODES, MODE_ORDER, MODE_COLORS,
+  MODES, MODE_ORDER, MODE_COLORS, DIFFICULTY_LADDER, MODALITY_MODES,
   ERAS, TENDER_ERAS, FINALE_ERAS, ALBUM_ERA, TS_MILESTONES,
   ALBUM_COLORS, CB_ALBUM_COLORS, STUDIO_ALBUMS, TITLE_ALIASES,
   ACHIEVEMENTS, ACH_ICONS, ACH_BY_ID, ACH_GROUPS, ACH_GROUP_COLORS, ACH_GROUP_OF, ACH_NO_TRADE,
@@ -2822,9 +2822,18 @@ function updateTagline() {
 function renderModePicker() {
   const tabs = $("modeTabs");
   if (!tabs) return;
-  tabs.innerHTML = MODE_ORDER.map((m) =>
-    `<button type="button" class="mode-tab${m === currentMode.id ? " active" : ""}" data-mode="${m}">${MODES[m].label}</button>`
-  ).join("");
+  const tab = (m, extra) =>
+    `<button type="button" class="mode-tab${extra || ""}${m === currentMode.id ? " active" : ""}" data-mode="${m}">${MODES[m].label}</button>`;
+  // The relaxed→ultra ladder is one axis; lyricist is a separate modality, so it sits past a
+  // divider with its own "by heart" caption rather than reading as a sixth difficulty rung.
+  const ladder = DIFFICULTY_LADDER.map((m) => tab(m)).join("");
+  const modality = MODALITY_MODES.length
+    ? `<span class="mode-tab-sep" aria-hidden="true"></span>` +
+      `<span class="mode-tab-group">` +
+      MODALITY_MODES.map((m) => tab(m, " mode-tab--modality")).join("") +
+      `<span class="mode-tab-cap">by heart</span></span>`
+    : "";
+  tabs.innerHTML = ladder + modality;
   tabs.querySelectorAll("[data-mode]").forEach((b) =>
     b.addEventListener("click", () => setMode(b.dataset.mode)));
   updateBlurb();
