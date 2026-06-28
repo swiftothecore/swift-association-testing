@@ -404,16 +404,11 @@
   }
   .inf-glyph { font-size: 22px; font-weight: 700; margin-right: 5px; vertical-align: -2px; }
   /* Lyricist sits off the relaxed→ultra ladder: it's a different modality (answer by
-     lyric line), not a harder rung. A dashed divider + "by heart" cap set it apart, and
-     its active wash is lyricist lavender rather than the ladder's yellow highlighter. */
+     lyric line), not a harder rung. A dashed divider sets it apart, and its active wash
+     is lyricist lavender rather than the ladder's yellow highlighter. */
   .mode-tab-sep {
     align-self: flex-end; width: 0; height: 30px; margin: 0 5px;
     border-left: 1px dashed rgba(43,39,34,0.24);
-  }
-  .mode-tab-group { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
-  .mode-tab-cap {
-    font-family: var(--type); font-size: 9px; letter-spacing: 1.5px;
-    text-transform: uppercase; color: var(--ink-soft); padding-left: 3px; line-height: 1;
   }
   .mode-tab--modality.active {
     background: rgba(138,120,176,0.20); border-color: rgba(138,120,176,0.5);

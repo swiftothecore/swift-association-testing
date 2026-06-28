@@ -2829,9 +2829,7 @@ function renderModePicker() {
   const ladder = DIFFICULTY_LADDER.map((m) => tab(m)).join("");
   const modality = MODALITY_MODES.length
     ? `<span class="mode-tab-sep" aria-hidden="true"></span>` +
-      `<span class="mode-tab-group">` +
-      MODALITY_MODES.map((m) => tab(m, " mode-tab--modality")).join("") +
-      `<span class="mode-tab-cap">by heart</span></span>`
+      MODALITY_MODES.map((m) => tab(m, " mode-tab--modality")).join("")
     : "";
   tabs.innerHTML = ladder + modality;
   tabs.querySelectorAll("[data-mode]").forEach((b) =>
