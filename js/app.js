@@ -373,7 +373,9 @@ function flipInToScreen(name) {
   // when the page we're leaving is shorter than the destination (e.g. give-up: the game
   // card is shorter than the start screen) the real screen's fade would otherwise play in
   // the uncovered strip below the backdrop — a second animation fighting the page turn.
-  // Cleared once the flip is done so the next genuine show fades normally.
+  // Left in place when the flip finishes: clearing it here would revert the still-active
+  // destination to its CSS fade and replay it (an extra flash). The next genuine showScreen
+  // clears every screen's inline animation, so the fade plays normally on the next show.
   dest.style.animation = "none";
   // 3. Clone the now-final destination for the incoming sheet — so its tape and id-styled
   //    buttons match the real screen exactly — and flip it in over the backdrop. (dest is the
@@ -386,7 +388,7 @@ function flipInToScreen(name) {
   backdrop.offsetHeight;                        // flush the opacity:1 baseline so the transition runs
   backdrop.style.transition = `opacity ${(0.16 * s).toFixed(3)}s linear ${(0.32 * s).toFixed(3)}s`;
   backdrop.style.opacity = "0";
-  scheduleFlipRemoval(incoming, () => { backdrop.remove(); dest.style.animation = ""; });
+  scheduleFlipRemoval(incoming, () => { backdrop.remove(); });
 }
 
 /* ---------- Random sticky-tape placement for the nav keepsake cards ----------
