@@ -159,17 +159,20 @@ export function censorText(text, profanity) {
   return out;
 }
 
-// "N years ago today" the readable way (singular guard; year 0 is the release day itself).
-function yearsAgoPhrase(n) {
-  if (n <= 0) return "today";
-  return n === 1 ? "1 year ago today" : `${n} years ago today`;
+// "N years today" the readable way (singular guard; year 0 is the release day itself).
+function yearsTodayPhrase(n) {
+  if (n <= 0) return "out today!";
+  return n === 1 ? "1 year today" : `${n} years today`;
 }
 
 // Anniversary marginalia for a "YYYY-MM-DD" date key, matched against a TS_MILESTONES
-// table (month-day, so it recurs every year). Returns { text, album } or null. Pure:
-// no DOM, no globals — the milestones table is passed in, the year drives the count.
-// When an original and its Taylor's Version share a day (Oct 27: 1989 + 1989 TV), the
-// two collapse into one note rather than fighting for the margin.
+// table (month-day, so it recurs every year). Pure: no DOM, no globals — the milestones
+// table is passed in, the year drives the count. Returns null on a quiet day, else a
+// structured object the UI turns into a pinned note (home) and a corner sticky (gameplay):
+//   { icon, album, eyebrow, headline, headlineRest, note, caption, aria }
+// `icon` is "cake" on her birthday, else "heart"; `album` keys the era colour (null on the
+// birthday, which wears plain ink). When an original and its Taylor's Version share a day
+// (Oct 27: 1989 + 1989 TV) the two collapse into one note rather than fighting for the margin.
 export function anniversaryNote(dateKey, milestones) {
   if (!dateKey || dateKey.length < 10) return null;
   const md = dateKey.slice(5);
@@ -180,29 +183,66 @@ export function anniversaryNote(dateKey, milestones) {
   const birthday = hits.find((m) => m.kind === "birthday");
   if (birthday) {
     const age = year - birthday.year;
-    const ageBit = age > 0 ? ` Born this day ${age} years ago` : " Born this day";
     // Dec 13 is also the game's sacred number — lean into the coincidence.
-    return { text: `Happy birthday, Taylor.${ageBit}, in ${birthday.year}. Fitting that today's notebook runs to 13 pages.`, album: null };
+    const born = age > 0
+      ? `Born this day ${age} years ago, in ${birthday.year}.`
+      : "Born this day.";
+    return {
+      icon: "cake", album: null,
+      eyebrow: "On this day",
+      headline: "Happy birthday, Taylor",
+      headlineRest: "",
+      note: `${born} Today's notebook runs to 13 pages.`,
+      caption: "happy birthday!",
+      aria: `Happy birthday, Taylor. ${born}`,
+    };
   }
 
   // Album / re-record day. Sort oldest-first so a combined note reads chronologically.
   const albums = hits.slice().sort((a, b) => a.year - b.year);
+  const primary = albums[0];
+  const caption = yearsTodayPhrase(year - primary.year);
+
   if (albums.length > 1) {
     const parts = albums.map((m) => {
       const ago = year - m.year;
       const tail = ago <= 0 ? "out today" : `${ago === 1 ? "1 year" : ago + " years"} ago`;
-      const name = m.kind === "tv" ? `its ${m.title.match(/\(([^)]+)\)/)?.[1] || "Taylor's Version"}` : m.title;
-      return `${name} (${tail})`;
+      const nm = m.kind === "tv" ? "its Taylor's Version" : "the album";
+      return `${nm} (${tail})`;
     });
-    return { text: `On this day: ${parts.join(", and ")}.`, album: albums[0].album };
+    const note = parts.join(", and ");
+    return {
+      icon: "heart", album: primary.album,
+      eyebrow: "On this day",
+      headline: primary.title,
+      headlineRest: "twice over",
+      note,
+      caption,
+      aria: `On this day: ${primary.title}, ${note}.`,
+    };
   }
 
-  const m = albums[0];
+  const m = primary;
   const ago = year - m.year;
-  const name = m.aka ? `${m.title}, ${m.aka}` : m.title;
-  const tail = m.kind === "tv" ? ", her re-record" : "";
-  const text = ago <= 0
-    ? `Out today: ${name}${tail}.`
-    : `${yearsAgoPhrase(ago)}: ${name}${tail}.`;
-  return { text, album: m.album };
+  const isTV = m.kind === "tv";
+  const headlineRest = ago <= 0
+    ? "is out today"
+    : (ago === 1 ? "turned 1 today" : `turned ${ago} today`);
+  let note;
+  if (ago <= 0) {
+    note = isTV ? "her re-record" : (m.aka || "");
+  } else {
+    note = isTV
+      ? `her re-record, out this day in ${m.year}`
+      : (m.aka ? `${m.aka}, out this day in ${m.year}` : `out this day in ${m.year}`);
+  }
+  return {
+    icon: "heart", album: m.album,
+    eyebrow: "On this day",
+    headline: m.title,
+    headlineRest,
+    note,
+    caption,
+    aria: `${m.title} ${headlineRest}.${note ? " " + note + "." : ""}`,
+  };
 }

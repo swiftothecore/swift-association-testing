@@ -291,6 +291,7 @@ function showScreen(name) {
   if (name === "game") {
     const qb = $("quitBtn");
     if (qb) { clearTimeout(quitTimer); qb.classList.remove("armed"); qb.textContent = qb.dataset.label; }
+    renderMilestoneSticky();   // milestone-day corner sticky (silent on ordinary days)
   }
   // Re-scatter the keepsake-card tape each time its screen is shown, so the pinning
   // feels hand-done rather than templated.
@@ -2884,18 +2885,82 @@ function renderStartPickers() {
   renderDailyButtonState();
   renderAnniversaryNote();
 }
+// The era ink for a milestone's album, honouring the colour-blind setting (null album →
+// plain ink, used by the birthday note and as a safe fallback for the sticky heart).
+function milestoneColor(album) {
+  const colors = settings.colorBlindAlbums ? CB_ALBUM_COLORS : ALBUM_COLORS;
+  return (album && colors[album]) || "";
+}
 // Dated marginalia at the top of today's page: on a real Taylor milestone (an album
-// release or her birthday) a warm handwritten note appears, tinted to that era. Most
-// days it's silent (hidden). Keyed on todayKey() so it flips on the player's local day.
+// release or her birthday) a torn slip is taped to the page, the album name tinted to its
+// era. Most days it's silent (hidden). Keyed on todayKey() so it flips on the player's day.
 function renderAnniversaryNote() {
   const el = $("anniversaryNote");
   if (!el) return;
   const note = anniversaryNote(todayKey(), TS_MILESTONES);
-  if (!note) { el.hidden = true; el.textContent = ""; el.style.color = ""; return; }
-  el.textContent = note.text;
-  const colors = settings.colorBlindAlbums ? CB_ALBUM_COLORS : ALBUM_COLORS;
-  el.style.color = (note.album && colors[note.album]) || "";
+  if (!note) { el.hidden = true; el.innerHTML = ""; return; }
+  const accent = milestoneColor(note.album);
+  const name = accent
+    ? `<span class="an-name" style="color:${accent}">${escapeHtml(note.headline)}</span>`
+    : `<span class="an-name">${escapeHtml(note.headline)}</span>`;
+  el.innerHTML =
+    `<div class="an-slip">` +
+      `<span class="an-tape an-tape-l"></span><span class="an-tape an-tape-r"></span>` +
+      `<div class="an-eyebrow">${escapeHtml(note.eyebrow)}</div>` +
+      `<div class="an-headline">${name}${note.headlineRest ? " " + escapeHtml(note.headlineRest) : ""}</div>` +
+      (note.note ? `<div class="an-note">${escapeHtml(note.note)}</div>` : "") +
+    `</div>`;
   el.hidden = false;
+}
+// The game-screen counterpart: a tiny taped corner sticky on a milestone day. An era-
+// coloured heart for an album/re-record, the "13" birthday cake on Dec 13, with a short
+// handwritten caption. Re-rendered on every show of the game screen (and by dev tools).
+function renderMilestoneSticky() {
+  const el = $("milestoneSticky");
+  if (!el) return;
+  const note = anniversaryNote(todayKey(), TS_MILESTONES);
+  if (!note) { el.hidden = true; el.innerHTML = ""; el.removeAttribute("aria-label"); return; }
+  const icon = note.icon === "cake" ? cakeSvg() : heartSvg(milestoneColor(note.album) || "var(--bead)");
+  el.innerHTML =
+    `<div class="ms-slip"><span class="ms-tape"></span>${icon}</div>` +
+    `<div class="ms-cap">${escapeHtml(note.caption)}</div>`;
+  el.setAttribute("aria-label", note.aria || note.caption);
+  el.hidden = false;
+}
+// Hand-built notebook SVGs for the milestone sticky (no album art, no emoji). The heart
+// takes the era ink as its fill, with a translucent dark edge so any era reads on cream.
+function heartSvg(fill) {
+  return `<svg viewBox="0 0 32 32" width="38" height="38" aria-hidden="true">` +
+    `<path d="M16 27.5C15.4 27.1 4.5 19.6 4.5 11.7c0-3.6 2.7-6.4 6-6.4 2.3 0 4.2 1.3 5.5 3.4 1.3-2.1 3.2-3.4 5.5-3.4 3.3 0 6 2.8 6 6.4 0 7.9-10.9 15.4-11.5 15.8z" fill="${fill}" stroke="rgba(0,0,0,0.22)" stroke-width="0.7" stroke-linejoin="round"/>` +
+    `<path d="M9.5 9.2c-1 .6-1.6 1.7-1.7 3" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.1" stroke-linecap="round"/>` +
+    `</svg>`;
+}
+// A "13" birthday cake: gold number candles (darker edge + lighter face + sheen) with lit
+// flames, a scalloped pink frosting layer, a sponge body with sprinkles, and a plate.
+function cakeSvg() {
+  return `<svg viewBox="0 0 32 32" width="40" height="40" aria-hidden="true">` +
+    `<g stroke-linecap="round" stroke-linejoin="round">` +
+    `<ellipse cx="16" cy="25.3" rx="12.2" ry="1.9" fill="#ece3cd" stroke="#b9accf" stroke-width="0.6"/>` +
+    `<path d="M13.7 1.2C15.1 2.6 14.9 4.5 13.7 4.9 12.5 4.5 12.3 2.6 13.7 1.2Z" fill="#f29030"/>` +
+    `<path d="M19 0.4C20.4 1.8 20.2 3.7 19 4.1 17.8 3.7 17.6 1.8 19 0.4Z" fill="#f29030"/>` +
+    `<path d="M13.7 2.6C14.5 3.4 14.4 4.4 13.7 4.7 13 4.4 12.9 3.4 13.7 2.6Z" fill="#ffe49a"/>` +
+    `<path d="M19 1.8C19.8 2.6 19.7 3.6 19 3.9 18.3 3.6 18.2 2.6 19 1.8Z" fill="#ffe49a"/>` +
+    `<path d="M12.2 5.6 L13.7 4.5 L13.7 11" fill="none" stroke="#a9791f" stroke-width="3.4"/>` +
+    `<path d="M12.1 11 L15.4 11" fill="none" stroke="#a9791f" stroke-width="3.4"/>` +
+    `<path d="M17.3 4.9Q17.7 3.6 19 3.5Q21.2 3.5 21.2 5.5Q21.2 6.8 19.5 7.1Q21.3 7.4 21.3 9.1Q21.3 11 19 11Q17.7 10.9 17.3 9.7" fill="none" stroke="#a9791f" stroke-width="3.4"/>` +
+    `<path d="M12.2 5.6 L13.7 4.5 L13.7 11" fill="none" stroke="#e3ad3c" stroke-width="2.5"/>` +
+    `<path d="M12.1 11 L15.4 11" fill="none" stroke="#e3ad3c" stroke-width="2.5"/>` +
+    `<path d="M17.3 4.9Q17.7 3.6 19 3.5Q21.2 3.5 21.2 5.5Q21.2 6.8 19.5 7.1Q21.3 7.4 21.3 9.1Q21.3 11 19 11Q17.7 10.9 17.3 9.7" fill="none" stroke="#e3ad3c" stroke-width="2.5"/>` +
+    `<path d="M13.3 5.4 L13.3 10.2" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="0.7"/>` +
+    `<path d="M17.7 4.8Q18 3.9 19 3.85" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="0.7"/>` +
+    `<path d="M6 13H26V23.4Q26 25 24.4 25H7.6Q6 25 6 23.4Z" fill="#f0e2c4" stroke="#c79a5e" stroke-width="0.8"/>` +
+    `<line x1="9.4" y1="20.2" x2="10.3" y2="18.8" stroke="#5d8fc4" stroke-width="1.3"/>` +
+    `<line x1="14" y1="22" x2="14.6" y2="20.5" stroke="#d4537e" stroke-width="1.3"/>` +
+    `<line x1="18.4" y1="19.6" x2="19.3" y2="21" stroke="#5d8fc4" stroke-width="1.3"/>` +
+    `<line x1="22.2" y1="21.8" x2="23" y2="20.5" stroke="#d4537e" stroke-width="1.3"/>` +
+    `<path d="M6 13Q6 11 8 11H24Q26 11 26 13V14Q24 17.4 22 14Q20 17.4 18 14Q16 17.4 14 14Q12 17.4 10 14Q8 17.4 6 14Z" fill="#ec85aa" stroke="#cf5d86" stroke-width="0.5"/>` +
+    `<path d="M7 12.4Q7 11.7 8 11.7H23" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="0.8"/>` +
+    `</g></svg>`;
 }
 // The Daily Challenge button wears an obvious "not done yet" coat (a sketchy dashed
 // ink border, a pinned "today!" sticky note, and 13 twinkling margin stars — Taylor's
@@ -7330,6 +7395,21 @@ function buildDevApi() {
       setStreak: (current, best, lastPlayed) =>
         saveDailyStreak({ current: current | 0, best: Math.max(best | 0, current | 0),
           lastPlayed: lastPlayed || todayKey() }),
+    },
+    // Milestones (anniversary / birthday marginalia). `preview` jumps the date to a
+    // milestone and re-renders both surfaces; `dates` lists this year's milestone keys.
+    milestone: {
+      dates: () => {
+        const yr = (window.__devDate || todayKey()).slice(0, 4);
+        return TS_MILESTONES.map((m) => `${yr}-${m.md}  ${m.title}${m.kind === "birthday" ? " (birthday)" : m.kind === "tv" ? " (TV)" : ""}`);
+      },
+      preview: (dateKey) => {
+        window.__devDate = dateKey || todayKey();
+        renderAnniversaryNote();
+        renderMilestoneSticky();
+        return anniversaryNote(window.__devDate, TS_MILESTONES);
+      },
+      clear: () => { window.__devDate = null; renderAnniversaryNote(); renderMilestoneSticky(); },
     },
     // Seeding
     seed: { records: devSeedRecords, history: devSeedHistory, tally: devSeedTally,
