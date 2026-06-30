@@ -191,6 +191,8 @@ function applySettings() {
   body.setAttribute("data-anim-speed", settings.animSpeed || "normal");
   if (settings.highContrast) body.setAttribute("data-contrast", "high");
   else body.removeAttribute("data-contrast");
+  if (settings.masteryPaper) body.setAttribute("data-paper", settings.masteryPaper);
+  else body.removeAttribute("data-paper");
   refreshSnow();   // December snowfall follows the reduce-motion setting live
 }
 
@@ -2336,6 +2338,14 @@ function updateMasteryNav() {
   document.querySelectorAll(".js-mastery-kicker").forEach((el) => { el.textContent = text; });
 }
 
+// Mastery cosmetic kinds: which setting persists the choice, the payload field holding the
+// value, and the labels for that kind's "reset to default" row. Pens swap the writing hand;
+// papers retint the page surface. New cosmetic kinds (ink colours, etc.) drop in here.
+const MASTERY_COSMETICS = {
+  pen:   { setting: "masteryPen",   field: "pen",   resetLabel: "Default pen",   resetMeta: "the everyday hand", resetIcon: "nib" },
+  paper: { setting: "masteryPaper", field: "paper", resetLabel: "Plain paper",   resetMeta: "the everyday page" },
+};
+
 // The Mastery page: a headline rank, the five skills with their levels + progress, and the
 // reward ladder (unlocked cosmetics are selectable; future tiers read "coming soon").
 function renderMasteryPage() {
@@ -2382,7 +2392,8 @@ function renderMasteryPage() {
   const rewards = MASTERY_REWARDS.map((r) => {
     const isUnlocked = !!m.unlocked[r.id];
     const isSoon = r.kind === "soon";
-    const active = r.kind === "pen" && settings.masteryPen === (r.payload && r.payload.pen);
+    const cos = MASTERY_COSMETICS[r.kind];
+    const active = cos && settings[cos.setting] === (r.payload && r.payload[cos.field]);
     let action;
     if (isSoon) action = `<button class="reward-action" disabled>coming soon</button>`;
     else if (!isUnlocked) action = `<button class="reward-action" disabled>locked</button>`;
@@ -2390,43 +2401,63 @@ function renderMasteryPage() {
     else action = `<button class="reward-action" data-reward="${r.id}">use</button>`;
     const cls = isUnlocked ? "unlocked" : (isSoon ? "soon" : "locked");
     return `<div class="reward-row ${cls}">` +
-      `<span class="reward-icon">${charmMarkup(r.icon)}</span>` +
+      `<span class="reward-icon">${rewardIconMarkup(r)}</span>` +
       `<div class="reward-main"><span class="reward-name">${escapeHtml(r.name)}</span>` +
         `<span class="reward-meta">Mastery ${r.level} · ${escapeHtml(r.desc)}</span></div>` +
       action + `</div>`;
   }).join("");
-  // A "default pen" reset, shown once any pen is in use.
-  const penReset = (settings.masteryPen)
-    ? `<div class="reward-row unlocked"><span class="reward-icon">${charmMarkup("nib")}</span>` +
-      `<div class="reward-main"><span class="reward-name">Default pen</span>` +
-      `<span class="reward-meta">the everyday hand</span></div>` +
-      `<button class="reward-action" data-reward="">use</button></div>`
-    : "";
+  // A "default" reset per cosmetic kind, shown once a choice in that kind is in use.
+  const resets = Object.entries(MASTERY_COSMETICS).map(([kind, cos]) => {
+    if (!settings[cos.setting]) return "";
+    const icon = kind === "paper" ? paperChipMarkup("default") : charmMarkup(cos.resetIcon);
+    return `<div class="reward-row unlocked"><span class="reward-icon">${icon}</span>` +
+      `<div class="reward-main"><span class="reward-name">${cos.resetLabel}</span>` +
+      `<span class="reward-meta">${cos.resetMeta}</span></div>` +
+      `<button class="reward-action" data-reward-reset="${kind}">use</button></div>`;
+  }).join("");
 
   body.innerHTML = `<div class="mastery-page">` +
     `<div class="mastery-head">${head}</div>` +
     `<div class="mastery-section-label">Skills</div>${skills}` +
-    `<div class="mastery-section-label">Rewards</div>${rewards}${penReset}` +
+    `<div class="mastery-section-label">Rewards</div>${rewards}${resets}` +
     `</div>`;
 
-  // Wire the cosmetic-selection buttons (v1: choose your writing pen).
+  // Wire the cosmetic-selection buttons (choose a pen / paper, or reset a kind to default).
   body.querySelectorAll(".reward-action[data-reward]").forEach((btn) => {
-    btn.addEventListener("click", () => chooseMasteryPen(btn.getAttribute("data-reward")));
+    btn.addEventListener("click", () => chooseMasteryCosmetic(btn.getAttribute("data-reward")));
+  });
+  body.querySelectorAll(".reward-action[data-reward-reset]").forEach((btn) => {
+    btn.addEventListener("click", () => resetMasteryCosmetic(btn.getAttribute("data-reward-reset")));
   });
 }
 
-// Apply a Mastery-unlocked pen as the default writing hand (or "" to clear). Persists in
-// settings and re-renders the page so the active state updates.
-function chooseMasteryPen(rewardId) {
-  let pen = "";
-  if (rewardId) {
-    const r = MASTERY_REWARD_BY_ID[rewardId];
-    if (!r || r.kind !== "pen" || !loadMastery().unlocked[rewardId]) return;   // guard: must be an unlocked pen
-    pen = (r.payload && r.payload.pen) || "";
-  }
-  settings.masteryPen = pen;
+// The reward-row icon: a paper swatch for paper stocks, else the charm glyph.
+function rewardIconMarkup(r) {
+  return r.kind === "paper" ? paperChipMarkup(r.payload && r.payload.paper) : charmMarkup(r.icon);
+}
+function paperChipMarkup(paper) {
+  return `<span class="paper-chip" data-paper="${paper || "default"}" aria-hidden="true"></span>`;
+}
+
+// Apply a Mastery-unlocked cosmetic. Pens swap the writing hand; papers retint the page
+// (applied globally via applySettings). Persists in settings and re-renders the page.
+function chooseMasteryCosmetic(rewardId) {
+  const r = MASTERY_REWARD_BY_ID[rewardId];
+  const cos = r && MASTERY_COSMETICS[r.kind];
+  if (!cos || !loadMastery().unlocked[rewardId]) return;   // guard: must be an unlocked cosmetic
+  applyMasteryCosmetic(r.kind, (r.payload && r.payload[cos.field]) || "");
+}
+// Reset a cosmetic kind to its default ("" clears the setting).
+function resetMasteryCosmetic(kind) {
+  if (MASTERY_COSMETICS[kind]) applyMasteryCosmetic(kind, "");
+}
+function applyMasteryCosmetic(kind, value) {
+  const cos = MASTERY_COSMETICS[kind];
+  if (!cos) return;
+  settings[cos.setting] = value;
   saveSettings(settings);
-  if (pen) setPen(pen); else setPen(null);
+  if (kind === "pen") setPen(value || null);
+  else applySettings();   // paper realised on <body data-paper>
   renderMasteryPage();
 }
 
@@ -7702,7 +7733,9 @@ function buildDevApi() {
         saveMastery(m); updateMasteryNav();
       },
       unlockRewards: () => { const m = loadMastery(); for (const r of MASTERY_REWARDS) m.unlocked[r.id] = new Date().toISOString(); saveMastery(m); },
-      reset: () => { resetMastery(); settings.masteryPen = ""; saveSettings(settings); setPen(null); updateMasteryNav(); },
+      reset: () => { resetMastery(); settings.masteryPen = ""; settings.masteryPaper = ""; saveSettings(settings); setPen(null); applySettings(); updateMasteryNav(); },
+      // Preview a paper stock without unlocking it: pass an id (manila/parchment/blush/slate) or "" to clear.
+      paper: (id) => { settings.masteryPaper = id || ""; saveSettings(settings); applySettings(); if ($("masteryBody")) renderMasteryPage(); },
       open: () => openMastery("start"),
     },
     // Seeding

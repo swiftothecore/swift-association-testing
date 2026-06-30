@@ -36,6 +36,14 @@
   body[data-era="lover"]      { --ink-accent:#b8487f; --highlighter:rgba(234,150,196,0.46); --bead:#d472a6; --page-wash:rgba(196,100,154,0.05); }
   body[data-era="evermore"]   { --ink-accent:#6b4a2e; --highlighter:rgba(160,120,80,0.42);  --bead:#8a6038; --page-wash:rgba(122,90,56,0.05); }
 
+  /* ---- Paper stocks (Mastery reward, body[data-paper]) ----
+     Retint the page surface only — the era accents above keep floating on top.
+     Defined before the high-contrast block so high contrast cleanly overrides them. */
+  body[data-paper="manila"]    { --paper:#e8d9b8; --paper-edge:#e0cfa8; --rule:rgba(74,54,30,0.10);  --margin:rgba(160,62,46,0.45); }
+  body[data-paper="parchment"] { --paper:#f1e4c9; --paper-edge:#e9dab9; --rule:rgba(92,70,40,0.11);  --margin:rgba(158,58,46,0.42); }
+  body[data-paper="blush"]     { --paper:#f6e4e4; --paper-edge:#efd6d6; --rule:rgba(120,62,72,0.09);  --margin:rgba(184,70,92,0.45); }
+  body[data-paper="slate"]     { --paper:#dfe3e8; --paper-edge:#d4d9df; --rule:rgba(40,55,75,0.11);   --margin:rgba(160,62,62,0.42); }
+
   * { box-sizing: border-box; }
 
   body {
@@ -2513,6 +2521,15 @@
   .reward-action { font-family: var(--type); font-size: 11px; letter-spacing: 0.04em; padding: 5px 11px; border-radius: 3px; border: 1px solid rgba(43, 39, 34, 0.3); background: var(--paper); color: var(--ink); cursor: pointer; white-space: nowrap; }
   .reward-action[disabled] { cursor: default; opacity: 0.5; }
   .reward-action.active { background: rgba(var(--m-accent), 0.18); border-color: rgba(var(--m-accent), 0.6); }
+  /* Paper-stock swatch: a little sheet of the actual stock with its red margin rule. */
+  .paper-chip { width: 26px; height: 26px; flex: none; border-radius: 2px; border: 1px solid rgba(43, 39, 34, 0.25);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3); position: relative; overflow: hidden; }
+  .paper-chip::before { content: ""; position: absolute; top: 0; bottom: 0; left: 7px; width: 1px; background: rgba(178, 58, 58, 0.5); }
+  .paper-chip[data-paper="default"]   { background: #f5efe1; }
+  .paper-chip[data-paper="manila"]    { background: #e8d9b8; }
+  .paper-chip[data-paper="parchment"] { background: #f1e4c9; }
+  .paper-chip[data-paper="blush"]     { background: #f6e4e4; }
+  .paper-chip[data-paper="slate"]     { background: #dfe3e8; }
 
   /* Album-focus corner badge — a colour-wheel of the 12 albums (gold star centre),
      pinned to the top-right corner of the start page, bleeding slightly over the edge

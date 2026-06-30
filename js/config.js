@@ -73,6 +73,7 @@ export const DEFAULT_SETTINGS = {
   playerName: "",           // notebook signature — set once, reused on every personal record
   avatar: "",               // profile polaroid — a center-cropped data-URL, stays on this device
   masteryPen: "",           // chosen writing pen, unlocked via Mastery ("" = the default random egg)
+  masteryPaper: "",         // chosen paper stock, unlocked via Mastery ("" = the default cream page)
 };
 
 /* Difficulty modes — each just re-tunes existing levers (timer, dropdown,
@@ -295,8 +296,13 @@ export const MASTERY_REWARDS = [
   { level: 1, id: "pen-fountain", kind: "pen",  name: "Fountain pen",     icon: "nib",     desc: "Always write with a fountain pen.", payload: { pen: "fountain" } },
   { level: 2, id: "pen-quill",    kind: "pen",  name: "Feather quill",    icon: "feather", desc: "Trade your pen for a feather quill.", payload: { pen: "quill" } },
   { level: 3, id: "pen-glitter",  kind: "pen",  name: "Glitter gel pen",  icon: "sparkle", desc: "A glitter gel pen, for the sparkle.", payload: { pen: "glitter" } },
+  // Paper stocks — a set unlocked together at level 4. Each retints the page surface
+  // (CSS body[data-paper="…"]); the swatch chip + apply path live in app.js.
+  { level: 4,  id: "paper-manila",    kind: "paper", name: "Manila pad",      icon: "book", desc: "Warm kraft tan, like a legal pad.",   payload: { paper: "manila" } },
+  { level: 4,  id: "paper-parchment", kind: "paper", name: "Aged parchment",  icon: "book", desc: "Antique ivory, softly foxed.",        payload: { paper: "parchment" } },
+  { level: 4,  id: "paper-blush",     kind: "paper", name: "Blush leaf",      icon: "book", desc: "A soft rose stationery.",            payload: { paper: "blush" } },
+  { level: 4,  id: "paper-slate",     kind: "paper", name: "Slate pad",       icon: "book", desc: "Cool blue-grey engineer's stock.",   payload: { paper: "slate" } },
   // Designed, not yet built — rendered as "coming soon" on the ladder.
-  { level: 4,  id: "covers-soon",   kind: "soon", name: "Notebook covers",       icon: "book",    desc: "New cover and paper themes." },
   { level: 5,  id: "charms-soon",   kind: "soon", name: "Bracelet charms",       icon: "scarf",   desc: "Customise your friendship-bracelet charms." },
   { level: 6,  id: "hardmode-soon", kind: "soon", name: "Super-hard challenges", icon: "swords",  desc: "Unlock a tier of brutal new challenges." },
   { level: 8,  id: "title-soon",    kind: "soon", name: "Prestige titles",       icon: "crown",   desc: "Wear a title on your records page." },
