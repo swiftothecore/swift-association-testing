@@ -10,6 +10,12 @@ import {
   ALBUM_FOCUS_DIFFS, ALBUM_FOCUS_TARGET,
   ADAPTIVE_BUCKETS, ADAPTIVE_LEVELS, ADAPT_MAX_LEVEL, ADAPT_START_LEVEL, ADAPT_PROMO_STREAK, ADAPT_NODROP_LEVEL,
   PEN_SVG, STAR_SVG, SPARKLE_SVG, DOODLE_SVG,
+  SKILLS, SKILL_IDS, SKILL_BY_ID,
+  TEMPO_BASE, TEMPO_SPEED, LYRIC_TIER_XP, LYRIC_LEN_REF,
+  ENDURANCE_GROWTH, ENDURANCE_RUN_CAP, RANGE_RATIO_XP, RANGE_PER_ALBUM,
+  RESOLVE_BASE, RESOLVE_STREAK_CAP,
+  MASTERY_REWARDS, MASTERY_REWARD_BY_ID, MASTERY_GATE, SKILL_MAX_LEVEL,
+  skillXpForLevel, skillLevelFromXp, masteryXpForLevel, masteryLevelFromXp,
 } from "./config.js";
 import { buildBraceletSVG } from "./bracelet.js";
 import { wordRegex as wordRegexCore, extractLineWithWord as extractLineWithWordCore, highlightWord as highlightWordCore } from "./match.js";
@@ -33,6 +39,7 @@ import {
   loadAlbumFocus, albumFocusRecord, recordAlbumFocusRun,
   adaptiveRecord, recordAdaptiveRun,
   resetRecords, resetStatsAll, resetAchievements, resetTally, resetDaily, clearAllData,
+  loadMastery, saveMastery, recordSkillXp, resetMastery, totalSkillLevels, isMasteryUnlocked,
 } from "./storage.js";
 
 /* ---------- Constants & state ---------- */
@@ -3150,6 +3157,10 @@ function resetRunState() {
   gameFuzzyMatches = 0;
   gameTimedRounds = 0;
   gameFastestMs = null;
+  gameTempoXp = 0;
+  gameLyricistXp = 0;
+  gameResolveXp = 0;
+  roundAnswerAlbums = [];
   newlyUnlocked = [];
   usedWords = [];
   recentEras = [];
@@ -4071,6 +4082,8 @@ function endChallenge() {
       isDaily: false, dailyPerfect: false,
       isInfinite: false, timeouts: gameTimeouts,
     });
+    // Challenges bend the rules the specialised skills measure, so only Instinct earns here.
+    foldSkillXp(["resolve"]);
   }
 
   showScreen("results");
@@ -4142,6 +4155,8 @@ function endAlbumFocus() {
     // The board only counts hint-free runs toward beating/perfecting (mirrors the
     // "a hinted run can't set a personal best" rule); best score still updates.
     rec = recordAlbumFocusRun(album, score, diff, hintFree);
+    // Single-album by construction, so Discography can't earn; the rest do.
+    foldSkillXp(["resolve", "tempo", "lyricist"]);
   }
 
   // Album Focus achievements (post-run, off the updated board — not sandbox-gated).
@@ -4225,6 +4240,8 @@ function endAdaptive() {
     // Stay Stay Stay: reached the Rarest tier and finished there without ever slipping off it.
     if (adaptiveReachedTop && adaptiveHeldTop && adaptiveLevel >= ADAPT_MAX_LEVEL) unlock("stay-stay-stay");
     rec = recordAdaptiveRun(peak, score, todayKey());
+    // A fair fixed-13 run; everything but endurance (not Infinite) earns.
+    foldSkillXp(["resolve", "tempo", "lyricist", "range"]);
   }
 
   showScreen("results");
@@ -5842,6 +5859,9 @@ function submitAnswer(song, isTimeout) {
   }
   roundResults[round - 1] = correct;
   roundAlbums[round - 1] = song ? (song.album || null) : null;
+  // Distinct albums the prompt word *could* have been answered from — the Discography skill
+  // normalises breadth against this, so a word that only lives in one album never penalises.
+  roundAnswerAlbums[round - 1] = [...new Set(currentSongs.map((s) => s.album).filter(Boolean))];
   roundWords[round - 1] = currentWord;                 // prompt word — for Nemesis Word
   roundSongs[round - 1] = correct && song ? song.title : null;  // credited song — for the lifetime tally
   justEarnedIndex = correct ? round - 1 : -1;
@@ -5882,6 +5902,11 @@ function submitAnswer(song, isTimeout) {
   if (lyricMatch) {
     lyricLineAnswers++;                  // recalled a lyric line (for You Knew The Line)
     verseBonus += lyricMatch.bonus;      // reward fuller recall, separate from the 0–13 score
+    // By Heart skill: reward faithful recall by tier (verse > perfect > good > base), scaled
+    // by coverage and a capped length factor — fidelity first, with longer lines a small plus.
+    const lineWords = lyricMatch.line ? lyricMatch.line.trim().split(/\s+/).length : 0;
+    const lyricLenFactor = Math.max(1, Math.min(2, lineWords / LYRIC_LEN_REF));
+    gameLyricistXp += Math.round((LYRIC_TIER_XP[lyricMatch.tier] || 0) * (0.5 + 0.5 * (lyricMatch.coverage || 0)) * lyricLenFactor);
     if (versePlus) {
       gameVersePerfect++;                // lifetime versePerfect / milestone achievements
       verseKeepsake.push({ line: lyricMatch.line, word: currentWord, tier: lyricMatch.tier });
@@ -5924,9 +5949,14 @@ function submitAnswer(song, isTimeout) {
       if (round === 1 && elapsed < 2) unlock("ready-for-it");
       if (remaining < 1) unlock("getaway-car");
       if (remaining < 0.5) unlock("i-did-something-bad");
+      // Quick Pen skill: faster answers earn more (full at instant, zero at the buzzer).
+      const speedFactor = Math.max(0, Math.min(1, remaining / currentMode.seconds));
+      gameTempoXp += Math.round(TEMPO_BASE + TEMPO_SPEED * speedFactor);
     }
   }
   gameMaxStreak = Math.max(gameMaxStreak, correctStreak);
+  // Instinct skill: every correct answer, scaled by the live correct-in-a-row streak.
+  if (correct) gameResolveXp += Math.round(RESOLVE_BASE * (1 + 0.1 * Math.min(correctStreak, RESOLVE_STREAK_CAP)));
   if (correctStreak >= 5) unlock("bejeweled");
   if (correctStreak >= 10) unlock("sparks-fly");
   // It's Raining And It's Monday — answer the word "rain" right on a Monday.
@@ -6129,6 +6159,53 @@ function runCountdown() {
 }
 
 
+/* ---------- Skills & Mastery folding ---------- */
+// Fold this game's skill XP into the mastery record. `mask` is the list of skills allowed to
+// earn in this mode (the contribution matrix — see PLAN/CLAUDE): a Challenge run passes only
+// ["resolve"], Album Focus omits "range", Adaptive omits "endurance". The per-answer skills
+// (tempo/lyricist/resolve) were accrued during play; endurance/range are derived here.
+// Surfaces level-up / mastery / unlock toasts. Caller gates on !devNoLog.
+function foldSkillXp(mask) {
+  const allow = (id) => mask.includes(id);
+  const delta = { resolve: 0, tempo: 0, lyricist: 0, endurance: 0, range: 0 };
+  if (allow("resolve"))  delta.resolve  = gameResolveXp;
+  if (allow("tempo"))    delta.tempo    = gameTempoXp;
+  if (allow("lyricist")) delta.lyricist = gameLyricistXp;
+  if (allow("endurance")) {
+    const survived = roundResults.length;
+    delta.endurance = Math.min(Math.round(2 * (Math.pow(ENDURANCE_GROWTH, survived) - 1)), ENDURANCE_RUN_CAP);
+  }
+  if (allow("range")) {
+    const used = new Set();
+    for (let i = 0; i < roundResults.length; i++) if (roundResults[i] && roundAlbums[i]) used.add(roundAlbums[i]);
+    const possible = new Set();
+    for (const set of roundAnswerAlbums) if (set) for (const a of set) possible.add(a);
+    const roundsCorrect = roundResults.filter(Boolean).length;
+    const denom = Math.min(possible.size || used.size, roundsCorrect) || 1;
+    const ratio = Math.min(used.size / denom, 1);
+    delta.range = Math.round(RANGE_RATIO_XP * ratio + RANGE_PER_ALBUM * used.size);
+  }
+  const res = recordSkillXp(delta);
+  announceSkillProgress(res);
+  return res;
+}
+
+// Toast skill level-ups, a mastery unlock/level, and any reward newly earned. Reuses the
+// note-toast stack so progress surfaces the same way achievements do.
+function announceSkillProgress(res) {
+  if (!res) return;
+  for (const up of res.levelUps) {
+    const sk = SKILL_BY_ID[up.id];
+    notifyNote(`${sk ? sk.name : up.id} — level ${up.to}`, sk ? sk.blurb : "");
+  }
+  if (res.masteryJustUnlocked) notifyNote("Mastery unlocked", "Every skill now feeds your mastery.");
+  else if (res.masteryUp) notifyNote(`Mastery — level ${res.masteryUp.to}`, "A new reward is waiting.");
+  for (const id of res.newUnlocks) {
+    const r = MASTERY_REWARD_BY_ID[id];
+    if (r) notifyNote("Reward unlocked", r.name);
+  }
+}
+
 /* ---------- End game ---------- */
 function endGame() {
   runFolded = true;   // this run's stats are saved here in full; block any unload re-fold
@@ -6198,6 +6275,12 @@ function endGame() {
     if (metrics.versePerfect >= 50) unlock("by-heart");
     if (metrics.versePerfect >= 100) unlock("where-i-start");
     if (metrics.versePerfect >= 1000) unlock("clearly-ready");
+  }
+  // Skills & Mastery: classic/infinite/daily earn the full skill set; endurance only in Infinite.
+  if (!devNoLog) {
+    const mask = ["resolve", "tempo", "lyricist", "range"];
+    if (isInfinite) mask.push("endurance");
+    foldSkillXp(mask);
   }
   const played = totalPlayed();   // classic modes only — infinite/daily tracked separately
 
@@ -6443,6 +6526,10 @@ let rareStreak = 0;              // consecutive correct rare/scarce words this g
 let gameFuzzyMatches = 0;        // fuzzy (non-verbatim) lyric matches this game (for Wordsmith / Eyes Closed)
 let gameTimedRounds = 0;         // rounds answered in a timed mode this game (for the lifetime avg answer time)
 let gameFastestMs = null;        // fastest single correct answer this game, ms (for the lifetime fastest-answer metric)
+let gameTempoXp = 0;             // Quick Pen skill XP accrued this game (fast correct answers)
+let gameLyricistXp = 0;          // By Heart skill XP accrued this game (lyric-line recall)
+let gameResolveXp = 0;           // Instinct skill XP accrued this game (correct answers × streak)
+let roundAnswerAlbums = [];      // per-round distinct albums among the round's valid songs (for the Discography skill)
 
 const PEN_LABELS = { quill: "quill pen", fountain: "fountain pen", glitter: "glitter gel pen" };
 
