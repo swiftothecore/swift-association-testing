@@ -131,6 +131,20 @@ export function initDev(api) {
         btn("remove", () => { api.seed.removeAch(achSel.value); toast("achievement removed"); }, "warn")),
     row(nameInput, btn("set name", () => { if (nameInput.value.trim()) { api.seed.setName(nameInput.value.trim()); toast("name set"); } }))));
 
+  // ---- Skills & Mastery ------------------------------------------------------
+  const mSkillSel = select(api.SKILL_IDS, (x) => x, (x) => x);
+  const mLvlN = num(10);
+  const mMastN = num(5);
+  const mGrantN = num(500, 56);
+  body.append(section("mastery",
+    row(btn("grant xp (all)", () => { api.mastery.grant(+mGrantN.value); toast("granted " + mGrantN.value + " xp"); }), mGrantN),
+    row(mSkillSel, "lvl", mLvlN, btn("set skill", () => { api.mastery.setSkillLevel(mSkillSel.value, +mLvlN.value); toast("skill set"); }),
+        btn("max all", () => { api.mastery.maxSkills(); toast("skills maxed"); })),
+    row("mastery lvl", mMastN, btn("set", () => { api.mastery.setMasteryLevel(+mMastN.value); toast("mastery set"); }),
+        btn("unlock rewards", () => { api.mastery.unlockRewards(); toast("rewards unlocked"); })),
+    row(btn("open page", () => api.mastery.open()),
+        btn("reset mastery", () => { api.mastery.reset(); toast("mastery reset"); }, "warn"))));
+
   // ---- Visual eggs -----------------------------------------------------------
   const penSel = select(["", "quill", "fountain", "glitter"], (x) => x, (x) => x || "no pen");
   const doodleSel = select(["cat", "guitar", "scarf", "fence", "thirteen", "snake"], (x) => x, (x) => x);

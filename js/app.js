@@ -7614,7 +7614,7 @@ function devLockAllAch() { resetAchievements(); earnedAchievements = {}; }
 // state on each call; the rest are thin wrappers over the game's own functions.
 function buildDevApi() {
   return {
-    MODES, MODE_ORDER, ERAS, ACHIEVEMENTS,
+    MODES, MODE_ORDER, ERAS, ACHIEVEMENTS, SKILL_IDS,
     getState: () => ({
       screen: Object.keys(screens).find((k) => screens[k].classList.contains("active")),
       round, score, total: TOTAL_ROUNDS,
@@ -7680,6 +7680,30 @@ function buildDevApi() {
           top: pool ? pool.slice(0, 13).map((s) => `${s.w} (${s.n})`) : null,
           all: pool ? pool.map((s) => s.w) : null };
       },
+    },
+    // Skills & Mastery
+    mastery: {
+      grant: (n) => { const d = {}; SKILL_IDS.forEach((id) => { d[id] = n | 0; }); announceSkillProgress(recordSkillXp(d)); updateMasteryNav(); },
+      setSkillLevel: (id, lvl) => {
+        const m = loadMastery();
+        m.skills[id] = skillXpForLevel(Math.max(1, Math.min(SKILL_MAX_LEVEL, lvl | 0)));
+        saveMastery(m); updateMasteryNav();
+      },
+      maxSkills: () => {
+        const m = loadMastery();
+        SKILL_IDS.forEach((id) => { m.skills[id] = skillXpForLevel(SKILL_MAX_LEVEL); });
+        saveMastery(m); updateMasteryNav();
+      },
+      setMasteryLevel: (lvl) => {
+        const m = loadMastery();
+        SKILL_IDS.forEach((id) => { m.skills[id] = skillXpForLevel(SKILL_MAX_LEVEL); });   // clear the unlock gate
+        m.masteryXp = masteryXpForLevel(Math.max(0, lvl | 0));
+        for (const r of MASTERY_REWARDS) if (r.level <= lvl && !m.unlocked[r.id]) m.unlocked[r.id] = new Date().toISOString();
+        saveMastery(m); updateMasteryNav();
+      },
+      unlockRewards: () => { const m = loadMastery(); for (const r of MASTERY_REWARDS) m.unlocked[r.id] = new Date().toISOString(); saveMastery(m); },
+      reset: () => { resetMastery(); settings.masteryPen = ""; saveSettings(settings); setPen(null); updateMasteryNav(); },
+      open: () => openMastery("start"),
     },
     // Seeding
     seed: { records: devSeedRecords, history: devSeedHistory, tally: devSeedTally,
