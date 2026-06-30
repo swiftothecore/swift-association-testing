@@ -367,9 +367,14 @@ function flipInToScreen(name) {
   //    underneath it is invisible.
   const backdrop = makeFlipSheet(current, current, "flip-static", "flip-shade--off");
   // 2. Activate the destination beneath the backdrop NOW — so it's fully prepared (tape
-  //    re-scattered, etc.) before we clone it, and its enter-fade plays hidden under the
-  //    sheets (no blink, and no fade-suppression hack that could break the next flip).
+  //    re-scattered, etc.) before we clone it.
   showScreen(name);
+  // Suppress the destination's own enter-fade: the incoming flip sheet IS the motion, and
+  // when the page we're leaving is shorter than the destination (e.g. give-up: the game
+  // card is shorter than the start screen) the real screen's fade would otherwise play in
+  // the uncovered strip below the backdrop — a second animation fighting the page turn.
+  // Cleared once the flip is done so the next genuine show fades normally.
+  dest.style.animation = "none";
   // 3. Clone the now-final destination for the incoming sheet — so its tape and id-styled
   //    buttons match the real screen exactly — and flip it in over the backdrop. (dest is the
   //    visible active screen now, so its offsets are real.)
@@ -381,7 +386,7 @@ function flipInToScreen(name) {
   backdrop.offsetHeight;                        // flush the opacity:1 baseline so the transition runs
   backdrop.style.transition = `opacity ${(0.16 * s).toFixed(3)}s linear ${(0.32 * s).toFixed(3)}s`;
   backdrop.style.opacity = "0";
-  scheduleFlipRemoval(incoming, () => backdrop.remove());
+  scheduleFlipRemoval(incoming, () => { backdrop.remove(); dest.style.animation = ""; });
 }
 
 /* ---------- Random sticky-tape placement for the nav keepsake cards ----------
@@ -1797,7 +1802,7 @@ function renderBestLine(el, mode) {
     if (best > 0) rec = { score: best, date: null };
   }
   if (!rec) {
-    el.innerHTML = `<div class="best-empty">no runs yet — set your first record ★</div>`;
+    el.innerHTML = `<div class="best-empty">no runs yet — set your first record <span class="best-empty-star">${STAR_SVG}</span></div>`;
     return;
   }
   const unit = isInfiniteToken(mode) ? " rounds" : " / " + TOTAL_ROUNDS;
@@ -1871,7 +1876,7 @@ function appendHistoryRows(hist) {
   rowsEl.insertAdjacentHTML("beforeend", next.map((h) => {
     const adaptive = isAdaptiveToken(h.m);
     const unit = (isInfiniteToken(h.m) || adaptive) ? "" : "/" + TOTAL_ROUNDS;
-    const scoreText = adaptive ? "L" + h.s : "" + h.s;
+    const scoreText = adaptive ? `<span class="lvl-prefix">L</span>${h.s}` : "" + h.s;
     const isPB = h.s > 0 && h.s === _pbByMode[h.m];
     return `<div class="hist-row${isPB ? " hist-pb" : ""}">` +
       `<span class="hist-score">${isPB ? `<span class="hist-crown" aria-hidden="true">${ACH_ICONS.crown}</span>` : ""}${scoreText}${unit ? `<span class="hist-unit">${unit}</span>` : ""}</span>` +
@@ -2310,7 +2315,7 @@ let challSelectedId = null;          // which challenge the detail panel is show
 const CHALL_TICK = `<svg viewBox="0 0 20 20" class="chall-mark-svg" aria-hidden="true"><circle cx="10" cy="10" r="8.5" fill="none" stroke="#d8a32f" stroke-width="1.6"/><path d="M5.5 10.2 L8.7 13.4 L14.5 6.4" fill="none" stroke="#d8a32f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const CHALL_RING = `<svg viewBox="0 0 20 20" class="chall-mark-svg" aria-hidden="true"><circle cx="10" cy="10" r="8.5" fill="none" stroke="#b6a98d" stroke-width="1.6"/></svg>`;
 const CHALL_LOCK = `<svg viewBox="0 0 20 20" class="chall-mark-svg" aria-hidden="true"><rect x="4.5" y="9" width="11" height="8" rx="1.4" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6.8 9 V6.7 a3.2 3.2 0 0 1 6.4 0 V9" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>`;
-const CHALL_STAR = `<svg viewBox="0 0 24 24" class="chall-star-svg" aria-hidden="true"><path d="M12 2 L14.7 8.3 L21.5 8.9 L16.4 13.4 L17.9 20.1 L12 16.6 L6.1 20.1 L7.6 13.4 L2.5 8.9 L9.3 8.3 Z" fill="#e0a32f" stroke="#b9821f" stroke-width="0.8" stroke-linejoin="round"/></svg>`;
+const CHALL_STAR = `<svg viewBox="0 0 24 24" class="chall-star-svg" aria-hidden="true"><path d="M12 2.3 L14.94 7.96 L21.22 9 L16.76 13.55 L17.7 19.85 L12 17 L6.3 19.85 L7.24 13.55 L2.78 9 L9.06 7.96 Z" fill="#e0a32f" stroke="#b9821f" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
 
 // Difficulty rating — cassette tapes (1 easy → 3 hard). Echoes the dark-shell +
 // cream-label cassette desk prop; the shell is recoloured per tier by the
@@ -2781,12 +2786,12 @@ function refreshStartBoard() {
 function renderAdaptiveBest(el) {
   const rec = adaptiveRecord();
   if (!rec.played) {
-    el.innerHTML = `<div class="best-empty">no climbs yet — see how high you reach ★</div>`;
+    el.innerHTML = `<div class="best-empty">no climbs yet — see how high you reach <span class="best-empty-star">${STAR_SVG}</span></div>`;
     return;
   }
   const name = ADAPTIVE_LEVELS[rec.bestPeak] || "";
   el.innerHTML =
-    `<div class="best-line"><span class="best-num">L${rec.bestPeak}<span class="best-unit"> · ${escapeHtml(name)}</span></span>` +
+    `<div class="best-line"><span class="best-num"><span class="lvl-prefix">L</span>${rec.bestPeak}<span class="best-unit"> · ${escapeHtml(name)}</span></span>` +
     `<span class="best-meta">★ highest level · ${rec.bestScore}/${TOTAL_ROUNDS} that run${rec.date ? " · " + recordDateLabel(rec.date) : ""}</span></div>`;
 }
 // Show/hide the start-screen rows that only apply to a particular game type:
@@ -3585,8 +3590,8 @@ function applyChallengeRound(wrap) {
   } else if (currentChallenge.rule === "combo") {
     renderComboBanner();
   } else if (currentChallenge.rule === "switchup") {
-    // Coin-flip the answer type each page (round 1 always starts on a title, a gentle open).
-    roundLyricOnly = round === 1 ? false : Math.random() < 0.5;
+    // The page's answer type was decided in advanceRound (before the word was drawn); just
+    // surface it in the banner.
     renderSwitchBanner();
   } else if (currentChallenge.rule === "multi") {
     renderMultiBanner();
@@ -4287,6 +4292,13 @@ function pickWord() {
     const enough = choices.filter((w) => validSongs(w, effectiveStrict(), effectiveNoTitle()).length >= need);
     if (enough.length) choices = enough;
   }
+  // Switch-Up: on a lyric page, avoid words that sit in any song title — singing a line
+  // shouldn't have to compete with an obvious title answer for the same word. The page type
+  // is decided before this draw (see advanceRound). Fall back if none survive.
+  if (gameType === "challenge" && currentChallenge && currentChallenge.rule === "switchup" && roundLyricOnly) {
+    const noTitleWords = choices.filter((w) => titleSongsForWord(w, effectiveStrict()).length === 0);
+    if (noTitleWords.length) choices = noTitleWords;
+  }
   // Devil's Path: keep only words that still have a valid answer after the active curses
   // (banned albums / forbidden initials / short-title-only). Fall back if none survive.
   if (gameType === "challenge" && currentChallenge && currentChallenge.rule === "devil") {
@@ -4366,7 +4378,9 @@ function nextRound() {
   // sheet, so the new word is already covered the instant the sheet rotates away (no
   // flash of the round). Once-per-run intros only show on round 1, which has no flip.
   const preHTML = roundCurtainHTML();
-  if (preHTML) mountCurtain(preHTML);
+  // Mount only the first card under the flip (round-1 multi-card queues never take the
+  // page-flip path); beginRoundClock re-derives the full queue and reuses this mount.
+  if (preHTML) mountCurtain(Array.isArray(preHTML) ? preHTML[0] : preHTML);
 
   let finished = false;
   const finish = () => {
@@ -4403,7 +4417,18 @@ function curtainCardHTML(o) {
     `</div>`;
 }
 
-// The curtain content for THIS round, or null if the round wants no curtain:
+// The per-page Switch-Up curtain card — announces whether this page wants a title or a
+// sung lyric line. Shown on every page (and, on round 1, right after the rules intro).
+function switchPageCardHTML() {
+  return curtainCardHTML({ kicker: `page ${round} · switch-up`, tag: "this page",
+    headline: roundLyricOnly ? "sing me a line" : "name the title",
+    sub: roundLyricOnly
+      ? "type a real lyric line — a title won't count"
+      : "name any song that uses the word" });
+}
+
+// The curtain content for THIS round: null for no curtain, a single card's HTML, or an
+// array of cards shown in sequence (Switch-Up's round 1 = rules intro then page type):
 //  • EVERY challenge — round 1 only, a "here's what you're doing" intro (challengeIntroHTML).
 //  • Wildcard — every later round, naming the active rule.
 //  • On Tour! — every later round, announcing tonight's album.
@@ -4413,19 +4438,20 @@ function roundCurtainHTML() {
   const c = currentChallenge;
   // Round 1 of any challenge opens with an explanatory intro (button-gated — see
   // beginRoundClock). The per-round curtains below take over from round 2 onward.
-  if (round === 1) return challengeIntroHTML(c);
+  if (round === 1) {
+    const intro = challengeIntroHTML(c);
+    // Switch-Up: follow the rules intro with the page-type card, so the very first page
+    // also says whether it wants a title or a lyric (always a title here — round 1 is a
+    // gentle open). A queue the curtain player shows in sequence.
+    if (c.rule === "switchup") return [intro, switchPageCardHTML()];
+    return intro;
+  }
   if (c.rule === "wildcard" && roundWildcard) {
     return curtainCardHTML({ kicker: `page ${round} · wildcard`, tag: "the rule",
       headline: roundWildcard.label });
   }
   // Switch-Up — every page flashes whether it wants a title or a sung lyric line.
-  if (c.rule === "switchup") {
-    return curtainCardHTML({ kicker: `page ${round} · switch-up`, tag: "this page",
-      headline: roundLyricOnly ? "sing me a line" : "name the title",
-      sub: roundLyricOnly
-        ? "type a real lyric line — a title won't count"
-        : "name any song that uses the word" });
-  }
+  if (c.rule === "switchup") return switchPageCardHTML();
   // On Tour! — every page announces tonight's album (the only acceptable source).
   if (c.rule === "setlist") {
     const album = tourSetlist[round - 1] || "";
@@ -4527,7 +4553,7 @@ function mountCurtain(innerHTML) {
 // clock is spent reading it. Tap to skip ahead. Reduced motion shows it briefly without
 // animation. Every other path starts the clock immediately.
 function beginRoundClock() {
-  const html = roundCurtainHTML();
+  let queue = roundCurtainHTML();
   // Adaptive: remember the dropdown state we've now surfaced, so the curtain only fires
   // again on the next genuine flip. Committed after roundCurtainHTML so the pre-flip mount
   // (nextRound) and this call agree on the same round's curtain.
@@ -4540,33 +4566,60 @@ function beginRoundClock() {
       vanishTimer = setTimeout(() => { wrap.classList.add("vanished"); }, ms);
     }
   };
-  if (!html) { beginTimedRoundEffects(); startTimer(); return; }
+  if (!queue) { beginTimedRoundEffects(); startTimer(); return; }
+  if (!Array.isArray(queue)) queue = [queue];
   showTimerFull();   // pin the clock at a paused full bar beneath the curtain — no leftover time shows through the lift
   const onDone = () => {
     beginTimedRoundEffects();
     if (isWildcardRound() && roundWildcard.display) roundWildcard.display(wrap);
     startTimer();
   };
-  const ov = mountCurtain(html);   // usually already mounted (pre-flip, Wildcard)
   const reduced = motionReduced();
-  let done = false;
-  const finish = () => { if (done) return; done = true; clearCurtain(); onDone(); };
-  const lift = () => {
-    if (done) return;
-    ov.classList.add("leaving");
-    curtainTimers.push(setTimeout(finish, reduced ? 0 : 360));
+  let i = 0;
+  // Show queue[i]. Acknowledging a card either swaps in the next one (the overlay stays
+  // opaque, so the word never flashes between cards) or, on the last card, lifts the whole
+  // curtain to reveal the word and start the clock.
+  const showCard = () => {
+    const html = queue[i];
+    const last = i === queue.length - 1;
+    // The first card is usually pre-mounted under the page-flip sheet (nextRound) already
+    // showing this same html — reuse it untouched (no needless re-animation on reveal). Only
+    // a later card in the queue swaps fresh HTML into the same opaque overlay.
+    let ov = document.querySelector(".chall-curtain");
+    if (ov) {
+      ov.classList.remove("swapping");
+      if (i > 0 || !ov.querySelector(".chall-curtain-card")) ov.innerHTML = html;
+    } else ov = mountCurtain(html);
+    let acted = false;
+    const next = () => {
+      if (acted) return;
+      acted = true;
+      i++;
+      if (last) {
+        ov.classList.add("leaving");
+        curtainTimers.push(setTimeout(() => { clearCurtain(); onDone(); }, reduced ? 0 : 360));
+      } else if (reduced) {
+        showCard();
+      } else {
+        // animate the current card out (overlay stays opaque), then drop the next one in
+        ov.classList.add("swapping");
+        curtainTimers.push(setTimeout(showCard, 240));
+      }
+    };
+    const nextBtn = ov.querySelector(".chall-curtain-next");
+    if (nextBtn) {
+      // Button-gated cards (every challenge's round-1 intro; Adaptive's suggestions-toggle
+      // notice) wait for an explicit tap — the whole-overlay tap is intentionally NOT wired
+      // so a stray click can't skip the notice unread.
+      nextBtn.addEventListener("click", next);
+    } else {
+      // Auto-lifting cards (per-page Wildcard / Switch-Up): advance after a beat, tap
+      // anywhere to skip ahead.
+      ov.addEventListener("click", next);
+      curtainTimers.push(setTimeout(next, reduced ? 1100 : 1750));
+    }
   };
-  const nextBtn = ov.querySelector(".chall-curtain-next");
-  if (nextBtn) {
-    // Button-gated curtains (every challenge's round-1 intro; Adaptive's suggestions-toggle
-    // notice) wait for an explicit tap, with no auto-lift, and the whole-overlay tap is
-    // intentionally NOT wired so a stray click can't skip the notice unread.
-    nextBtn.addEventListener("click", lift);
-  } else {
-    // Per-round Wildcard rule curtain: auto-lift after a beat, tap anywhere to skip ahead.
-    ov.addEventListener("click", lift);
-    curtainTimers.push(setTimeout(lift, reduced ? 1100 : 1750));
-  }
+  showCard();
 }
 
 // Choose Your Path perk registry. Each perk's apply() mutates run state (time/swaps/
@@ -4785,6 +4838,11 @@ function advanceRound() {
   round++;
   roundLocked = false;
   justEarnedIndex = -1;
+  // Switch-Up decides this page's answer type up front — BEFORE the word is drawn — so the
+  // word pool can honour the "lyric pages avoid title words" rule (see pickWord). Round 1
+  // always opens on a title, a gentle start. applyChallengeRound just renders the banner.
+  if (gameType === "challenge" && currentChallenge && currentChallenge.rule === "switchup")
+    roundLyricOnly = round === 1 ? false : Math.random() < 0.5;
   // "Play this word" deep-link forces round 1's word; every later round draws normally.
   if (round === 1 && forcedFirstWord) {
     currentWord = forcedFirstWord;
@@ -5859,7 +5917,12 @@ function showCorrectFeedback(song, lyricMatch) {
   // On a lyric answer, celebrate the recall and show the exact line they typed.
   // The banner escalates with how much of the line they recalled, and a gold sticker
   // is pressed on for any verse bonus earned (fuller line = a louder, gold-foil reward).
-  const banner = lyricMatch ? (LYRIC_BANNERS[lyricMatch.tier] || LYRIC_BANNERS.base) : "✓ that's the one";
+  // Double Trouble resolves a page only once both songs are named — celebrate (and show)
+  // the pair, not just the last one typed.
+  const multi = gameType === "challenge" && currentChallenge && currentChallenge.rule === "multi" && roundNamed.length > 1;
+  const banner = multi
+    ? (roundNamed.length === 2 ? "✓ both of them" : `✓ all ${roundNamed.length}`)
+    : lyricMatch ? (LYRIC_BANNERS[lyricMatch.tier] || LYRIC_BANNERS.base) : "✓ that's the one";
   const bonus = lyricMatch ? lyricMatch.bonus : 0;
   const sticker = lyricMatch ? verseSticker(lyricMatch.tier, bonus) : "";
   // First time a verse bonus is ever earned, teach what it is — once, then silent.
@@ -5868,9 +5931,11 @@ function showCorrectFeedback(song, lyricMatch) {
     settings.seenVerseBonus = true; saveSettings(settings);
     firstNote = `<p class="verse-firstnote">writing more of the line earns a verse bonus — a prestige tally, kept apart from your score</p>`;
   }
-  const card = lyricMatch
-    ? lyricCard(song, currentWord, false, lyricMatch.line, true)
-    : lyricCard(song, currentWord, false, null, true);
+  const card = multi
+    ? roundNamed.map((t) => lyricCard(currentSongs.find((s) => s.title === t) || song, currentWord, false, null, true)).join("")
+    : lyricMatch
+      ? lyricCard(song, currentWord, false, lyricMatch.line, true)
+      : lyricCard(song, currentWord, false, null, true);
   // Auto-advance setting on → a countdown + skip; off → a plain "next page" button.
   const auto = settings.autoAdvance;
   const advanceUI = auto
@@ -5894,7 +5959,12 @@ function showWrongFeedback(song, isTimeout) {
   const n = settings.showExamples ? currentMode.examples : 0;
   let help = "";
   if (n > 0) {
-    const examples = shuffle(currentSongs.slice()).slice(0, n);
+    let pool = currentSongs;
+    // Double Trouble: don't showcase a song the player already named on this page (e.g.
+    // they got the first of the pair, then missed the second) — only surface fresh options.
+    if (currentChallenge && currentChallenge.rule === "multi" && roundNamed.length)
+      pool = pool.filter((s) => !roundNamed.includes(s.title));
+    const examples = shuffle(pool.slice()).slice(0, n);
     const cards = examples.map((s) => lyricCard(s, currentWord, true, null, true)).join("");
     help = `<span class="red-note">songs that hold "<b>${escapeHtml(currentWord)}</b>"</span>${cards}`;
   }

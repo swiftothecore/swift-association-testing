@@ -332,7 +332,7 @@ export const TITLE_ALIASES = {
 /* ---------- Achievements ---------- */
 export const ACH_ICONS = {
   // hung charms: filled bead bodies (ink-fill) with inked detail (ink)
-  star:    `<svg viewBox="0 0 24 24"><path class="ink-fill" stroke-linejoin="round" d="M12 2 L14.7 8.3 L21.5 8.9 L16.4 13.4 L17.9 20.1 L12 16.6 L6.1 20.1 L7.6 13.4 L2.5 8.9 L9.3 8.3 Z"/><path class="ink" stroke-width="0.9" opacity="0.7" d="M12 6 L13.2 9.2 L16.6 9.5"/></svg>`,
+  star:    `<svg viewBox="0 0 24 24"><path class="ink-fill" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round" d="M12 2.3 L14.94 7.96 L21.22 9 L16.76 13.55 L17.7 19.85 L12 17 L6.3 19.85 L7.24 13.55 L2.78 9 L9.06 7.96 Z"/><path class="ink" stroke-width="0.9" opacity="0.7" d="M12 6.4 L13.1 9.2 L16 9.5"/></svg>`,
   sparkle: `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M10.6 1.6 C11.6 7.4 14 9.8 19.8 10.8 C14 11.8 11.6 14.2 10.6 20 C9.6 14.2 7.2 11.8 1.4 10.8 C7.2 9.8 9.6 7.4 10.6 1.6 Z"/><path class="ink-fill" d="M18.8 14.6 C19.2 16.6 19.8 17.2 21.8 17.6 C19.8 18 19.2 18.6 18.8 20.6 C18.4 18.6 17.8 18 15.8 17.6 C17.8 17.2 18.4 16.6 18.8 14.6 Z"/></svg>`,
   shield:  `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M12 1.8 L20 4.6 V11 C20 16.2 16.6 20.2 12 22.2 C7.4 20.2 4 16.2 4 11 V4.6 Z"/><path class="ink" d="M8.3 11.8 l2.7 2.7 4.8 -5.6"/></svg>`,
   bolt:    `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M13.6 1.8 L4.4 13.6 H10 L9 22.2 L19.6 9.5 H13.3 Z"/><path class="ink" stroke-width="0.9" opacity="0.6" d="M12 6 L9 13"/></svg>`,
@@ -555,11 +555,12 @@ export const PEN_SVG = {
   glitter: `<svg viewBox="0 0 24 24"><g transform="rotate(-45 12 12)"><path class="barrel" d="M8 10 H20 Q22 10 22 12 Q22 14 20 14 H8 Z"/><rect class="grip" x="6" y="10.2" width="2.4" height="3.6" rx="0.4"/><path class="tip" d="M6 10.4 L3 11.6 Q2.3 12 3 12.4 L6 13.6 Z"/><circle class="glitter-spark" cx="2.7" cy="12" r="0.6"/><rect class="band" x="19" y="10" width="1.6" height="4" rx="0.6"/></g><g class="glitter-spark"><path d="M5 6 l0.5 1.4 1.4 0.5 -1.4 0.5 -0.5 1.4 -0.5 -1.4 -1.4 -0.5 1.4 -0.5 z"/><path d="M18 17 l0.4 1.1 1.1 0.4 -1.1 0.4 -0.4 1.1 -0.4 -1.1 -1.1 -0.4 1.1 -0.4 z"/><circle cx="11" cy="5.5" r="0.7"/><circle cx="16" cy="19" r="0.6"/></g></svg>`,
 };
 
-// A plumper five-point star (inner/outer radius ~0.46, up from the spiky ~0.35) with a
-// thin same-colour rounded-join stroke that softens the points — friendlier and a touch
-// hand-drawn, away from the machined look. The plump geometry is shared by ACH_ICONS.star
-// and CHALL_STAR so every star on the site reads as one family (only the finish differs).
-export const STAR_SVG = `<svg viewBox="0 0 24 24"><path d="M12 2 L14.7 8.3 L21.5 8.9 L16.4 13.4 L17.9 20.1 L12 16.6 L6.1 20.1 L7.6 13.4 L2.5 8.9 L9.3 8.3 Z" fill="currentColor" stroke="currentColor" stroke-width="0.7" stroke-linejoin="round"/></svg>`;
+// A plump five-point star (inner/outer radius ~0.52, up from the spiky ~0.35) with a
+// same-colour rounded-join/cap stroke that rounds the points right off — friendlier and a
+// touch hand-drawn, away from the machined look. The plump geometry is shared by
+// ACH_ICONS.star and CHALL_STAR so every star on the site reads as one family (only the
+// finish differs).
+export const STAR_SVG = `<svg viewBox="0 0 24 24"><path d="M12 2.3 L14.94 7.96 L21.22 9 L16.76 13.55 L17.7 19.85 L12 17 L6.3 19.85 L7.24 13.55 L2.78 9 L9.06 7.96 Z" fill="currentColor" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
 export const SPARKLE_SVG = `<svg viewBox="0 0 24 24"><path d="M12 1 C13 8 16 11 23 12 C16 13 13 16 12 23 C11 16 8 13 1 12 C8 11 11 8 12 1 Z" fill="currentColor"/></svg>`;
 
 export const DOODLE_SVG = {
