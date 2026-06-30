@@ -1328,12 +1328,16 @@
     box-shadow: 2px 4px 11px rgba(60, 50, 35, 0.16);
     padding: 17px 30px 16px; transform: rotate(-1.4deg);
   }
+  /* Two strips of the shared realistic washi (kraft tan); see .nav-tape surface rule. */
   .an-tape {
-    position: absolute; top: -10px; width: 60px; height: 19px;
-    background: var(--highlighter); opacity: 0.8; border-radius: 1px; pointer-events: none;
+    position: absolute; top: -11px; z-index: 3; width: 58px; height: 18px;
+    pointer-events: none; --tape-color: #c9b27a;
   }
-  .an-tape-l { left: 16%; transform: rotate(-6deg); }
-  .an-tape-r { right: 14%; transform: rotate(5deg); }
+  .an-tape-l { left: 15%; transform: rotate(-7deg); }
+  .an-tape-r {
+    right: 13%; transform: rotate(5deg);
+    --tape-clip: polygon(4% 0%, 95% 0%, 99% 25%, 90% 50%, 97% 75%, 93% 100%, 6% 100%, 10% 75%, 2% 50%, 9% 25%);
+  }
   .an-eyebrow {
     font-family: var(--type); font-size: 11px; letter-spacing: 2px;
     text-transform: uppercase; color: var(--ink-soft); margin-bottom: 4px;
@@ -1362,9 +1366,8 @@
     display: flex; align-items: center; justify-content: center; transform: rotate(-3deg);
   }
   .ms-tape {
-    position: absolute; left: 50%; top: -7px; width: 34px; height: 13px;
-    transform: translateX(-50%) rotate(4deg);
-    background: var(--highlighter); opacity: 0.85; border-radius: 1px;
+    position: absolute; left: 50%; top: -8px; z-index: 3; width: 34px; height: 13px;
+    transform: translateX(-50%) rotate(5deg); pointer-events: none; --tape-color: #c9b27a;
   }
   .ms-cap {
     font-family: var(--hand); font-size: 15px; color: var(--ink-soft);
@@ -2398,6 +2401,8 @@
      and dropdown cycle a few preset tears below). */
   .nav-tape,
   .pol-tape,
+  .an-tape,
+  .ms-tape,
   .pb-tile::before,
   .dropdown .item::before {
     background:
