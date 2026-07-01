@@ -1291,6 +1291,7 @@ function tokenBalance() { return loadChallengeTokens().balance; }
 function unlockChallenge(id) {
   const c = CHALLENGE_BY_ID[id];
   if (!c) return false;
+  if (c.mastery) return challengeMasteryReached(c);  // mastery-gated: never token-purchasable
   const st = loadChallengeState();
   if (st[id] && st[id].unlocked) return true;       // already open
   const wallet = loadChallengeTokens();
@@ -1301,14 +1302,22 @@ function unlockChallenge(id) {
   st[id] = { ...challengeRecord(id), unlocked: true };
   saveChallengeState(st);
   // Paper Rings — every challenge in the registry is now unlocked (free ones count).
-  if (CHALLENGES.every((ch) => ch.free || challengeRecord(ch.id).unlocked)) unlock("paper-rings");
+  if (CHALLENGES.every((ch) => challengeUnlocked(ch.id))) unlock("paper-rings");
   return true;
 }
 
-// True if the player can start this challenge right now (free, already unlocked, or affordable).
+// True if the player's Mastery level has reached a mastery-gated challenge's requirement.
+function challengeMasteryReached(c) {
+  return masteryLevelFromXp(loadMastery().masteryXp) >= c.mastery;
+}
+
+// True if the player can start this challenge right now. Mastery-gated challenges open
+// purely on Mastery level (never via tokens); others on free/already-unlocked.
 function challengeUnlocked(id) {
   const c = CHALLENGE_BY_ID[id];
-  return !!c && (c.free || challengeRecord(id).unlocked);
+  if (!c) return false;
+  if (c.mastery) return challengeMasteryReached(c);
+  return c.free || challengeRecord(id).unlocked;
 }
 
 // Bump the attempt counter (called when a challenge run starts).
@@ -2496,10 +2505,12 @@ function renderMasteryPage() {
   const rewards = MASTERY_REWARDS.filter((r) => r.kind !== "title").map((r) => {
     const isUnlocked = !!m.unlocked[r.id];
     const isSoon = r.kind === "soon";
+    const isInfo = r.kind === "unlock";   // milestone that grants no toggle (e.g. super-hard tier)
     const cos = MASTERY_COSMETICS[r.kind];
     const active = cos && settings[cos.setting] === (r.payload && r.payload[cos.field]);
     let action;
     if (isSoon) action = `<button class="reward-action" disabled>coming soon</button>`;
+    else if (isInfo) action = `<button class="reward-action" disabled>${isUnlocked ? "unlocked" : "locked"}</button>`;
     else if (!isUnlocked) action = `<button class="reward-action" disabled>locked</button>`;
     else if (active) action = `<button class="reward-action active" data-reward="${r.id}">in use</button>`;
     else action = `<button class="reward-action" data-reward="${r.id}">use</button>`;
@@ -2687,12 +2698,12 @@ const CHALL_STAR = `<svg viewBox="0 0 24 24" class="chall-star-svg" aria-hidden=
 // cream-label cassette desk prop; the shell is recoloured per tier by the
 // wrapper's t1/t2/t3 class (green → orange → red, set in CSS).
 const TAPE_GLYPH = `<svg viewBox="0 0 24 16" class="tape-glyph" aria-hidden="true"><rect class="tape-shell" x="1" y="1.6" width="22" height="12.8" rx="2.2"/><rect class="tape-label" x="5" y="3.3" width="14" height="3.2" rx="0.7"/><circle class="tape-reel" cx="8.5" cy="10.2" r="2.4"/><circle class="tape-reel" cx="15.5" cy="10.2" r="2.4"/></svg>`;
-const TAPE_WORD = { 1: "easy", 2: "tricky", 3: "tough" };
+const TAPE_WORD = { 1: "easy", 2: "tricky", 3: "tough", 4: "brutal" };
 
-// `n` tapes (clamped 1–3); the wrapper's t<n> class colours them by tier.
+// `n` tapes (clamped 1–4); the wrapper's t<n> class colours them by tier.
 function tapesMarkup(n) {
-  const t = Math.max(1, Math.min(3, n || 1));
-  return `<span class="chall-tapes t${t}" aria-label="difficulty ${t} of 3">${TAPE_GLYPH.repeat(t)}</span>`;
+  const t = Math.max(1, Math.min(4, n || 1));
+  return `<span class="chall-tapes t${t}" aria-label="difficulty ${t} of 4">${TAPE_GLYPH.repeat(t)}</span>`;
 }
 
 function openChallenges(from) {
@@ -2715,7 +2726,7 @@ function renderChallengesPage() {
   // Grouped by difficulty: three tape tiers (easy → tough), each a coloured
   // header over its challenges (kept in registry order within the tier).
   let list = "";
-  [1, 2, 3].forEach((tier) => {
+  [1, 2, 3, 4].forEach((tier) => {
     const inTier = CHALLENGES.filter((c) => (c.tapes || 1) === tier);
     if (!inTier.length) return;
     list += `<div class="chall-group">` +
@@ -2726,7 +2737,7 @@ function renderChallengesPage() {
       `</div>`;
     inTier.forEach((c) => {
       const rec = challengeRecord(c.id);
-      const open = c.free || rec.unlocked;
+      const open = challengeUnlocked(c.id);
       let mark, stateCls;
       if (rec.defeated)   { mark = CHALL_TICK; stateCls = "is-defeated"; }
       else if (open)      { mark = CHALL_RING; stateCls = "is-open"; }
@@ -2772,13 +2783,16 @@ function renderChallengeDetail(id) {
   if (!el) return;
   const c = CHALLENGE_BY_ID[id];
   const rec = challengeRecord(id);
-  const open = c.free || rec.unlocked;
+  const open = challengeUnlocked(id);
   const cost = c.cost || 1;
   const tk = loadChallengeTokens().balance;
   const mode = MODES[c.mode];
 
   let action;
-  if (!open) {
+  if (!open && c.mastery) {
+    // Mastery-gated tier: never token-purchasable. Show a clear "unlocks at Mastery L{n}" state.
+    action = `<div class="chall-need chall-need--mastery">${CHALL_LOCK} Unlocks at Mastery level ${c.mastery}</div>`;
+  } else if (!open) {
     action = tk >= cost
       ? `<button type="button" class="chall-go is-unlock" data-unlock="${id}">unlock · 🎟 ${cost}</button>`
       : `<div class="chall-need">need a token · 🎟 ${cost}</div>` +
@@ -2788,7 +2802,8 @@ function renderChallengeDetail(id) {
   }
 
   let meta = "";
-  if (rec.defeated) meta = `best ${rec.best}/${TOTAL_ROUNDS} · ${rec.attempts} attempt${rec.attempts === 1 ? "" : "s"}`;
+  const bestOutOf = c.rule === "survive" ? "" : `/${TOTAL_ROUNDS}`;
+  if (rec.defeated) meta = `best ${rec.best}${bestOutOf} · ${rec.attempts} attempt${rec.attempts === 1 ? "" : "s"}`;
   else if (rec.attempts) meta = `${rec.attempts} attempt${rec.attempts === 1 ? "" : "s"} · not yet beaten`;
 
   el.innerHTML =
@@ -2800,7 +2815,7 @@ function renderChallengeDetail(id) {
     `<div class="chall-diff">` +
       `<span class="chall-eyebrow">Difficulty</span>` +
       `${tapesMarkup(c.tapes)}` +
-      `<span class="chall-diff-word">${TAPE_WORD[Math.max(1, Math.min(3, c.tapes || 1))]}</span>` +
+      `<span class="chall-diff-word">${TAPE_WORD[Math.max(1, Math.min(4, c.tapes || 1))]}</span>` +
     `</div>` +
     `<div class="chall-sec">` +
       `<div class="chall-eyebrow">The rule</div>` +

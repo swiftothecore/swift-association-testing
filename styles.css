@@ -607,6 +607,10 @@
   .chall-tapes.t1 .tape-shell { fill: #4f7a45; stroke: #38602f; }
   .chall-tapes.t2 .tape-shell { fill: #cd8a2c; stroke: #9c6418; }
   .chall-tapes.t3 .tape-shell { fill: #b23a3a; stroke: #872a2a; }
+  /* tier 4 "brutal" — oxblood. Shell is dark, so label/reel stay light (paper tone). */
+  .chall-tapes.t4 .tape-shell { fill: #5c1a1a; stroke: #3f1010; }
+  .chall-tapes.t4 .tape-label { fill: #efe7d4; }
+  .chall-tapes.t4 .tape-reel  { stroke: #efe7d4; }
 
   /* difficulty groups in the list */
   .chall-group + .chall-group { margin-top: 14px; }
@@ -622,6 +626,9 @@
   .chall-group-count {
     margin-left: auto; font-family: var(--type); font-size: 10px; color: #b3a584;
   }
+  /* brutal tier group-head: oxblood accent on the divider + label */
+  .chall-group-head.t4 { border-bottom-color: #a86a6a; }
+  .chall-group-head.t4 .chall-group-label { color: #7a2b2b; }
   .chall-item.is-locked .chall-item-name { color: var(--ink-soft); }
   .chall-item.is-locked .chall-item-num { color: #c7bfac; }
   .chall-item.is-locked .chall-item-mark { color: #c4bca9; }
@@ -662,6 +669,12 @@
     font-family: var(--type); font-size: 11px; color: #5a5042; text-align: center;
     border: 1px dashed #b3a584; border-radius: 1px; padding: 9px 18px; background: rgba(236,227,208,0.5);
   }
+  /* mastery-gated lock: oxblood-tinted, carries the padlock glyph inline */
+  .chall-need--mastery {
+    display: inline-flex; align-items: center; gap: 7px;
+    color: #7a2b2b; border-color: #b06a6a; background: rgba(92,26,26,0.06);
+  }
+  .chall-need--mastery .chall-mark-svg { width: 15px; height: 15px; color: #7a2b2b; }
   .chall-token-link {
     font-family: var(--type); font-size: 10px; letter-spacing: 0.8px; color: var(--ink-soft);
     background: transparent; border: none; border-bottom: 1px solid rgba(43,39,34,0.28);
