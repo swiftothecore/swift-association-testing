@@ -2560,17 +2560,124 @@
   .skill-bar i { display: block; height: 100%; border-radius: 4px; background: rgba(var(--m-accent), 0.6); }
   .skill-bar.maxed i { background: rgba(199, 149, 31, 0.8); }
   .skill-blurb { font-family: var(--type); font-size: 10.5px; line-height: 1.4; color: var(--ink-soft); }
-  .reward-row { display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-bottom: 1px solid rgba(43, 39, 34, 0.08); }
-  .reward-icon { width: 26px; height: 26px; flex: none; color: var(--ink-soft); }
-  .reward-icon svg { width: 100%; height: 100%; }
-  .reward-row.locked { opacity: 0.5; }
-  .reward-row.unlocked .reward-icon { color: rgba(var(--m-accent), 0.85); }
-  .reward-main { flex: 1; min-width: 0; }
-  .reward-name { display: block; font-family: var(--hand); font-weight: 700; font-size: 16px; color: var(--ink); }
-  .reward-meta { display: block; font-family: var(--type); font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); margin-top: 2px; }
-  .reward-action { font-family: var(--type); font-size: 11px; letter-spacing: 0.04em; padding: 5px 11px; border-radius: 3px; border: 1px solid rgba(43, 39, 34, 0.3); background: var(--paper); color: var(--ink); cursor: pointer; white-space: nowrap; }
-  .reward-action[disabled] { cursor: default; opacity: 0.5; }
-  .reward-action.active { background: rgba(var(--m-accent), 0.18); border-color: rgba(var(--m-accent), 0.6); }
+  /* ---- Reward bento: cosmetics grouped into weight-sized tiles (pens, charms, paper, the
+     super-hard milestone) plus the prestige-titles tile. Replaces the old flat reward list.
+     Uses the mastery rose (--m-accent) for state; charms keep their era-gold (--bead). ---- */
+  .reward-bento { margin-top: 22px; }
+  .rb-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 0 2px 14px; }
+  .rb-title { font-family: var(--hand); font-weight: 700; font-size: 22px; line-height: 1; color: var(--ink); }
+  .rb-sub { font-family: var(--type); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft); margin-top: 6px; }
+  .rb-meter { text-align: right; flex: none; }
+  .rb-count { font-family: var(--type); font-size: 10.5px; letter-spacing: 0.04em; color: rgba(var(--m-accent), 0.95); }
+  .rb-prog { display: block; width: 120px; height: 5px; border-radius: 3px; background: rgba(43, 39, 34, 0.1); overflow: hidden; margin-top: 6px; }
+  .rb-prog i { display: block; height: 100%; border-radius: 3px; background: rgba(var(--m-accent), 0.78); }
+
+  .rb-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    grid-template-areas: "pens charm charm charm" "pens charm charm charm" "paper paper hard hard" "title title title title"; }
+
+  .rb-tile { position: relative; border-radius: 12px; padding: 14px 16px;
+    background-color: var(--paper); background-image: linear-gradient(rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.32));
+    border: 1px solid rgba(43, 39, 34, 0.16); box-shadow: 0 1px 2px rgba(43, 39, 34, 0.05); }
+  .rb-tile-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .rb-tt { font-family: var(--hand); font-weight: 700; font-size: 17px; color: var(--ink); }
+  .rb-tt-sub { font-family: var(--type); font-size: 10px; letter-spacing: 0.04em; color: var(--ink-soft); margin-top: 3px; }
+  .rb-chip { font-family: var(--type); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap;
+    color: rgba(var(--m-accent), 0.95); background: rgba(var(--m-accent), 0.1); border-radius: 20px; padding: 3px 9px; }
+  /* charm-icon ink (ACH_ICONS glyphs) inside the bento; charm previews use global .b-* styling */
+  .reward-bento .charm { display: inline-flex; }
+  .reward-bento .charm svg, .reward-bento .rb-lock svg, .reward-bento .rb-hard-swords svg, .reward-bento .rb-hard-seal svg { width: 100%; height: 100%; overflow: visible; }
+  .reward-bento .ink { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .reward-bento .ink-fill { fill: var(--bead); stroke: var(--ink); stroke-width: 1.2; }
+  .rb-lock { display: inline-flex; width: 15px; height: 15px; color: var(--ink-soft); }
+  .rb-lock .ink { stroke: var(--ink-soft); }
+  .rb-lock .ink-fill { fill: var(--ink-soft); stroke: var(--ink-soft); }
+
+  /* Pens — stacked rows */
+  .rb-pen-list { display: flex; flex-direction: column; gap: 9px; margin-top: 12px; }
+  .rb-pen { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; font: inherit; cursor: pointer;
+    padding: 8px 11px; border-radius: 10px; border: 1px solid rgba(43, 39, 34, 0.14); background: rgba(43, 39, 34, 0.015); }
+  .rb-pen.active { border-color: rgba(var(--m-accent), 0.6); background: rgba(var(--m-accent), 0.1); }
+  .rb-pen.locked { cursor: default; border-style: dashed; opacity: 0.6; }
+  .rb-pen-ic { width: 22px; height: 22px; flex: none; color: var(--bead); }
+  .rb-pen-ic.rb-lock { color: var(--ink-soft); }
+  .rb-pen-nm { flex: 1; font-family: var(--hand); font-weight: 700; font-size: 14px; color: var(--ink); }
+  .rb-pen.locked .rb-pen-nm { color: var(--ink-soft); }
+  .rb-pen-tag { font-family: var(--type); font-size: 8.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+  .rb-pen.active .rb-pen-tag { color: rgba(var(--m-accent), 0.95); }
+
+  /* Charms — bracelet strand hero */
+  .rb-strand { position: relative; margin-top: 16px; padding-top: 8px; }
+  .rb-cord { position: absolute; top: 8px; left: 4px; right: 4px; border-top: 2px solid rgba(43, 39, 34, 0.22); }
+  .rb-clasp { position: absolute; top: 3px; width: 9px; height: 9px; border-radius: 50%; background: var(--paper); border: 2px solid rgba(43, 39, 34, 0.22); }
+  .rb-clasp.l { left: -2px; }
+  .rb-clasp.r { right: -2px; }
+  .rb-beads { position: relative; display: flex; justify-content: space-between; align-items: flex-start; }
+  .rb-bead-col { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 0; font: inherit; border: 0; background: none; padding: 0; cursor: pointer; }
+  .rb-bead-col.locked { cursor: default; }
+  .rb-stem { width: 2px; background: rgba(43, 39, 34, 0.22); }
+  .rb-bead-col.short .rb-stem { height: 14px; }
+  .rb-bead-col.long .rb-stem { height: 30px; }
+  .rb-bead { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    background: rgba(255, 255, 255, 0.5); border: 1px solid rgba(43, 39, 34, 0.16); }
+  .rb-bead .charm-preview { width: 30px; height: 30px; color: var(--bead); }
+  .rb-bead-col.active .rb-bead { border: 2px solid rgba(var(--m-accent), 0.75); box-shadow: 0 0 0 3px rgba(var(--m-accent), 0.15); background: #fff9ec; }
+  .rb-bead-col.locked .rb-bead { border-style: dashed; background: rgba(43, 39, 34, 0.04); }
+  .rb-bead-col.locked .rb-lock { width: 15px; height: 15px; opacity: 0.6; }
+  .rb-bead-nm { font-family: var(--type); font-size: 8.5px; letter-spacing: 0.03em; color: var(--ink-soft); margin-top: 6px; }
+  .rb-bead-col.active .rb-bead-nm { color: rgba(var(--m-accent), 0.95); }
+
+  /* Paper — swatches of the real stock */
+  .rb-swatches { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 15px; }
+  .rb-sw-col { display: flex; flex-direction: column; align-items: center; gap: 7px; font: inherit; border: 0; background: none; padding: 0; cursor: pointer; }
+  .rb-sw-col.locked { cursor: default; }
+  .rb-sw { width: 56px; height: 44px; border-radius: 8px; }
+  .rb-sw.paper-chip::before { left: 9px; }
+  .rb-sw-col.active .rb-sw { border-color: rgba(var(--m-accent), 0.7); box-shadow: 0 0 0 3px rgba(var(--m-accent), 0.16); }
+  .rb-sw.locked { display: flex; align-items: center; justify-content: center; border: 1px dashed rgba(43, 39, 34, 0.25); background: rgba(43, 39, 34, 0.04); }
+  .rb-sw.locked .rb-lock { opacity: 0.6; }
+  .rb-sw-nm { font-family: var(--type); font-size: 8.5px; letter-spacing: 0.03em; color: var(--ink-soft); }
+  .rb-sw-col.active .rb-sw-nm { color: rgba(var(--m-accent), 0.95); }
+
+  /* Super-hard vault */
+  .rb-hard { overflow: hidden; background-color: #26221d; background-image: none; border-color: #3d372e; }
+  .rb-hard .rb-chip { position: absolute; top: 13px; right: 14px; color: #c99a45; background: transparent; border: 1px solid #5c4b2c; }
+  .rb-hard-swords { position: absolute; right: -8px; bottom: -22px; width: 132px; height: 132px; opacity: 0.09; }
+  .rb-hard-swords .ink, .rb-hard-swords .ink-fill { stroke: #c8951f; fill: #c8951f; }
+  .rb-hard-seal { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%;
+    background: #2f2921; border: 1.5px solid #5c4b2c; padding: 8px; }
+  .rb-hard-seal .ink { stroke: #c99a45; }
+  .rb-hard-seal .ink-fill { fill: #c99a45; stroke: #c99a45; }
+  .rb-hard-nm { font-family: var(--hand); font-weight: 700; font-size: 18px; color: #f3e7d0; margin-top: 10px; }
+  .rb-hard-sub { position: relative; font-family: var(--type); font-size: 10px; line-height: 1.5; color: #b4a488; margin-top: 5px; max-width: 240px; }
+  .rb-hard.earned .rb-hard-swords { opacity: 0.16; }
+  .rb-hard.earned .rb-hard-seal { border-color: #7a6330; }
+  .rb-hard.earned .rb-hard-seal .ink, .rb-hard.earned .rb-hard-seal .ink-fill { stroke: #e8c37a; fill: #e8c37a; }
+
+  /* Prestige titles — rank-medallion ladder above the picker */
+  .rb-ladder { position: relative; display: flex; justify-content: space-between; align-items: flex-start; margin: 18px 4px 6px; padding: 0 6px; }
+  .rb-ladder-rail { position: absolute; top: 22px; left: 40px; right: 40px; border-top: 1.5px dashed rgba(43, 39, 34, 0.2); }
+  .rb-medal { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 0; }
+  .rb-medal-ic { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; padding: 11px;
+    background: var(--paper); border: 1.5px solid rgba(43, 39, 34, 0.16); }
+  .rb-medal-ic .charm { width: 100%; height: 100%; }
+  .rb-medal.locked .rb-medal-ic { opacity: 0.5; }
+  .rb-medal.reached .rb-medal-ic { border-color: rgba(var(--m-accent), 0.5); background: #fff9ec; }
+  .rb-medal.worn .rb-medal-ic, .rb-medal.next .rb-medal-ic { border: 2px solid rgba(var(--m-accent), 0.75); box-shadow: 0 0 0 3px rgba(var(--m-accent), 0.14); }
+  .rb-medal.next .rb-medal-ic { border-color: rgba(var(--m-accent), 0.5); }
+  .rb-medal-lv { font-family: var(--type); font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); margin-top: 7px; }
+  .rb-medal-nm { font-family: var(--hand); font-weight: 700; font-size: 13px; color: var(--ink); margin-top: 1px; }
+  .rb-medal.locked .rb-medal-nm { color: var(--ink-soft); }
+  .rb-medal-flag { font-family: var(--type); font-size: 7.5px; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(var(--m-accent), 0.95); margin-top: 3px; }
+  .rb-title-lock { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; padding: 8px 12px; border-radius: 9px;
+    font-family: var(--type); font-size: 10.5px; color: var(--ink-soft); background: rgba(43, 39, 34, 0.04); border: 1px solid rgba(43, 39, 34, 0.14); }
+  .rb-titles .title-stepper { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(43, 39, 34, 0.1); }
+  @media (max-width: 560px) {
+    .rb-grid { grid-template-columns: 1fr; grid-template-areas: "pens" "charm" "paper" "hard" "title"; }
+    .rb-bead { width: 34px; height: 34px; }
+    .rb-bead .charm-preview { width: 24px; height: 24px; }
+    .rb-swatches { gap: 10px; }
+    .rb-sw { width: 48px; height: 38px; }
+  }
   /* Prestige-title stepper: browse one title at a time; a star marks the worn title, a
      circle the one being viewed. Tier-grouped position dots below the name. */
   .title-stepper { text-align: center; margin: 6px 0 2px; }

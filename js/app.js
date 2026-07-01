@@ -2512,68 +2512,174 @@ function renderMasteryPage() {
       `</div></div>`;
   }).join("");
 
-  // Reward ladder — titles are excluded here; they get their own stepper section below.
-  const rewards = MASTERY_REWARDS.filter((r) => r.kind !== "title").map((r) => {
-    const isUnlocked = !!m.unlocked[r.id];
-    const isInfo = r.kind === "unlock";   // milestone that grants no toggle (e.g. super-hard tier)
-    const cos = MASTERY_COSMETICS[r.kind];
-    const active = cos && settings[cos.setting] === (r.payload && r.payload[cos.field]);
-    let action;
-    if (isInfo) action = `<button class="reward-action" disabled>${isUnlocked ? "unlocked" : "locked"}</button>`;
-    else if (!isUnlocked) action = `<button class="reward-action" disabled>locked</button>`;
-    else if (active) action = `<button class="reward-action active" data-reward="${r.id}">in use</button>`;
-    else action = `<button class="reward-action" data-reward="${r.id}">use</button>`;
-    const cls = isUnlocked ? "unlocked" : "locked";
-    return `<div class="reward-row ${cls}">` +
-      `<span class="reward-icon">${rewardIconMarkup(r)}</span>` +
-      `<div class="reward-main"><span class="reward-name">${escapeHtml(r.name)}</span>` +
-        `<span class="reward-meta">Mastery ${r.level} · ${escapeHtml(r.desc)}</span></div>` +
-      action + `</div>`;
-  }).join("");
-  // A "default" reset per cosmetic kind, shown once a choice in that kind is in use.
-  const resets = Object.entries(MASTERY_COSMETICS).map(([kind, cos]) => {
-    if (!settings[cos.setting]) return "";
-    const icon = kind === "paper" ? paperChipMarkup("default")
-      : kind === "charm" ? charmPreviewSVG("star", "#c8951f")
-      : charmMarkup(cos.resetIcon);
-    return `<div class="reward-row unlocked"><span class="reward-icon">${icon}</span>` +
-      `<div class="reward-main"><span class="reward-name">${cos.resetLabel}</span>` +
-      `<span class="reward-meta">${cos.resetMeta}</span></div>` +
-      `<button class="reward-action" data-reward-reset="${kind}">use</button></div>`;
-  }).join("");
-
-  // Titles — a stepper (own section) once Mastery is unlocked; hidden while still locked.
-  const titlesSection = unlocked
-    ? `<div class="mastery-section-label">Titles</div><div id="titleStepper" class="title-stepper"></div>`
-    : "";
+  // Reward board — a bento of grouped cosmetic tiles (pens, charms, paper, the super-hard
+  // milestone) plus the prestige-titles tile. Titles fold in as the last tile.
+  const bento = buildRewardBento(m, mLevel, unlocked);
 
   body.innerHTML = `<div class="mastery-page">` +
     `<div class="mastery-head">${head}</div>` +
     `<div class="mastery-section-label">Skills</div>${skills}` +
-    titlesSection +
-    `<div class="mastery-section-label">Rewards</div>${rewards}${resets}` +
+    bento +
     `</div>`;
 
-  renderTitleStepper();
+  renderTitleStepper();   // fills #titleStepper inside the titles tile (present only once unlocked)
 
-  // Wire the cosmetic-selection buttons (choose a pen / paper, or reset a kind to default).
-  body.querySelectorAll(".reward-action[data-reward]").forEach((btn) => {
-    btn.addEventListener("click", () => chooseMasteryCosmetic(btn.getAttribute("data-reward")));
+  // Wire cosmetic selection: data-reward chooses that reward; data-reward-reset reverts a
+  // whole kind (pen / paper / charm) to its default.
+  body.querySelectorAll("[data-reward]").forEach((el) => {
+    el.addEventListener("click", () => chooseMasteryCosmetic(el.getAttribute("data-reward")));
   });
-  body.querySelectorAll(".reward-action[data-reward-reset]").forEach((btn) => {
-    btn.addEventListener("click", () => resetMasteryCosmetic(btn.getAttribute("data-reward-reset")));
+  body.querySelectorAll("[data-reward-reset]").forEach((el) => {
+    el.addEventListener("click", () => resetMasteryCosmetic(el.getAttribute("data-reward-reset")));
   });
 }
 
-// The reward-row icon: a paper swatch for paper stocks, a bracelet-charm glyph for
-// charms, else the achievement-style charm icon.
-function rewardIconMarkup(r) {
-  if (r.kind === "paper") return paperChipMarkup(r.payload && r.payload.paper);
-  if (r.kind === "charm") return charmPreviewSVG((r.payload && r.payload.charm) || "star", "#c8951f");
-  return charmMarkup(r.icon);
+// ---- Reward bento ----
+// The reward board groups the cosmetics into tiles sized by weight: pens as a stacked
+// column, charms hung from a bracelet strand (the hero), paper as live-tinted swatches,
+// the super-hard milestone as a sealed vault, and the prestige titles as a rank ladder.
+// Each group carries its own "default" option so a kind can always be reverted; still-locked
+// items read as empty slots (a lock, no glyph) so the reward stays a surprise until earned.
+function buildRewardBento(m, mLevel, unlocked) {
+  const groups = { pen: [], paper: [], charm: [], unlock: [] };
+  MASTERY_REWARDS.forEach((r) => { if (groups[r.kind]) groups[r.kind].push(r); });
+  const all = MASTERY_REWARDS.filter((r) => r.kind !== "title");
+  const earned = all.filter((r) => m.unlocked[r.id]).length;
+  const pct = Math.round((earned / all.length) * 100);
+
+  return `<div class="reward-bento">` +
+    `<div class="rb-head">` +
+      `<div><div class="rb-title">Rewards</div><div class="rb-sub">Your collected spoils</div></div>` +
+      `<div class="rb-meter"><div class="rb-count">${earned} of ${all.length} earned</div>` +
+        `<div class="rb-prog"><i style="width:${pct}%"></i></div></div>` +
+    `</div>` +
+    `<div class="rb-grid">` +
+      buildPensTile(groups.pen, m) +
+      buildCharmTile(groups.charm, m) +
+      buildPaperTile(groups.paper, m) +
+      buildHardTile(groups.unlock[0], m) +
+      buildTitlesTile(m, unlocked) +
+    `</div>` +
+  `</div>`;
 }
-function paperChipMarkup(paper) {
-  return `<span class="paper-chip" data-paper="${paper || "default"}" aria-hidden="true"></span>`;
+
+// Small level pill shown top-right of a tile.
+function rbChip(text) { return `<span class="rb-chip">${escapeHtml(text)}</span>`; }
+
+// Pens — a stacked column. A "default" hand plus each unlockable pen; locked pens are slots.
+function buildPensTile(pens, m) {
+  const active = settings.masteryPen || "";
+  let rows = penRow(`data-reward-reset="pen"`, charmMarkup("nib"), "Default", active === "");
+  pens.forEach((r) => {
+    if (!m.unlocked[r.id]) rows += penSlot(r.level);
+    else rows += penRow(`data-reward="${r.id}"`, charmMarkup(r.icon), r.name, active === r.payload.pen);
+  });
+  return `<div class="rb-tile rb-pens" style="grid-area:pens">` +
+    `<div class="rb-tile-top"><span class="rb-tt">Pens</span>${rbChip("Mastery 1–3")}</div>` +
+    `<div class="rb-tt-sub">Your writing hand</div>` +
+    `<div class="rb-pen-list">${rows}</div></div>`;
+}
+function penRow(attr, iconHTML, name, active) {
+  return `<button type="button" class="rb-pen${active ? " active" : ""}" ${attr}>` +
+    `<span class="rb-pen-ic">${iconHTML}</span><span class="rb-pen-nm">${escapeHtml(name)}</span>` +
+    `<span class="rb-pen-tag">${active ? "in use" : "use"}</span></button>`;
+}
+function penSlot(level) {
+  return `<div class="rb-pen locked"><span class="rb-pen-ic rb-lock">${ACH_ICONS.lock}</span>` +
+    `<span class="rb-pen-nm">Locked</span><span class="rb-pen-tag">Mastery ${level}</span></div>`;
+}
+
+// Charms — the hero tile: charms hang from a bracelet strand on alternating drops.
+function buildCharmTile(charms, m) {
+  const setUnlocked = charms.length ? !!m.unlocked[charms[0].id] : false;
+  const active = settings.masteryCharm || "";
+  let beads = charmBead(`data-reward-reset="charm"`, "star", "star", active === "", true, 0);
+  charms.forEach((r, i) => {
+    beads += charmBead(`data-reward="${r.id}"`, r.payload.charm, r.payload.charm, active === r.payload.charm, setUnlocked, i + 1);
+  });
+  return `<div class="rb-tile rb-charm" style="grid-area:charm">` +
+    `<div class="rb-tile-top"><span class="rb-tt">Bracelet charms</span>${rbChip("Mastery 5")}</div>` +
+    `<div class="rb-tt-sub">Hangs from every bead you earn</div>` +
+    `<div class="rb-strand"><span class="rb-cord"></span>` +
+      `<span class="rb-clasp l"></span><span class="rb-clasp r"></span>` +
+      `<div class="rb-beads">${beads}</div></div></div>`;
+}
+function charmBead(attr, id, name, active, available, idx) {
+  const drop = idx % 2 === 0 ? "short" : "long";   // alternating hang, like a laid-out bracelet
+  if (!available) {
+    return `<span class="rb-bead-col ${drop} locked"><span class="rb-stem"></span>` +
+      `<span class="rb-bead"><span class="rb-lock">${ACH_ICONS.lock}</span></span></span>`;
+  }
+  return `<button type="button" class="rb-bead-col ${drop}${active ? " active" : ""}" ${attr}>` +
+    `<span class="rb-stem"></span><span class="rb-bead">${charmPreviewSVG(id)}</span>` +
+    `<span class="rb-bead-nm">${active ? "in use" : escapeHtml(name)}</span></button>`;
+}
+
+// Paper stock — swatches of the real stock (default plus each unlockable set member).
+function buildPaperTile(papers, m) {
+  const setUnlocked = papers.length ? !!m.unlocked[papers[0].id] : false;
+  const active = settings.masteryPaper || "";
+  let sw = paperSwatch(`data-reward-reset="paper"`, "default", "plain", active === "", true, 0);
+  papers.forEach((r) => {
+    sw += paperSwatch(`data-reward="${r.id}"`, r.payload.paper, r.payload.paper, active === r.payload.paper, setUnlocked, r.level);
+  });
+  return `<div class="rb-tile rb-paper" style="grid-area:paper">` +
+    `<div class="rb-tile-top"><span class="rb-tt">Paper stock</span>${rbChip("Mastery 4")}</div>` +
+    `<div class="rb-tt-sub">Retints the whole page</div>` +
+    `<div class="rb-swatches">${sw}</div></div>`;
+}
+function paperSwatch(attr, paper, name, active, available, level) {
+  if (!available) {
+    return `<span class="rb-sw-col locked"><span class="rb-sw locked"><span class="rb-lock">${ACH_ICONS.lock}</span></span>` +
+      `<span class="rb-sw-nm">Mastery ${level}</span></span>`;
+  }
+  return `<button type="button" class="rb-sw-col${active ? " active" : ""}" ${attr}>` +
+    `<span class="rb-sw paper-chip" data-paper="${paper}"></span>` +
+    `<span class="rb-sw-nm">${active ? "in use" : escapeHtml(name)}</span></button>`;
+}
+
+// Super-hard challenges — a single dark "vault" milestone tile: sealed while locked, earned
+// once reached. Grants no toggle; it just unlocks the tier over in Challenges mode.
+function buildHardTile(r, m) {
+  if (!r) return "";
+  const unlocked = !!m.unlocked[r.id];
+  return `<div class="rb-tile rb-hard${unlocked ? " earned" : ""}" style="grid-area:hard">` +
+    `<span class="rb-hard-swords">${ACH_ICONS.swords}</span>${rbChip("Mastery " + r.level)}` +
+    `<span class="rb-hard-seal">${unlocked ? ACH_ICONS.swords : ACH_ICONS.lock}</span>` +
+    `<div class="rb-hard-nm">${escapeHtml(r.name)}</div>` +
+    `<div class="rb-hard-sub">${unlocked
+      ? "Unlocked — a tier of brutal new challenges awaits in Challenges."
+      : "A tier of brutal new challenges. Reach Mastery " + r.level + " to break the seal."}</div></div>`;
+}
+
+// Prestige titles — the rank ladder (four tier medallions along a rail) above the title
+// picker. The medallions show progress; the stepper (once unlocked) does the actual choosing.
+const RB_TIER_ROMAN = ["I", "II", "III", "IV"];
+const RB_TIER_SHORT = ["Poet", "Bridge", "Chairman", "Showgirl"];
+function buildTitlesTile(m, unlocked) {
+  const worn = wornTitleValue(m);
+  const wornR = MASTERY_TITLE_BY_VALUE[worn];
+  const wornTier = wornR ? wornR.level : -1;
+  const tiers = MASTERY_TITLES.filter((t) => t.isDefault);   // one representative per tier
+  const nextLocked = tiers.find((t) => !m.unlocked[t.id]);
+  const medals = tiers.map((t, i) => {
+    const reached = !!m.unlocked[t.id];
+    const isWorn = reached && t.level === wornTier;
+    const isNext = !reached && nextLocked && t.level === nextLocked.level;
+    const cls = reached ? (isWorn ? "reached worn" : "reached") : (isNext ? "next" : "locked");
+    const flag = isWorn ? `<span class="rb-medal-flag">worn</span>`
+      : isNext ? `<span class="rb-medal-flag">next</span>` : "";
+    return `<div class="rb-medal ${cls}"><span class="rb-medal-ic">${charmMarkup(t.icon)}</span>` +
+      `<span class="rb-medal-lv">${RB_TIER_ROMAN[i]} · L${t.level}</span>` +
+      `<span class="rb-medal-nm">${RB_TIER_SHORT[i]}</span>${flag}</div>`;
+  }).join("");
+  const picker = unlocked
+    ? `<div id="titleStepper" class="title-stepper"></div>`
+    : `<div class="rb-title-lock"><span class="rb-lock">${ACH_ICONS.lock}</span>Reach Mastery 7 to earn your first title</div>`;
+  return `<div class="rb-tile rb-titles" style="grid-area:title">` +
+    `<div class="rb-tile-top"><span class="rb-tt">Prestige titles</span>${rbChip("Mastery 7")}</div>` +
+    `<div class="rb-tt-sub">Four ranks, fourteen titles. Engraved on your records signature.</div>` +
+    `<div class="rb-ladder"><span class="rb-ladder-rail"></span>${medals}</div>${picker}</div>`;
 }
 
 // Apply a Mastery-unlocked cosmetic. Pens swap the writing hand; papers retint the page
@@ -8096,10 +8202,12 @@ function buildDevApi() {
         SKILL_IDS.forEach((id) => { m.skills[id] = skillXpForLevel(SKILL_MAX_LEVEL); });   // clear the unlock gate
         m.masteryXp = masteryXpForLevel(lvl);
         for (const r of MASTERY_REWARDS) if (r.level <= lvl && !m.unlocked[r.id]) m.unlocked[r.id] = new Date().toISOString();
-        saveMastery(m); updateMasteryNav();
+        saveMastery(m); updateMasteryNav(); if ($("masteryBody")) renderMasteryPage();
       },
-      unlockRewards: () => { const m = loadMastery(); for (const r of MASTERY_REWARDS) m.unlocked[r.id] = new Date().toISOString(); saveMastery(m); },
-      reset: () => { resetMastery(); settings.masteryPen = ""; settings.masteryPaper = ""; settings.masteryCharm = ""; settings.masteryTitle = ""; saveSettings(settings); setPen(null); applySettings(); updateMasteryNav(); },
+      unlockRewards: () => { const m = loadMastery(); for (const r of MASTERY_REWARDS) m.unlocked[r.id] = new Date().toISOString(); saveMastery(m); if ($("masteryBody")) renderMasteryPage(); },
+      // Re-lock every reward — preview the reward bento's locked/empty-slot tile states.
+      lockRewards: () => { const m = loadMastery(); m.unlocked = {}; saveMastery(m); updateMasteryNav(); if ($("masteryBody")) renderMasteryPage(); },
+      reset: () => { resetMastery(); settings.masteryPen = ""; settings.masteryPaper = ""; settings.masteryCharm = ""; settings.masteryTitle = ""; saveSettings(settings); setPen(null); applySettings(); updateMasteryNav(); if ($("masteryBody")) renderMasteryPage(); },
       // Preview a paper stock without unlocking it: pass an id (manila/parchment/blush/slate) or "" to clear.
       paper: (id) => { settings.masteryPaper = id || ""; saveSettings(settings); applySettings(); if ($("masteryBody")) renderMasteryPage(); },
       // Preview a bracelet charm without unlocking it: pass an id (heart/moon/daisy/bow/pick/note/lightning/snake) or "" for the default star.
