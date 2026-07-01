@@ -230,6 +230,26 @@ export const CHALLENGES = [
     blurb: "10s · suggestions · at pages 4 & 8 you must take the lesser of two curses",
     desc: "Choose Your Path's evil twin: at forks in the run you're handed two curses and must take the lesser of two evils. Whatever you pick haunts the rest of the run.",
     win: "Score 9 / 13 despite the curses you take." },
+  { id: "ready-for-it", name: "Are You Sure You're …Ready For It???", rule: "flashwarp", mode: "medium",
+    mastery: 6, target: 9, revealMs: 1200, noTitle: true, tapes: 4, icon: "readyforit",
+    blurb: "the word flashes warped, then it's gone",
+    desc: "The word shows up scrambled AND vanishes after a beat. Read it warped, answer from memory.",
+    win: "Score 9 / 13 on warped, vanishing words." },
+  { id: "home-evasion", name: "I Have No Experience With Home Evasion", rule: "spite", mode: "medium",
+    mastery: 6, target: 9, seconds: 10, penalty: 3, tapes: 4, icon: "homeevasion",
+    blurb: "10s a page · every wrong answer cuts 3s off the clock, permanently",
+    desc: "You start with 10 seconds a page. Every wrong answer steals 3 seconds from every page that follows. Miss four times and there's nothing left.",
+    win: "Score 9 / 13 before the clock runs dry." },
+  { id: "thirty-one", name: "Thirty-One", rule: "survive", mode: "infinite",
+    mastery: 6, target: 31, tapes: 4, icon: "thirtyone",
+    blurb: "Infinite sudden-death rules · reach round 31",
+    desc: "Infinite mode's rules, one miss ends it. Get to round 31.",
+    win: "Reach round 31 in a single unbroken run." },
+  { id: "smallest-song", name: "The Smallest Song Who Ever Lived", rule: "tiny", mode: "medium",
+    mastery: 6, target: 9, tapes: 4, icon: "smallestsong",
+    blurb: "the word is tiny, tilted, and never quite where you look",
+    desc: "The word shrinks to almost nothing, slants off-axis, and drifts somewhere on the page. Find it, read it, name it.",
+    win: "Score 9 / 13 hunting the tiny word." },
 ];
 export const CHALLENGE_BY_ID = Object.fromEntries(CHALLENGES.map((c) => [c.id, c]));
 export const CHALLENGE_ORDER = CHALLENGES.map((c) => c.id);
@@ -315,7 +335,7 @@ export const MASTERY_REWARDS = [
   { level: 5,  id: "charm-note",      kind: "charm", name: "Note charm",      icon: "note",   desc: "A single eighth note.",          payload: { charm: "note" } },
   { level: 5,  id: "charm-lightning", kind: "charm", name: "Lightning charm", icon: "bolt",   desc: "A bolt of lightning.",           payload: { charm: "lightning" } },
   { level: 5,  id: "charm-snake",     kind: "charm", name: "Snake charm",     icon: "snake",  desc: "A reputation serpent.",          payload: { charm: "snake" } },
-  { level: 6,  id: "hardmode-soon", kind: "soon", name: "Super-hard challenges", icon: "swords",  desc: "Unlock a tier of brutal new challenges." },
+  { level: 6,  id: "hardmode-unlock", kind: "unlock", name: "Super-hard challenges", icon: "swords",  desc: "Unlocks a tier of brutal new challenges in Challenges mode." },
   // Prestige titles — worn on your records-page notebook signature. Unlocked in tiers as
   // Mastery climbs; each tier has one `isDefault` title that a player on the "follows your
   // mastery" auto setting wears automatically, plus alternates they can switch to via the
@@ -529,6 +549,10 @@ export const ACH_ICONS = {
   checklist:`<svg viewBox="0 0 24 24"><rect class="ink-fill" x="4" y="2.5" width="16" height="19" rx="2"/><g stroke="var(--paper)" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M6.6 7.6 l1.3 1.3 L10.4 6.4"/><path d="M6.6 13.4 l1.3 1.3 L10.4 12.2"/><path d="M12.8 8 H17"/><path d="M12.8 13.8 H17"/></g></svg>`,
   // a six-armed snowflake — weird but beautiful (Snow On The Beach)
   snowflake:`<svg viewBox="0 0 24 24"><g class="ink" stroke-width="1.5" stroke-linecap="round" fill="none"><path d="M12 2.5 V21.5"/><path d="M3.8 7.25 L20.2 16.75"/><path d="M20.2 7.25 L3.8 16.75"/><path d="M12 6 L9.7 4.4 M12 6 L14.3 4.4 M12 18 L9.7 19.6 M12 18 L14.3 19.6"/><path d="M6.6 7.7 L6.5 5 M6.6 7.7 L3.9 7.9 M17.4 16.3 L17.5 19 M17.4 16.3 L20.1 16.1"/><path d="M17.4 7.7 L17.5 5 M17.4 7.7 L20.1 7.9 M6.6 16.3 L6.5 19 M6.6 16.3 L3.9 16.1"/></g></svg>`,
+  readyforit: `<svg viewBox="0 0 24 24"><path class="ink" fill="none" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" d="M11 2 L5 13 L10 13 L8 22 L16 9 L11 9 Z"/><circle class="ink-fill" cx="17.6" cy="14" r="1.3"/><circle class="ink-fill" cx="20" cy="17" r="1"/><circle class="ink-fill" cx="21.8" cy="20" r="0.7"/></svg>`,
+  homeevasion: `<svg viewBox="0 0 24 24"><path class="ink" fill="none" stroke-width="1.8" stroke-linejoin="round" d="M12 12 L12 4 A8 8 0 1 0 20 12 Z"/><path class="ink" fill="none" stroke-width="1.8" stroke-linecap="round" d="M12 12 L8.5 9.5"/><circle class="ink-fill" cx="12" cy="12" r="1"/><path class="ink" fill="none" stroke-width="1.5" stroke-linecap="round" d="M8.5 19.6 L7 21.6 M15.5 19.6 L17 21.6"/></svg>`,
+  thirtyone: `<svg viewBox="0 0 24 24"><path class="ink" fill="none" stroke-width="1.8" stroke-linecap="round" d="M6 22 L6 3"/><path class="ink" fill="none" stroke-width="1.6" stroke-linejoin="round" d="M6 3 H19 L16 7.4 L19 11.8 H6 Z"/><text class="ink-fill" x="11.6" y="9.8" text-anchor="middle" font-size="6.4" font-weight="700" font-family="monospace">31</text><path class="ink" fill="none" stroke-width="1.6" stroke-linecap="round" d="M2 22 H22"/></svg>`,
+  smallestsong: `<svg viewBox="0 0 24 24"><circle class="ink" fill="none" stroke-width="1.8" cx="10" cy="10" r="6.4"/><path class="ink" fill="none" stroke-width="2.3" stroke-linecap="round" d="M14.9 14.9 L21 21"/><g transform="rotate(-18 10 10)"><ellipse class="ink-fill" cx="8.6" cy="12" rx="1.5" ry="1.1"/><path class="ink" fill="none" stroke-width="1.2" stroke-linecap="round" d="M10 11.8 L10 7.4"/><path class="ink" fill="none" stroke-width="1.2" stroke-linecap="round" d="M10 7.4 C11.7 7.9 12.1 9 11.4 10.1"/></g></svg>`,
 };
 export const ACHIEVEMENTS = [
   { id: "enchanted",        name: "Enchanted",        desc: "Finish your first game",              secret: false, icon: "sparkle" },
