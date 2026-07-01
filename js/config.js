@@ -76,6 +76,8 @@ export const DEFAULT_SETTINGS = {
   masteryPaper: "",         // chosen paper stock, unlocked via Mastery ("" = the default cream page)
   masteryCharm: "",         // chosen bracelet charm, unlocked via Mastery ("" = the default star)
   masteryTitle: "",         // chosen prestige title, unlocked via Mastery ("" = follows your mastery: the highest tier's default)
+  masteryButton: "",        // chosen "start writing" button finish, unlocked via Mastery ("" = the default gold marker)
+  masterySignature: "",     // chosen records-signature flourish, unlocked via Mastery ("" = no flourish, just your name)
 };
 
 /* Difficulty modes — each just re-tunes existing levers (timer, dropdown,
@@ -337,6 +339,24 @@ export const MASTERY_REWARDS = [
   { level: 5,  id: "charm-lightning", kind: "charm", name: "Lightning charm", icon: "bolt",   desc: "A bolt of lightning.",           payload: { charm: "lightning" } },
   { level: 5,  id: "charm-snake",     kind: "charm", name: "Snake charm",     icon: "snake",  desc: "A reputation serpent.",          payload: { charm: "snake" } },
   { level: 6,  id: "hardmode-unlock", kind: "unlock", name: "Super-hard challenges", icon: "swords",  desc: "Unlocks a tier of brutal new challenges in Challenges mode." },
+  // Start-writing button finishes — a set unlocked together at level 8. Each restyles the
+  // home-screen hero CTA (CSS body[data-startbtn="…"] over #playBtn). Selection persists in
+  // settings.masteryButton; applied globally via applySettings.
+  { level: 8,  id: "btn-ink",   kind: "button", name: "Ink press", icon: "drop", desc: "A solid ink-stamped start button.", payload: { button: "ink" } },
+  { level: 8,  id: "btn-blush", kind: "button", name: "Blush",     icon: "sun",  desc: "A soft rose marker start button.",  payload: { button: "rose" } },
+  { level: 8,  id: "btn-sky",   kind: "button", name: "Sky",       icon: "moon", desc: "A cool blue marker start button.",  payload: { button: "sky" } },
+  // Secret hints — a level-10 milestone (grants no toggle). Once earned, the achievements
+  // page reveals how to earn each still-locked secret charm (its desc, name kept masked).
+  { level: 10, id: "reveal-hints", kind: "unlock", name: "Secret hints", icon: "key", desc: "Reveals how to earn every secret charm." },
+  // Signature flourishes — a set unlocked together at level 12. Each draws a hand-inked mark
+  // beneath your records-page notebook signature (flourishSVG in app.js; the crest is a wax
+  // seal). Selection persists in settings.masterySignature; rendered on the records page.
+  { level: 12, id: "sig-swash",    kind: "signature", name: "Underline",    icon: "feather", desc: "A confident stroke under your name.",         payload: { signature: "swash" } },
+  { level: 12, id: "sig-loop",     kind: "signature", name: "Flourish",     icon: "feather", desc: "A looping swash with a tail.",                payload: { signature: "loop" } },
+  { level: 12, id: "sig-rule",     kind: "signature", name: "Double rule",  icon: "book",    desc: "Two clean rules — signed and official.",      payload: { signature: "rule" } },
+  { level: 12, id: "sig-splatter", kind: "signature", name: "Ink splatter", icon: "drop",    desc: "A charming spray of dropped ink.",            payload: { signature: "splatter" } },
+  { level: 12, id: "sig-thirteen", kind: "signature", name: "The 13",       icon: "star",    desc: "The sacred number, drawn by hand.",           payload: { signature: "thirteen" } },
+  { level: 12, id: "sig-crest",    kind: "signature", name: "Poet’s crest", icon: "feather", desc: "A wax seal — quill and laurel.",         payload: { signature: "crest" } },
   // Prestige titles — worn on your records-page notebook signature. Unlocked in tiers as
   // Mastery climbs; each tier has one `isDefault` title that a player on the "follows your
   // mastery" auto setting wears automatically, plus alternates they can switch to via the

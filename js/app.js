@@ -195,6 +195,8 @@ function applySettings() {
   else body.removeAttribute("data-contrast");
   if (settings.masteryPaper) body.setAttribute("data-paper", settings.masteryPaper);
   else body.removeAttribute("data-paper");
+  if (settings.masteryButton) body.setAttribute("data-startbtn", settings.masteryButton);
+  else body.removeAttribute("data-startbtn");
   refreshSnow();   // December snowfall follows the reduce-motion setting live
 }
 
@@ -1676,7 +1678,11 @@ function achTile(a) {
     return `<div class="ach ach--earned">${charmMarkup(a.icon)}<div class="ach-text"><div class="ach-nm">${escapeHtml(a.name)}</div><div class="ach-dc">${escapeHtml(a.desc)}</div></div>${achSacrificeMarkup(a)}</div>`;
   }
   if (a.secret) {
-    return `<div class="ach locked secret"><span class="charm-q" aria-hidden="true">?</span><div class="ach-text"><div class="ach-nm">???</div><div class="ach-dc">a secret charm</div></div></div>`;
+    // Once the level-10 "secret hints" reward is earned, reveal the how-to (desc) while
+    // keeping the name and charm a surprise; otherwise it stays fully masked.
+    const dc = hiddenHintsUnlocked() ? escapeHtml(a.desc) : "a secret charm";
+    const cls = hiddenHintsUnlocked() ? "ach locked secret hinted" : "ach locked secret";
+    return `<div class="${cls}"><span class="charm-q" aria-hidden="true">?</span><div class="ach-text"><div class="ach-nm">???</div><div class="ach-dc">${dc}</div></div></div>`;
   }
   return `<div class="ach locked">${charmMarkup(a.icon)}<div class="ach-text"><div class="ach-nm">${escapeHtml(a.name)}</div><div class="ach-dc">${escapeHtml(a.desc)}</div></div></div>`;
 }
@@ -2355,8 +2361,10 @@ function renderRecordsPage() {
   const avatar = getAvatar();
   const title = wornTitleName();
   const titleHTML = (name && title) ? `<span class="rec-sig-title">${escapeHtml(title)}</span>` : "";
+  const floId = settings.masterySignature || "";
+  const floHTML = (name && floId) ? `<span class="rec-flourish" data-fl="${floId}">${flourishSVG(floId)}</span>` : "";
   const sigText = name
-    ? `<span class="rec-sig-name">${escapeHtml(name)}’s notebook</span><span class="rec-sig-sub">best scores &amp; history</span>${titleHTML}`
+    ? `<span class="rec-sig-name">${escapeHtml(name)}’s notebook</span>${floHTML}<span class="rec-sig-sub">best scores &amp; history</span>${titleHTML}`
     : `<div class="rec-sign-row"><input id="recSignInput" class="set-text" maxlength="20" placeholder="sign your notebook" /><button id="recSignSave" class="btn-ghost">sign</button></div>`;
   const sig =
     `<button type="button" id="recPolBtn" class="rec-pol-btn" aria-label="${avatar ? "change your photo" : "add a photo"}">${polaroidHTML(avatar, name)}</button>` +
@@ -2461,10 +2469,16 @@ function updateMasteryNav() {
 // value, and the labels for that kind's "reset to default" row. Pens swap the writing hand;
 // papers retint the page surface. New cosmetic kinds (ink colours, etc.) drop in here.
 const MASTERY_COSMETICS = {
-  pen:   { setting: "masteryPen",   field: "pen",   resetLabel: "Default pen",   resetMeta: "the everyday hand", resetIcon: "nib" },
-  paper: { setting: "masteryPaper", field: "paper", resetLabel: "Plain paper",   resetMeta: "the everyday page" },
-  charm: { setting: "masteryCharm", field: "charm", resetLabel: "Star charm",    resetMeta: "the default keepsake" },
+  pen:       { setting: "masteryPen",       field: "pen",       resetLabel: "Default pen",    resetMeta: "the everyday hand", resetIcon: "nib" },
+  paper:     { setting: "masteryPaper",     field: "paper",     resetLabel: "Plain paper",    resetMeta: "the everyday page" },
+  charm:     { setting: "masteryCharm",     field: "charm",     resetLabel: "Star charm",     resetMeta: "the default keepsake" },
+  button:    { setting: "masteryButton",    field: "button",    resetLabel: "Gold marker",    resetMeta: "the everyday button" },
+  signature: { setting: "masterySignature", field: "signature", resetLabel: "No flourish",    resetMeta: "just your name" },
 };
+
+// True once the level-10 "secret hints" milestone has been earned (reveals the how-to on
+// still-locked secret charms in the achievements page). Derived from the unlocked map.
+function hiddenHintsUnlocked() { return !!loadMastery().unlocked["reveal-hints"]; }
 
 // The Mastery page: a headline rank, the five skills with their levels + progress, and the
 // reward ladder (unlocked cosmetics are selectable; still-locked tiers read "locked").
@@ -2532,11 +2546,12 @@ function renderMasteryPage() {
 
 // Which reward each mastery level introduces, for the ascent-track markers and the
 // "next reward" note. Only the levels that unlock something appear.
-const MASTERY_TRACK_ICONS = { 1: "nib", 4: "book", 5: "gem", 6: "swords", 7: "feather", 13: "crown" };
+const MASTERY_TRACK_ICONS = { 1: "nib", 4: "book", 5: "gem", 6: "swords", 7: "feather", 8: "rise", 10: "key", 12: "sparkle", 13: "crown" };
 const MASTERY_LEVEL_LABEL = {
   1: "a new pen", 2: "a new pen", 3: "a new pen", 4: "paper stocks", 5: "bracelet charms",
-  6: "super-hard challenges", 7: "a prestige title", 9: "a prestige title",
-  11: "a prestige title", 13: "your final title",
+  6: "super-hard challenges", 7: "a prestige title", 8: "a button finish",
+  9: "a prestige title", 10: "secret hints", 11: "a prestige title",
+  12: "a signature flourish", 13: "your final title",
 };
 
 // The next reward waiting up the track, phrased for the sub-line ("" once none remain).
@@ -2627,11 +2642,13 @@ function masteryHeadClimb(m, mLevel) {
 // Each group carries its own "default" option so a kind can always be reverted; still-locked
 // items read as empty slots (a lock, no glyph) so the reward stays a surprise until earned.
 function buildRewardBento(m, mLevel, unlocked) {
-  const groups = { pen: [], paper: [], charm: [], unlock: [] };
+  const groups = { pen: [], paper: [], charm: [], unlock: [], button: [], signature: [] };
   MASTERY_REWARDS.forEach((r) => { if (groups[r.kind]) groups[r.kind].push(r); });
   const all = MASTERY_REWARDS.filter((r) => r.kind !== "title");
   const earned = all.filter((r) => m.unlocked[r.id]).length;
   const pct = Math.round((earned / all.length) * 100);
+  const hardR = groups.unlock.find((r) => r.id === "hardmode-unlock");
+  const hintR = groups.unlock.find((r) => r.id === "reveal-hints");
 
   return `<div class="reward-bento">` +
     `<div class="rb-head">` +
@@ -2643,7 +2660,10 @@ function buildRewardBento(m, mLevel, unlocked) {
       buildPensTile(groups.pen, m) +
       buildCharmTile(groups.charm, m) +
       buildPaperTile(groups.paper, m) +
-      buildHardTile(groups.unlock[0], m) +
+      buildHardTile(hardR, m) +
+      buildButtonTile(groups.button, m) +
+      buildSignatureTile(groups.signature, m) +
+      buildHintTile(hintR, m) +
       buildTitlesTile(m, unlocked) +
     `</div>` +
   `</div>`;
@@ -2738,6 +2758,114 @@ function buildHardTile(r, m) {
       : "A tier of brutal new challenges. Reach Mastery " + r.level + " to break the seal."}</div></div>`;
 }
 
+// Start-writing button finishes — swatches of the real CTA (default plus each unlockable
+// finish). Selecting one restyles the home-screen hero button globally.
+function buildButtonTile(buttons, m) {
+  const setUnlocked = buttons.length ? !!m.unlocked[buttons[0].id] : false;
+  const active = settings.masteryButton || "";
+  let sw = buttonSwatch(`data-reward-reset="button"`, "", "gold marker", active === "", true, 0);
+  buttons.forEach((r) => {
+    sw += buttonSwatch(`data-reward="${r.id}"`, r.payload.button, r.name, active === r.payload.button, setUnlocked, r.level);
+  });
+  return `<div class="rb-tile rb-button" style="grid-area:button">` +
+    `<div class="rb-tile-top"><span class="rb-tt">Start button</span>${rbChip("Mastery 8")}</div>` +
+    `<div class="rb-tt-sub">Restyles your home-screen button</div>` +
+    `<div class="rb-swatches">${sw}</div></div>`;
+}
+function buttonSwatch(attr, style, name, active, available, level) {
+  if (!available) {
+    return `<span class="rb-sw-col locked"><span class="rb-btn-sw locked"><span class="rb-lock">${ACH_ICONS.lock}</span></span>` +
+      `<span class="rb-sw-nm">Mastery ${level}</span></span>`;
+  }
+  return `<button type="button" class="rb-sw-col${active ? " active" : ""}" ${attr}>` +
+    `<span class="rb-btn-sw" data-startbtn="${style}">Aa</span>` +
+    `<span class="rb-sw-nm">${active ? "in use" : escapeHtml(name)}</span></button>`;
+}
+
+// Signature flourishes — a stacked column of hand-inked marks (default "no flourish" plus
+// each unlockable flourish). Selecting one draws it beneath your records signature.
+function buildSignatureTile(sigs, m) {
+  const setUnlocked = sigs.length ? !!m.unlocked[sigs[0].id] : false;
+  const active = settings.masterySignature || "";
+  let rows = sigRow(`data-reward-reset="signature"`, flourishSVG(""), "No flourish", active === "");
+  sigs.forEach((r) => {
+    if (!setUnlocked) rows += sigSlot(r.level);
+    else rows += sigRow(`data-reward="${r.id}"`, flourishSVG(r.payload.signature), r.name, active === r.payload.signature);
+  });
+  return `<div class="rb-tile rb-sig" style="grid-area:sig">` +
+    `<div class="rb-tile-top"><span class="rb-tt">Signature flourish</span>${rbChip("Mastery 12")}</div>` +
+    `<div class="rb-tt-sub">Inked beneath your records signature</div>` +
+    `<div class="rb-sig-list">${rows}</div></div>`;
+}
+function sigRow(attr, glyphHTML, name, active) {
+  return `<button type="button" class="rb-sig-row${active ? " active" : ""}" ${attr}>` +
+    `<span class="rb-sig-ic">${glyphHTML}</span><span class="rb-sig-nm">${escapeHtml(name)}</span>` +
+    `<span class="rb-sig-tag">${active ? "in use" : "use"}</span></button>`;
+}
+function sigSlot(level) {
+  return `<div class="rb-sig-row locked"><span class="rb-sig-ic rb-lock">${ACH_ICONS.lock}</span>` +
+    `<span class="rb-sig-nm">Locked</span><span class="rb-sig-tag">Mastery ${level}</span></div>`;
+}
+
+// Secret hints — a level-10 milestone tile (grants no toggle). Sealed while locked, earned
+// once reached; when earned, the achievements page reveals each secret charm's how-to.
+function buildHintTile(r, m) {
+  if (!r) return "";
+  const unlocked = !!m.unlocked[r.id];
+  return `<div class="rb-tile rb-hint${unlocked ? " earned" : ""}" style="grid-area:hint">` +
+    `<span class="rb-hint-seal">${unlocked ? ACH_ICONS.key : ACH_ICONS.lock}</span>` +
+    `${rbChip("Mastery " + r.level)}` +
+    `<div class="rb-hint-nm">${escapeHtml(r.name)}</div>` +
+    `<div class="rb-hint-sub">${unlocked
+      ? "Earned — every secret charm now shows how to earn it."
+      : "Reveal how to earn every secret charm. Reach Mastery " + r.level + "."}</div></div>`;
+}
+
+// The signature-flourish glyph for a given id (shared by the records page and the Mastery
+// picker). Strokes ink in currentColor; the crest is a fixed oxblood wax seal. "" = nothing.
+const WAX = "#8f2a2e", WAX_DARK = "#651d20", WAX_LITE = "#c25e62";
+function flourishSVG(id) {
+  switch (id) {
+    case "swash":
+      return `<svg class="fl fl-stroke" viewBox="0 0 220 16" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path d="M4 10 C42 3 84 15 122 8 C150 3 188 13 216 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+    case "loop":
+      return `<svg class="fl fl-stroke" viewBox="0 0 220 20" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path d="M4 12 C38 5 78 16 112 10 C140 5 164 3 178 8 C190 12 184 19 175 17 C168 15 172 9 185 9 C202 9 214 6 216 4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>`;
+    case "rule":
+      return `<svg class="fl fl-stroke" viewBox="0 0 220 12" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path d="M3 3.5 H217" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M9 9 H198" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity="0.72"/></svg>`;
+    case "splatter":
+      return `<svg class="fl fl-stroke" viewBox="0 0 220 20" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path d="M4 10 C56 4 116 14 182 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><g fill="currentColor"><circle cx="190" cy="6" r="1.9"/><circle cx="198" cy="12" r="1.3"/><circle cx="185" cy="15" r="1"/><circle cx="204" cy="5" r="0.9"/><circle cx="196" cy="17" r="0.8"/></g></svg>`;
+    case "thirteen":
+      return `<svg class="fl fl-13" viewBox="0 0 42 26" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><text x="3" y="21">13</text></svg>`;
+    case "crest":
+      return crestSealSVG();
+    default:
+      return "";
+  }
+}
+// The Poet's crest wax seal: an oxblood disc with a beaded rim, an embossed quill, and two
+// laurel fronds — built programmatically so the beaded ring stays compact.
+function crestSealSVG() {
+  let dots = "";
+  for (let i = 0; i < 30; i++) {
+    const a = (i / 30) * Math.PI * 2;
+    dots += `<circle cx="${(50 + 33 * Math.cos(a)).toFixed(1)}" cy="${(50 + 33 * Math.sin(a)).toFixed(1)}" r="1.3" fill="${WAX_LITE}"/>`;
+  }
+  const laurel =
+    `<path d="M28 72 C 20 62 20 48 27 38" fill="none" stroke="${WAX_LITE}" stroke-width="2" stroke-linecap="round"/>` +
+    `<path d="M72 72 C 80 62 80 48 73 38" fill="none" stroke="${WAX_LITE}" stroke-width="2" stroke-linecap="round"/>` +
+    `<g fill="${WAX_LITE}"><ellipse cx="24" cy="60" rx="3.4" ry="1.7" transform="rotate(40 24 60)"/><ellipse cx="24" cy="50" rx="3.4" ry="1.7" transform="rotate(20 24 50)"/><ellipse cx="27" cy="42" rx="3.2" ry="1.6"/>` +
+    `<ellipse cx="76" cy="60" rx="3.4" ry="1.7" transform="rotate(-40 76 60)"/><ellipse cx="76" cy="50" rx="3.4" ry="1.7" transform="rotate(-20 76 50)"/><ellipse cx="73" cy="42" rx="3.2" ry="1.6"/></g>`;
+  const feather =
+    `<g transform="translate(30,30) scale(1.75)" fill="${WAX_LITE}" stroke="${WAX_DARK}" stroke-width="0.5">` +
+    `<path d="M19 3 C10 4 5 10 4.5 17 L8 13.5 C10 16 14 15 16 11 C13 12 11.5 11 11 9.5 C13 11 16 10 17 6.5 C14.5 7.5 13 6.8 12.5 5.5 C15 7 18 5.5 19 3 Z"/>` +
+    `<path d="M4 20 L8 13.5" stroke="${WAX_LITE}" stroke-width="1.4" stroke-linecap="round" fill="none"/></g>`;
+  return `<svg class="fl fl-crest" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" aria-hidden="true">` +
+    `<circle cx="50" cy="50" r="40" fill="${WAX}"/>` +
+    `<circle cx="50" cy="50" r="40" fill="none" stroke="${WAX_DARK}" stroke-width="3"/>` +
+    `<circle cx="50" cy="50" r="36" fill="none" stroke="${WAX_DARK}" stroke-width="1" opacity="0.5"/>` +
+    dots + laurel + feather + `</svg>`;
+}
+
 // Prestige titles — the rank ladder (four tier medallions along a rail) above the title
 // picker. The medallions show progress; the stepper (once unlocked) does the actual choosing.
 const RB_TIER_ROMAN = ["I", "II", "III", "IV"];
@@ -2786,7 +2914,9 @@ function applyMasteryCosmetic(kind, value) {
   settings[cos.setting] = value;
   saveSettings(settings);
   if (kind === "pen") setPen(value || null);
-  else applySettings();   // paper realised on <body data-paper>
+  else applySettings();   // paper + button realised on <body> attributes
+  // The signature flourish only lives on the records page — refresh it if it's showing.
+  if (kind === "signature" && screens.records.classList.contains("active")) renderRecordsPage();
   renderMasteryPage();
 }
 
@@ -8306,11 +8436,18 @@ function buildDevApi() {
       unlockRewards: () => { const m = loadMastery(); for (const r of MASTERY_REWARDS) m.unlocked[r.id] = new Date().toISOString(); saveMastery(m); if ($("masteryBody")) renderMasteryPage(); },
       // Re-lock every reward — preview the reward bento's locked/empty-slot tile states.
       lockRewards: () => { const m = loadMastery(); m.unlocked = {}; saveMastery(m); updateMasteryNav(); if ($("masteryBody")) renderMasteryPage(); },
-      reset: () => { resetMastery(); settings.masteryPen = ""; settings.masteryPaper = ""; settings.masteryCharm = ""; settings.masteryTitle = ""; saveSettings(settings); setPen(null); applySettings(); updateMasteryNav(); if ($("masteryBody")) renderMasteryPage(); },
+      reset: () => { resetMastery(); settings.masteryPen = ""; settings.masteryPaper = ""; settings.masteryCharm = ""; settings.masteryTitle = ""; settings.masteryButton = ""; settings.masterySignature = ""; saveSettings(settings); setPen(null); applySettings(); updateMasteryNav(); if ($("masteryBody")) renderMasteryPage(); },
       // Preview a paper stock without unlocking it: pass an id (manila/parchment/blush/slate) or "" to clear.
       paper: (id) => { settings.masteryPaper = id || ""; saveSettings(settings); applySettings(); if ($("masteryBody")) renderMasteryPage(); },
       // Preview a bracelet charm without unlocking it: pass an id (heart/moon/daisy/bow/pick/note/lightning/snake) or "" for the default star.
       charm: (id) => { settings.masteryCharm = id || ""; saveSettings(settings); if ($("masteryBody")) renderMasteryPage(); },
+      // Preview a start-button finish without unlocking it: pass an id (ink/rose/sky) or "" for the default gold marker.
+      button: (id) => { settings.masteryButton = id || ""; saveSettings(settings); applySettings(); if ($("masteryBody")) renderMasteryPage(); },
+      // Preview a signature flourish without unlocking it: pass an id (swash/loop/rule/splatter/thirteen/crest) or "" for none.
+      signature: (id) => { settings.masterySignature = id || ""; saveSettings(settings); if ($("masteryBody")) renderMasteryPage(); if (screens.records.classList.contains("active")) renderRecordsPage(); },
+      // Toggle the level-10 "secret hints" reward without changing your level: hints(true) reveals
+      // each secret charm's how-to on the achievements page, hints(false) re-masks them.
+      hints: (on) => { const m = loadMastery(); if (on === false) delete m.unlocked["reveal-hints"]; else m.unlocked["reveal-hints"] = new Date().toISOString(); saveMastery(m); if ($("masteryBody")) renderMasteryPage(); if (screens.achievements.classList.contains("active")) renderAchievementsPage(); },
       // Wear a prestige title: pass a slug (see mastery.titles() for the list) or "" to follow your
       // mastery. Only honoured once that title's reward is unlocked — run mastery.setMasteryLevel or
       // mastery.unlockRewards first, else it falls back to the mastery-following default.

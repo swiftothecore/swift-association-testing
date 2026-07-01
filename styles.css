@@ -360,6 +360,18 @@
   }
   body[data-reduce-motion="on"] #playBtn,
   body[data-reduce-motion="on"] #playBtn::before { animation: none; }
+  /* Mastery-unlocked "start writing" finishes (level 8). Only the resting fill changes; the
+     generic #playBtn:hover already inverts to ink, so rose/sky invert for free. Ink starts
+     inverted, so it needs its own hover back to gold. */
+  body[data-startbtn="ink"] #playBtn {
+    background-color: var(--ink); color: var(--paper);
+    background-image: linear-gradient(168deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 60%);
+  }
+  body[data-startbtn="ink"] #playBtn:hover, body[data-startbtn="ink"] #playBtn:focus-visible {
+    background-color: #efb73e; color: var(--ink);
+  }
+  body[data-startbtn="rose"] #playBtn { background-color: #e79ab5; }
+  body[data-startbtn="sky"] #playBtn { background-color: #7fb0dd; }
   @keyframes playBob {
     0%, 100% { transform: rotate(-0.6deg) translateY(0); box-shadow: 3px 3px 0 rgba(43, 39, 34, 0.22); }
     50%      { transform: rotate(-0.6deg) translateY(-3px); box-shadow: 3px 6px 0 rgba(43, 39, 34, 0.18); }
@@ -461,6 +473,13 @@
   .rec-sig { display: flex; align-items: center; gap: 18px; margin: 2px 0 16px; padding-bottom: 16px; border-bottom: 1px dashed rgba(43,39,34,0.16); }
   .rec-sig-text { min-width: 0; }
   .rec-sig-name { font-family: var(--hand); font-weight: 700; font-size: 30px; color: var(--ink); display: block; line-height: 1.05; transform: rotate(-0.6deg); }
+  /* Mastery-unlocked signature flourish (level 12), inked beneath your name. */
+  .rec-flourish { display: block; color: var(--ink); margin: 4px 0 2px; line-height: 0; }
+  .rec-flourish .fl-stroke { display: block; width: 200px; max-width: 72%; height: 16px; }
+  .rec-flourish[data-fl="thirteen"] .fl-13 { width: 48px; height: 30px; transform: rotate(-3deg); }
+  .rec-flourish[data-fl="crest"] .fl-crest { width: 54px; height: 54px; }
+  .fl { display: block; }
+  .fl-13 text { font-family: var(--hand); font-weight: 700; font-size: 22px; fill: currentColor; }
   .rec-sig-sub { font-family: var(--type); font-size: 11px; letter-spacing: 0.5px; color: var(--ink-soft); display: block; margin-top: 5px; }
   .rec-sign-row { display: flex; align-items: center; gap: 8px; }
   .rec-sign-row .set-text { text-align: left; width: 190px; }
@@ -2214,6 +2233,9 @@
   .ach.locked .charm { color: var(--ink-soft); }
   .ach.locked .charm .ink-fill { fill: var(--ink-soft); }
   .ach.secret .charm-q { font-family: var(--hand); font-weight: 700; font-size: 22px; color: var(--ink-soft); width: 30px; text-align: center; flex: none; }
+  /* Secret charm with the level-10 hints reward earned: the how-to is shown (still masked name). */
+  .ach.secret.hinted { opacity: 0.72; }
+  .ach.secret.hinted .ach-dc { font-style: italic; color: var(--ink-soft); }
 
   /* Charm Collection page — header (title + by-theme breakdown + meter/latest), then grouped grid */
   .ach-page-head { margin-bottom: 14px; }
@@ -2634,7 +2656,13 @@
   .rb-prog i { display: block; height: 100%; border-radius: 3px; background: rgba(var(--m-accent), 0.78); }
 
   .rb-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
-    grid-template-areas: "pens pens paper paper" "hard hard hard hard" "charm charm charm charm" "title title title title"; }
+    grid-template-areas:
+      "pens pens paper paper"
+      "charm charm charm charm"
+      "hard hard hard hard"
+      "sig sig button button"
+      "sig sig hint hint"
+      "title title title title"; }
 
   .rb-tile { position: relative; border-radius: 12px; padding: 14px 16px;
     background-color: var(--paper); background-image: linear-gradient(rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.32));
@@ -2716,6 +2744,45 @@
   .rb-hard.earned .rb-hard-seal { border-color: #7a6330; }
   .rb-hard.earned .rb-hard-seal .ink, .rb-hard.earned .rb-hard-seal .ink-fill { stroke: #e8c37a; fill: #e8c37a; }
 
+  /* Start-writing button — swatches of the real CTA (reuses .rb-swatches / .rb-sw-col) */
+  .rb-btn-sw { width: 56px; height: 44px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    font-family: var(--type); font-weight: 700; font-size: 14px; letter-spacing: 0.5px;
+    color: var(--ink); background: #efb73e; border: 2px solid var(--ink); box-shadow: 2px 2px 0 rgba(43, 39, 34, 0.18); }
+  .rb-btn-sw[data-startbtn="ink"] { background: var(--ink); color: var(--paper); }
+  .rb-btn-sw[data-startbtn="rose"] { background: #e79ab5; }
+  .rb-btn-sw[data-startbtn="sky"] { background: #7fb0dd; }
+  .rb-sw-col.active .rb-btn-sw { box-shadow: 2px 2px 0 rgba(43, 39, 34, 0.18), 0 0 0 3px rgba(var(--m-accent), 0.2); }
+  .rb-btn-sw.locked { background: rgba(43, 39, 34, 0.04); border: 1px dashed rgba(43, 39, 34, 0.25); box-shadow: none; color: var(--ink-soft); }
+  .rb-btn-sw.locked .rb-lock { opacity: 0.6; }
+
+  /* Signature flourish — stacked rows (reuses the pen-list rhythm) */
+  .rb-sig-list { display: flex; flex-direction: column; gap: 9px; margin-top: 12px; }
+  .rb-sig-row { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; text-align: left; font: inherit; cursor: pointer;
+    padding: 6px 11px; border-radius: 10px; border: 1px solid rgba(43, 39, 34, 0.14); background: rgba(43, 39, 34, 0.015); }
+  .rb-sig-row.active { border-color: rgba(var(--m-accent), 0.6); background: rgba(var(--m-accent), 0.1); }
+  .rb-sig-row.locked { cursor: default; border-style: dashed; opacity: 0.6; }
+  .rb-sig-ic { width: 96px; height: 28px; flex: none; display: flex; align-items: center; color: var(--ink); }
+  .rb-sig-ic.rb-lock { width: 15px; height: 15px; color: var(--ink-soft); }
+  .rb-sig-ic .fl-stroke { width: 96px; height: 15px; }
+  .rb-sig-ic .fl-13 { width: 36px; height: 24px; }
+  .rb-sig-ic .fl-crest { width: 28px; height: 28px; }
+  .rb-sig-ic .fl-none { font-family: var(--hand); font-size: 20px; color: var(--ink-soft); opacity: 0.6; }
+  .rb-sig-nm { flex: 1; font-family: var(--hand); font-weight: 700; font-size: 14px; color: var(--ink); }
+  .rb-sig-row.locked .rb-sig-nm { color: var(--ink-soft); }
+  .rb-sig-tag { font-family: var(--type); font-size: 8.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+  .rb-sig-row.active .rb-sig-tag { color: rgba(var(--m-accent), 0.95); }
+
+  /* Secret hints — a light milestone tile on paper */
+  .rb-hint .rb-chip { position: absolute; top: 13px; right: 14px; }
+  .rb-hint-seal { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(var(--m-accent), 0.1); border: 1.5px solid rgba(var(--m-accent), 0.4); padding: 8px; }
+  .rb-hint-seal svg { width: 100%; height: 100%; overflow: visible; }
+  .rb-hint-seal .ink { stroke: rgba(var(--m-accent), 0.95); }
+  .rb-hint-seal .ink-fill { fill: rgba(var(--m-accent), 0.9); stroke: rgba(var(--m-accent), 0.95); }
+  .rb-hint-nm { font-family: var(--hand); font-weight: 700; font-size: 17px; color: var(--ink); margin-top: 10px; }
+  .rb-hint-sub { font-family: var(--type); font-size: 10px; line-height: 1.5; color: var(--ink-soft); margin-top: 5px; max-width: 240px; }
+  .rb-hint.earned .rb-hint-seal { background: rgba(var(--m-accent), 0.18); border-color: rgba(var(--m-accent), 0.6); }
+
   /* Prestige titles — rank-medallion ladder above the picker */
   .rb-ladder { position: relative; display: flex; justify-content: space-between; align-items: flex-start; margin: 18px 4px 6px; padding: 0 6px; }
   .rb-ladder-rail { position: absolute; top: 22px; left: 40px; right: 40px; border-top: 1.5px dashed rgba(43, 39, 34, 0.2); }
@@ -2735,7 +2802,7 @@
     font-family: var(--type); font-size: 10.5px; color: var(--ink-soft); background: rgba(43, 39, 34, 0.04); border: 1px solid rgba(43, 39, 34, 0.14); }
   .rb-titles .title-stepper { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(43, 39, 34, 0.1); }
   @media (max-width: 560px) {
-    .rb-grid { grid-template-columns: 1fr; grid-template-areas: "pens" "charm" "paper" "hard" "title"; }
+    .rb-grid { grid-template-columns: 1fr; grid-template-areas: "pens" "charm" "paper" "hard" "sig" "button" "hint" "title"; }
     .rb-bead { width: 34px; height: 34px; }
     .rb-bead .charm-preview { width: 24px; height: 24px; }
     .rb-swatches { gap: 10px; }
