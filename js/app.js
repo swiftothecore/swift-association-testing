@@ -2476,24 +2476,12 @@ function renderMasteryPage() {
   const total = totalSkillLevels(m);
   const mLevel = masteryLevelFromXp(m.masteryXp);
 
-  // Headline
+  // Headline — a notebook-card hero with three states: locked (the wax not yet
+  // pressed), climbing (the ascent track), and complete (sealed at the cap).
   let head;
-  if (unlocked && mLevel >= MASTERY_MAX_LEVEL) {
-    head = `<div class="mastery-rank">Mastery — level ${mLevel}</div>` +
-      `<div class="ms-bar maxed"><i style="width:100%"></i></div>` +
-      `<p class="mastery-sub">Mastery complete — every reward earned.</p>`;
-  } else if (unlocked) {
-    const cur = masteryXpForLevel(mLevel), next = masteryXpForLevel(mLevel + 1);
-    const pct = Math.max(0, Math.min(100, ((m.masteryXp - cur) / (next - cur)) * 100));
-    head = `<div class="mastery-rank">Mastery — level ${mLevel}</div>` +
-      `<div class="ms-bar"><i style="width:${pct.toFixed(1)}%"></i></div>` +
-      `<p class="mastery-sub">${m.masteryXp - cur} / ${next - cur} ink to level ${mLevel + 1}</p>`;
-  } else {
-    const pct = Math.max(0, Math.min(100, (total / MASTERY_GATE) * 100));
-    head = `<div class="mastery-rank"><span class="ms-locked">Mastery locked</span></div>` +
-      `<div class="ms-bar"><i style="width:${pct.toFixed(1)}%"></i></div>` +
-      `<p class="mastery-sub">${total} / ${MASTERY_GATE} skill levels — raise your skills to begin</p>`;
-  }
+  if (unlocked && mLevel >= MASTERY_MAX_LEVEL) head = masteryHeadComplete(mLevel);
+  else if (unlocked) head = masteryHeadClimb(m, mLevel);
+  else head = masteryHeadLocked(total);
 
   // Skills
   const skills = SKILLS.map((sk) => {
@@ -2532,6 +2520,104 @@ function renderMasteryPage() {
   body.querySelectorAll("[data-reward-reset]").forEach((el) => {
     el.addEventListener("click", () => resetMasteryCosmetic(el.getAttribute("data-reward-reset")));
   });
+}
+
+// ---- Mastery hero ----
+// The card at the top of the Mastery page. Three states share a notebook-card shell
+// (paper, a red margin rule, a wax-seal medallion) but diverge in the middle:
+//   locked   → a dashed, unpressed seal + a bar toward the unlock gate
+//   climbing → a gold seal with your level + the ascent track (13 pips, reward
+//              markers, a pen nib riding the ink line at your exact progress)
+//   complete → a sealed gold medallion + a full gold bar
+
+// Which reward each mastery level introduces, for the ascent-track markers and the
+// "next reward" note. Only the levels that unlock something appear.
+const MASTERY_TRACK_ICONS = { 1: "nib", 4: "book", 5: "gem", 6: "swords", 7: "feather", 13: "crown" };
+const MASTERY_LEVEL_LABEL = {
+  1: "a new pen", 2: "a new pen", 3: "a new pen", 4: "paper stocks", 5: "bracelet charms",
+  6: "super-hard challenges", 7: "a prestige title", 9: "a prestige title",
+  11: "a prestige title", 13: "your final title",
+};
+
+// The next reward waiting up the track, phrased for the sub-line ("" once none remain).
+function masteryNextRewardNote(mLevel) {
+  for (let lv = mLevel + 1; lv <= MASTERY_MAX_LEVEL; lv++) {
+    if (MASTERY_LEVEL_LABEL[lv]) return `Next — ${MASTERY_LEVEL_LABEL[lv]} at level ${lv}`;
+  }
+  return "";
+}
+
+// Locked — the wax not yet pressed. Bar runs toward the skill-level gate.
+function masteryHeadLocked(total) {
+  const pct = Math.max(0, Math.min(100, (total / MASTERY_GATE) * 100));
+  const left = Math.max(0, MASTERY_GATE - total);
+  return `<div class="mh-card mh-locked"><span class="mh-rule"></span>` +
+    `<div class="mh-row">` +
+      `<div class="mh-seal locked"><span class="mh-seal-emblem">${charmMarkup("lock")}</span></div>` +
+      `<div class="mh-body">` +
+        `<div class="mh-kicker">Mastery</div>` +
+        `<div class="mh-title">Not yet sealed</div>` +
+        `<div class="mh-bar"><i style="width:${pct.toFixed(1)}%"></i><span class="mh-gate"></span></div>` +
+        `<div class="mh-sub"><b>${total} / ${MASTERY_GATE}</b> skill levels · ${left} more to press the wax</div>` +
+      `</div>` +
+    `</div></div>`;
+}
+
+// Complete — sealed at the cap.
+function masteryHeadComplete(mLevel) {
+  return `<div class="mh-card mh-complete"><span class="mh-rule"></span>` +
+    `<div class="mh-row">` +
+      `<div class="mh-seal complete"><span class="mh-seal-emblem">${charmMarkup("crown")}</span></div>` +
+      `<div class="mh-body">` +
+        `<div class="mh-kicker">Mastery</div>` +
+        `<div class="mh-title">Mastered</div>` +
+        `<div class="mh-bar"><i style="width:100%"></i></div>` +
+        `<div class="mh-sub"><b>Level ${mLevel}</b> · every reward earned</div>` +
+      `</div>` +
+    `</div></div>`;
+}
+
+// Climbing — the ascent track. Pips are levels 1–13; reached ones ink gold, the current
+// one glows plum, and a nib rides the ink line at the exact fraction between levels.
+function masteryHeadClimb(m, mLevel) {
+  const cur = masteryXpForLevel(mLevel), next = masteryXpForLevel(mLevel + 1);
+  const inCur = Math.max(0, m.masteryXp - cur), span = Math.max(1, next - cur);
+  const pct = Math.max(0, Math.min(100, (inCur / span) * 100));
+  const frac = Math.max(0, Math.min(1, ((mLevel - 1) + pct / 100) / (MASTERY_MAX_LEVEL - 1)));
+  const fillPos = `calc((100% - 16px) * ${frac.toFixed(4)})`;
+
+  let pips = "";
+  for (let i = 1; i <= MASTERY_MAX_LEVEL; i++) {
+    const reached = i <= mLevel, current = i === mLevel;
+    const icon = MASTERY_TRACK_ICONS[i];
+    const label = MASTERY_LEVEL_LABEL[i];
+    const tip = `Level ${i}${label ? " · " + label : ""}`;
+    pips += `<div class="mh-nd${reached ? " reached" : ""}${current ? " current" : ""}" title="${escapeHtml(tip)}">` +
+      `<span class="mh-ic">${icon ? charmMarkup(icon) : ""}</span>` +
+      `<span class="mh-dot"></span><span class="mh-lv">${i}</span></div>`;
+  }
+
+  const seal = mLevel >= 1
+    ? `<span class="mh-seal-star">${charmMarkup("star")}</span><span class="mh-seal-num">${mLevel}</span>`
+    : `<span class="mh-seal-emblem">${charmMarkup("star")}</span>`;
+  const title = mLevel >= 1 ? `Level ${mLevel}` : "Freshly sealed";
+
+  return `<div class="mh-card mh-climb"><span class="mh-rule"></span>` +
+    `<div class="mh-row">` +
+      `<div class="mh-seal climb">${seal}</div>` +
+      `<div class="mh-body">` +
+        `<div class="mh-kicker">Mastery</div>` +
+        `<div class="mh-title">${title}</div>` +
+        `<div class="mh-next">${masteryNextRewardNote(mLevel)}</div>` +
+      `</div>` +
+    `</div>` +
+    `<div class="mh-track">` +
+      `<span class="mh-line"></span>` +
+      `<span class="mh-fill" style="width:${fillPos}"></span>` +
+      `<span class="mh-nib" style="left:calc(8px + ${fillPos})">${charmMarkup("nib")}</span>` +
+      `<div class="mh-nodes">${pips}</div>` +
+    `</div>` +
+    `<div class="mh-sub"><b>${inCur} / ${span}</b> ink to level ${mLevel + 1}</div></div>`;
 }
 
 // ---- Reward bento ----
@@ -8201,6 +8287,19 @@ function buildDevApi() {
         const m = loadMastery();
         SKILL_IDS.forEach((id) => { m.skills[id] = skillXpForLevel(SKILL_MAX_LEVEL); });   // clear the unlock gate
         m.masteryXp = masteryXpForLevel(lvl);
+        for (const r of MASTERY_REWARDS) if (r.level <= lvl && !m.unlocked[r.id]) m.unlocked[r.id] = new Date().toISOString();
+        saveMastery(m); updateMasteryNav(); if ($("masteryBody")) renderMasteryPage();
+      },
+      // Set a partial mastery level to preview the ascent-track nib mid-segment: base level
+      // plus a 0–1 fraction toward the next (e.g. setMasteryFrac(5, 0.6) sits the nib 60%
+      // between levels 5 and 6). Clears the unlock gate and unlocks rewards through the base.
+      setMasteryFrac: (lvl, frac) => {
+        lvl = Math.max(0, Math.min(MASTERY_MAX_LEVEL, lvl | 0));
+        frac = Math.max(0, Math.min(1, +frac || 0));
+        const m = loadMastery();
+        SKILL_IDS.forEach((id) => { m.skills[id] = skillXpForLevel(SKILL_MAX_LEVEL); });
+        const cur = masteryXpForLevel(lvl), next = masteryXpForLevel(Math.min(MASTERY_MAX_LEVEL, lvl + 1));
+        m.masteryXp = Math.round(cur + (next - cur) * frac);
         for (const r of MASTERY_REWARDS) if (r.level <= lvl && !m.unlocked[r.id]) m.unlocked[r.id] = new Date().toISOString();
         saveMastery(m); updateMasteryNav(); if ($("masteryBody")) renderMasteryPage();
       },

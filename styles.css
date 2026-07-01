@@ -2540,11 +2540,72 @@
   }
 
   /* ===== Mastery screen ===== */
-  .mastery-page { --m-accent: 168, 87, 122; }
-  .mastery-head { text-align: center; margin: 4px 0 6px; }
-  .mastery-rank { font-family: var(--hand); font-weight: 700; font-size: 30px; line-height: 1; color: var(--ink); }
-  .mastery-rank .ms-locked { font-size: 19px; color: var(--ink-soft); }
-  .mastery-sub { font-family: var(--type); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); margin: 8px 0 0; }
+  .mastery-page { --m-accent: 168, 87, 122; --m-gold: 199, 149, 31; --m-red: 178, 58, 58; --m-goldink: 150, 105, 20; }
+
+  /* Mastery hero — a notebook card, three states (see masteryHead* in app.js). */
+  .mastery-head { margin: 4px 0 6px; }
+  .mh-card { position: relative; border-radius: 14px; padding: 20px 24px 18px 46px;
+    background-color: var(--paper); background-image: linear-gradient(rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0.32));
+    border: 1px solid rgba(43, 39, 34, 0.16); box-shadow: 0 1px 2px rgba(43, 39, 34, 0.05); }
+  .mh-rule { position: absolute; top: 14px; bottom: 14px; left: 34px; width: 1.5px; background: rgba(var(--m-red), 0.55); }
+  .mh-row { display: flex; align-items: center; gap: 16px; }
+  .mh-body { flex: 1; min-width: 0; }
+  .mh-kicker { font-family: var(--type); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--ink-soft); }
+  .mh-title { font-family: var(--hand); font-weight: 700; font-size: 34px; line-height: 0.95; color: var(--ink); margin-top: 1px; }
+  .mh-next { font-family: var(--type); font-size: 10.5px; letter-spacing: 0.03em; color: rgba(var(--m-goldink), 1); margin-top: 5px; }
+  .mh-sub { font-family: var(--type); font-size: 10.5px; letter-spacing: 0.04em; color: var(--ink-soft); margin-top: 10px; }
+  .mh-sub b { color: var(--ink); font-weight: 700; }
+
+  /* Wax-seal medallion */
+  .mh-seal { width: 62px; height: 62px; border-radius: 50%; flex: none; position: relative;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .mh-seal.locked { background: rgba(var(--m-gold), 0.12); border: 1.5px dashed rgba(var(--m-gold), 0.85); }
+  .mh-seal.locked::before { content: ""; position: absolute; inset: 6px; border-radius: 50%; border: 1px solid rgba(var(--m-gold), 0.3); }
+  .mh-seal.climb, .mh-seal.complete { background: rgba(var(--m-gold), 0.92); border: 2px solid rgba(var(--m-goldink), 0.9); }
+  .mh-seal.climb::before, .mh-seal.complete::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; border: 1px dashed rgba(63, 44, 16, 0.4); }
+  .mh-seal-num { font-family: var(--hand); font-weight: 700; font-size: 30px; line-height: 1; color: #3f2c10; }
+  .mh-seal.climb .mh-seal-num { margin-top: 6px; }
+  .mh-seal-star { position: absolute; top: 7px; display: inline-flex; }
+  .mh-seal-star .charm { width: 10px; height: 10px; }
+  .mh-seal-emblem .charm { width: 26px; height: 26px; }
+  .mh-seal .charm { display: inline-flex; }
+  .mh-seal .charm svg { width: 100%; height: 100%; overflow: visible; }
+  .mh-seal.locked .ink { fill: none; stroke: rgba(var(--m-goldink), 0.95); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .mh-seal.locked .ink-fill { fill: rgba(var(--m-gold), 0.28); stroke: rgba(var(--m-goldink), 0.95); stroke-width: 1.2; }
+  .mh-seal.climb .ink, .mh-seal.complete .ink { fill: none; stroke: #3f2c10; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .mh-seal.climb .ink-fill, .mh-seal.complete .ink-fill { fill: #3f2c10; stroke: #3f2c10; stroke-width: 1.2; }
+
+  /* Flat bar (locked + complete states) */
+  .mh-bar { position: relative; height: 9px; border-radius: 5px; background: rgba(43, 39, 34, 0.1); margin: 13px 0 9px; }
+  .mh-bar i { position: absolute; left: 0; top: 0; height: 100%; border-radius: 5px; background: rgba(var(--m-accent), 0.72); }
+  .mh-complete .mh-bar i { background: rgba(var(--m-gold), 0.85); }
+  .mh-gate { position: absolute; right: -1px; top: -4px; bottom: -4px; width: 2px; border-radius: 1px; background: rgba(var(--m-goldink), 0.95); }
+
+  /* Ascent track (climbing state) */
+  .mh-track { position: relative; margin: 22px 2px 6px; }
+  .mh-line { position: absolute; top: 26px; left: 8px; right: 8px; height: 3px; border-radius: 2px; background: rgba(43, 39, 34, 0.14); }
+  .mh-fill { position: absolute; top: 26px; left: 8px; height: 3px; border-radius: 2px; background: rgba(var(--m-gold), 0.9); }
+  .mh-nodes { position: relative; display: flex; justify-content: space-between; }
+  .mh-nd { display: flex; flex-direction: column; align-items: center; width: 16px; }
+  .mh-ic { height: 20px; display: flex; align-items: center; justify-content: center; }
+  .mh-ic .charm { display: inline-flex; width: 15px; height: 15px; opacity: 0.85; }
+  .mh-ic .charm svg { width: 100%; height: 100%; overflow: visible; }
+  .mh-nd .mh-ic .ink { fill: none; stroke: var(--ink-soft); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .mh-nd .mh-ic .ink-fill { fill: rgba(43, 39, 34, 0.16); stroke: var(--ink-soft); stroke-width: 1.2; }
+  .mh-nd.reached .mh-ic .charm { opacity: 1; }
+  .mh-nd.reached .mh-ic .ink { stroke: rgba(var(--m-goldink), 0.95); }
+  .mh-nd.reached .mh-ic .ink-fill { fill: rgba(var(--m-gold), 0.85); stroke: rgba(var(--m-goldink), 0.95); }
+  .mh-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--paper); border: 2px solid rgba(43, 39, 34, 0.26); margin-top: 1px; }
+  .mh-nd.reached .mh-dot { background: rgba(var(--m-gold), 0.92); border-color: rgba(var(--m-goldink), 0.9); }
+  .mh-nd.current .mh-dot { background: rgba(var(--m-accent), 0.95); border-color: rgba(var(--m-accent), 0.95); box-shadow: 0 0 0 3px rgba(var(--m-accent), 0.18); }
+  .mh-lv { font-family: var(--type); font-size: 9.5px; color: var(--ink-soft); margin-top: 6px; }
+  .mh-nd.reached .mh-lv { color: var(--ink); }
+  .mh-nib { position: absolute; top: 6px; transform: translateX(-50%); width: 16px; height: 16px; z-index: 2; }
+  .mh-nib .charm { display: inline-flex; width: 100%; height: 100%; transform: rotate(45deg); }
+  .mh-nib .charm svg { width: 100%; height: 100%; overflow: visible; }
+  .mh-nib .ink { fill: none; stroke: rgba(var(--m-accent), 0.95); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .mh-nib .ink-fill { fill: rgba(var(--m-accent), 0.9); stroke: rgba(var(--m-accent), 0.95); stroke-width: 1.2; }
+
   .ms-bar { height: 9px; border-radius: 5px; background: rgba(43, 39, 34, 0.1); overflow: hidden; margin: 12px auto 0; max-width: 320px; }
   .ms-bar i { display: block; height: 100%; border-radius: 5px; background: rgba(var(--m-accent), 0.7); }
   .ms-bar.maxed i { background: rgba(199, 149, 31, 0.85); }
@@ -2819,6 +2880,21 @@
   [data-reduce-motion="true"] .album-focus-badge:focus-visible { transform: none; }
   @media (max-width: 480px) {
     .album-focus-badge { width: 44px; height: 44px; top: 9px; right: 9px; }
+
+    /* Mastery hero — tighten the card and the 13-pip ascent track for narrow screens. */
+    .mh-card { padding: 18px 16px 16px 30px; }
+    .mh-rule { left: 20px; }
+    .mh-row { gap: 12px; }
+    .mh-seal { width: 54px; height: 54px; }
+    .mh-title { font-size: 30px; }
+    .mh-track { margin-top: 20px; }
+    .mh-line, .mh-fill { top: 22px; }
+    .mh-nd { width: 14px; }
+    .mh-ic { height: 16px; }
+    .mh-ic .charm { width: 12px; height: 12px; }
+    .mh-dot { width: 10px; height: 10px; }
+    .mh-lv { font-size: 8px; margin-top: 5px; }
+    .mh-nib { top: 4px; width: 13px; height: 13px; }
   }
 
   /* Daily-streak status line under the streak numbers on the Stats page. */
