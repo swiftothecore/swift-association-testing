@@ -7832,7 +7832,7 @@ function buildDevApi() {
       grant: (n) => { const d = {}; SKILL_IDS.forEach((id) => { d[id] = n | 0; }); announceSkillProgress(recordSkillXp(d)); updateMasteryNav(); },
       setSkillLevel: (id, lvl) => {
         const m = loadMastery();
-        m.skills[id] = skillXpForLevel(Math.max(1, Math.min(SKILL_MAX_LEVEL, lvl | 0)));
+        m.skills[id] = skillXpForLevel(Math.max(0, Math.min(SKILL_MAX_LEVEL, lvl | 0)));
         saveMastery(m); updateMasteryNav();
       },
       maxSkills: () => {

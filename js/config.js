@@ -258,17 +258,17 @@ export const ENDURANCE_GROWTH = 1.12, ENDURANCE_RUN_CAP = 1500; // exponential f
 export const RANGE_RATIO_XP = 60, RANGE_PER_ALBUM = 8;     // breadth ratio bonus + flat per distinct album
 export const RESOLVE_BASE = 10, RESOLVE_STREAK_CAP = 10;   // streakMult = 1 + 0.1*min(streak, CAP)
 
-// Skill levels cap at 10. Cumulative XP to REACH a level (level 1 is free at 0 xp):
-//   threshold(n) = round(BASE * (n-1)^EXP).
+// Skills start at level 0 and cap at 10. Cumulative XP to REACH a level (level 0 is free at
+// 0 xp): threshold(n) = round(BASE * n^EXP).
 export const SKILL_MAX_LEVEL = 10;
 export const SKILL_LEVEL_BASE = 120;
 export const SKILL_LEVEL_EXP = 1.6;
 export function skillXpForLevel(level) {
-  if (level <= 1) return 0;
-  return Math.round(SKILL_LEVEL_BASE * Math.pow(level - 1, SKILL_LEVEL_EXP));
+  if (level <= 0) return 0;
+  return Math.round(SKILL_LEVEL_BASE * Math.pow(level, SKILL_LEVEL_EXP));
 }
 export function skillLevelFromXp(xp) {
-  let lv = 1;
+  let lv = 0;
   while (lv < SKILL_MAX_LEVEL && (xp || 0) >= skillXpForLevel(lv + 1)) lv++;
   return lv;
 }
