@@ -2497,20 +2497,31 @@ function renderMasteryPage() {
   else if (unlocked) head = masteryHeadClimb(m, mLevel);
   else head = masteryHeadLocked(total);
 
-  // Skills
+  // Skills — each a full-width row of SKILL_MAX_LEVEL "pips" (one per level) inked in the
+  // skill's own tint, with the current level's pip part-filled to progress toward the next.
+  // A maxed skill overrides its tint to gold.
+  const GOLD_TINT = "199, 149, 31";
   const skills = SKILLS.map((sk) => {
     const xp = m.skills[sk.id] || 0;
     const lvl = skillLevelFromXp(xp);
     const maxed = lvl >= SKILL_MAX_LEVEL;
     const cur = skillXpForLevel(lvl), next = skillXpForLevel(lvl + 1);
-    const pct = maxed ? 100 : Math.max(0, Math.min(100, ((xp - cur) / (next - cur)) * 100));
-    const lvlText = maxed ? "Level " + lvl + " · max" : "Level " + lvl;
-    return `<div class="skill-row">` +
-      `<span class="skill-icon">${charmMarkup(sk.icon)}</span>` +
+    const frac = maxed ? 1 : Math.max(0, Math.min(1, (xp - cur) / (next - cur)));
+    const tint = maxed ? GOLD_TINT : sk.tint;
+    let pips = "";
+    for (let i = 1; i <= SKILL_MAX_LEVEL; i++) {
+      if (i <= lvl) pips += `<span class="on"></span>`;
+      else if (i === lvl + 1 && !maxed && frac > 0) pips += `<span class="part" style="--p:${(frac * 100).toFixed(1)}%"></span>`;
+      else pips += `<span></span>`;
+    }
+    const lvlText = (maxed ? "★ " : "") + "Level " + lvl;
+    const nextText = maxed ? "mastered" : `${xp - cur} ink to ${lvl + 1}`;
+    return `<div class="skill-row" style="--c:rgb(${tint});--cs:rgba(${tint},0.14);--cr:rgba(${tint},0.42)">` +
+      `<span class="skill-emblem">${ACH_ICONS[sk.icon] || ""}</span>` +
       `<div class="skill-main">` +
         `<div class="skill-top"><span class="skill-name">${escapeHtml(sk.name)}</span><span class="skill-lvl">${lvlText}</span></div>` +
-        `<div class="skill-bar${maxed ? " maxed" : ""}"><i style="width:${pct.toFixed(1)}%"></i></div>` +
-        `<div class="skill-blurb">${escapeHtml(sk.blurb)}</div>` +
+        `<div class="skill-bar">${pips}</div>` +
+        `<div class="skill-foot"><span class="skill-blurb">${escapeHtml(sk.blurb)}</span><span class="skill-next">${nextText}</span></div>` +
       `</div></div>`;
   }).join("");
 
@@ -8406,7 +8417,17 @@ function buildDevApi() {
       setSkillLevel: (id, lvl) => {
         const m = loadMastery();
         m.skills[id] = skillXpForLevel(Math.max(0, Math.min(SKILL_MAX_LEVEL, lvl | 0)));
-        saveMastery(m); updateMasteryNav();
+        saveMastery(m); updateMasteryNav(); if ($("masteryBody")) renderMasteryPage();
+      },
+      // Set a skill mid-level to preview the part-filled pip: base level plus a 0–1 fraction
+      // toward the next (e.g. setSkillFrac("tempo", 5, 0.6) fills pip 6 to 60%).
+      setSkillFrac: (id, lvl, frac) => {
+        lvl = Math.max(0, Math.min(SKILL_MAX_LEVEL, lvl | 0));
+        frac = Math.max(0, Math.min(1, +frac || 0));
+        const m = loadMastery();
+        const cur = skillXpForLevel(lvl), next = skillXpForLevel(Math.min(SKILL_MAX_LEVEL, lvl + 1));
+        m.skills[id] = Math.round(cur + (next - cur) * frac);
+        saveMastery(m); updateMasteryNav(); if ($("masteryBody")) renderMasteryPage();
       },
       maxSkills: () => {
         const m = loadMastery();

@@ -2632,17 +2632,24 @@
   .ms-bar i { display: block; height: 100%; border-radius: 5px; background: rgba(var(--m-accent), 0.7); }
   .ms-bar.maxed i { background: rgba(199, 149, 31, 0.85); }
   .mastery-section-label { font-family: var(--type); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft); margin: 26px 0 8px; }
-  .skill-row { display: flex; align-items: center; gap: 12px; padding: 11px 4px; border-bottom: 1px solid rgba(43, 39, 34, 0.08); }
-  .skill-icon { width: 30px; height: 30px; flex: none; color: rgba(var(--m-accent), 0.85); }
-  .skill-icon svg { width: 100%; height: 100%; }
+  /* Each skill carries its own ink via --c / --cs (soft) / --cr (ring), set inline per row. */
+  .skill-row { display: flex; align-items: center; gap: 16px; padding: 13px 4px; border-bottom: 1px solid rgba(43, 39, 34, 0.08); }
+  .skill-row:last-of-type { border-bottom: none; }
+  .skill-emblem { width: 46px; height: 46px; flex: none; border-radius: 50%; background: var(--cs); border: 1px dashed var(--cr); display: flex; align-items: center; justify-content: center; }
+  .skill-emblem svg { width: 27px; height: 27px; overflow: visible; }
+  .skill-emblem .ink-fill { fill: var(--c); stroke: var(--c); stroke-width: 1; stroke-linejoin: round; stroke-linecap: round; }
+  .skill-emblem .ink { fill: none; stroke: var(--c); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
   .skill-main { flex: 1; min-width: 0; }
-  .skill-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-  .skill-name { font-family: var(--hand); font-weight: 700; font-size: 18px; color: var(--ink); }
-  .skill-lvl { font-family: var(--type); font-size: 11px; letter-spacing: 0.05em; color: var(--ink-soft); white-space: nowrap; }
-  .skill-bar { height: 7px; border-radius: 4px; background: rgba(43, 39, 34, 0.09); overflow: hidden; margin: 6px 0 5px; }
-  .skill-bar i { display: block; height: 100%; border-radius: 4px; background: rgba(var(--m-accent), 0.6); }
-  .skill-bar.maxed i { background: rgba(199, 149, 31, 0.8); }
+  .skill-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .skill-name { font-family: var(--hand); font-weight: 700; font-size: 20px; color: var(--ink); }
+  .skill-lvl { font-family: var(--type); font-weight: 700; font-size: 11px; letter-spacing: 0.06em; color: var(--c); white-space: nowrap; }
+  .skill-bar { display: flex; gap: 3px; margin: 8px 0 6px; }
+  .skill-bar span { flex: 1; height: 9px; border-radius: 2px; background: rgba(43, 39, 34, 0.08); }
+  .skill-bar span.on { background: var(--c); }
+  .skill-bar span.part { background: linear-gradient(90deg, var(--c) var(--p), rgba(43, 39, 34, 0.08) var(--p)); }
+  .skill-foot { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
   .skill-blurb { font-family: var(--type); font-size: 10.5px; line-height: 1.4; color: var(--ink-soft); }
+  .skill-next { font-family: var(--type); font-size: 9.5px; letter-spacing: 0.03em; color: var(--ink-soft); opacity: 0.85; white-space: nowrap; }
   /* ---- Reward bento: cosmetics grouped into weight-sized tiles (pens, charms, paper, the
      super-hard milestone) plus the prestige-titles tile. Replaces the old flat reward list.
      Uses the mastery rose (--m-accent) for state; charms keep their era-gold (--bead). ---- */

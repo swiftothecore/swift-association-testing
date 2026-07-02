@@ -263,12 +263,14 @@ export const CHALLENGE_ORDER = CHALLENGES.map((c) => c.id);
    (an inclusive record of engagement), not the competitive boards — see foldSkillXp in
    app.js for the per-mode contribution mask. Internal ids stay neutral; the visible names
    are notebook-flavoured and tunable here. No RPG "XP bar / Lvl" chrome in the UI. */
+// `tint` is the skill's own ink (an "r, g, b" triplet, drawn from the era palette) — the
+// mastery skills bars, emblem, and level label all take it; a maxed skill overrides to gold.
 export const SKILLS = [
-  { id: "resolve",   name: "Instinct",      icon: "nib",    blurb: "Every song you land — and the streaks you string together." },
-  { id: "tempo",     name: "Quick Pen",     icon: "bolt",   blurb: "Answering fast, against the clock." },
-  { id: "lyricist",  name: "By Heart",      icon: "quote",  blurb: "Recalling the lyric line, word for word." },
-  { id: "endurance", name: "The Long Game", icon: "mountain", blurb: "How far you run in Infinite." },
-  { id: "range",     name: "Discography",   icon: "vinyl",  blurb: "Spreading your answers across her albums." },
+  { id: "resolve",   name: "Instinct",      icon: "comet",     tint: "61, 79, 134",   blurb: "Every song you land — and the streaks you string together." },
+  { id: "tempo",     name: "Quick Pen",     icon: "metronome", tint: "178, 58, 63",   blurb: "Answering fast, against the clock." },
+  { id: "lyricist",  name: "By Heart",      icon: "heartline", tint: "200, 95, 151",  blurb: "Recalling the lyric line, word for word." },
+  { id: "endurance", name: "The Long Game", icon: "trail",     tint: "78, 143, 99",   blurb: "How far you run in Infinite." },
+  { id: "range",     name: "Discography",   icon: "records",   tint: "125, 104, 184", blurb: "Spreading your answers across her albums." },
 ];
 export const SKILL_IDS = SKILLS.map((s) => s.id);
 export const SKILL_BY_ID = Object.fromEntries(SKILLS.map((s) => [s.id, s]));
@@ -552,6 +554,13 @@ export const ACH_ICONS = {
   yinyang: `<svg viewBox="0 0 24 24"><circle class="ink-fill" cx="12" cy="12" r="10" stroke-width="1.2"/><path d="M12 2 a10 10 0 0 1 0 20 a5 5 0 0 1 0 -10 a5 5 0 0 0 0 -10 z" fill="var(--ink)"/><circle cx="12" cy="7" r="1.7" fill="var(--ink)"/><circle cx="12" cy="17" r="1.7" fill="var(--bead)"/></svg>`,
   // a vinyl record — Taylor's Version (re-recording)
   vinyl:   `<svg viewBox="0 0 24 24"><circle class="ink-fill" cx="12" cy="12" r="9.5"/><circle cx="12" cy="12" r="4.4" fill="var(--paper)"/><circle class="ink-fill" cx="12" cy="12" r="1.3"/><g stroke="var(--paper)" stroke-width="0.8" fill="none" opacity="0.6"><circle cx="12" cy="12" r="6.6"/><circle cx="12" cy="12" r="8"/></g></svg>`,
+  // Mastery skill emblems: a comet (Instinct), metronome (Quick Pen), heart holding lyric
+  // lines (By Heart), a winding trail to a flag (The Long Game), and fanned records (Discography).
+  comet:     `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M19.4 8.4 C13.5 12 7.5 15.5 2.6 21.6 C8.5 17 13.2 12.6 15 8.6 Z"/><path d="M12.4 12.3 L8.4 16.2 M13.9 13.9 L10 17.5" stroke="var(--paper)" stroke-width="0.9" stroke-linecap="round" opacity="0.55"/><circle class="ink-fill" cx="17.6" cy="6.9" r="3.3"/><circle cx="18.5" cy="6" r="1" fill="var(--paper)"/></svg>`,
+  metronome: `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M9.2 5 H14.8 L18 21 H6 Z"/><path d="M7 16.6 H17" stroke="var(--paper)" stroke-width="1.1"/><rect x="11.7" y="7.8" width="5.2" height="3.2" rx="1" fill="var(--paper)" transform="rotate(14 14.3 9.4)"/><rect class="ink-fill" x="12.3" y="8.3" width="4" height="2.2" rx="0.6" transform="rotate(14 14.3 9.4)"/><path class="ink" d="M12 18 L16 3"/><circle cx="12" cy="18" r="0.9" fill="var(--paper)"/></svg>`,
+  heartline: `<svg viewBox="0 0 24 24"><path class="ink-fill" d="M12 21 C12 21 3.5 14.6 3.5 8.9 C3.5 6.1 5.7 4.3 8 4.3 C9.9 4.3 11.3 5.6 12 7 C12.7 5.6 14.1 4.3 16 4.3 C18.3 4.3 20.5 6.1 20.5 8.9 C20.5 14.6 12 21 12 21 Z"/><path d="M7.7 11 q2.15 -1.5 4.3 0 t4.3 0" fill="none" stroke="var(--paper)" stroke-width="1.2" stroke-linecap="round"/><path d="M9 13.7 q1.5 -1.1 3 0 t3 0" fill="none" stroke="var(--paper)" stroke-width="1.15" stroke-linecap="round" opacity="0.85"/></svg>`,
+  trail:     `<svg viewBox="0 0 24 24"><path class="ink" stroke-width="2" d="M4.2 21 C10.4 20 6.6 14.6 11 13.2 C15.2 11.9 12 7.9 16.5 7"/><circle class="ink-fill" cx="4.2" cy="21" r="1.7"/><path class="ink" stroke-width="1.6" d="M16.5 7 V2.5"/><path class="ink-fill" d="M16.5 2.7 L21 4 L16.5 5.6 Z"/></svg>`,
+  records:   `<svg viewBox="0 0 24 24"><circle class="ink-fill" cx="6.3" cy="15.3" r="4.8"/><circle cx="6.3" cy="15.3" r="4.8" fill="none" stroke="var(--paper)" stroke-width="0.9"/><circle class="ink-fill" cx="17.7" cy="15.3" r="4.8"/><circle cx="17.7" cy="15.3" r="4.8" fill="none" stroke="var(--paper)" stroke-width="0.9"/><circle class="ink-fill" cx="12" cy="11.3" r="5.7"/><circle cx="12" cy="11.3" r="3.5" fill="none" stroke="var(--paper)" stroke-width="0.8" opacity="0.55"/><circle cx="12" cy="11.3" r="1.4" fill="var(--paper)"/></svg>`,
   // a few piano keys — the piano was hissing
   piano:   `<svg viewBox="0 0 24 24"><rect class="ink-fill" x="3" y="5" width="18" height="14" rx="1.5"/><rect x="4.5" y="6.5" width="15" height="11" fill="var(--paper)"/><g class="ink" stroke-width="1"><path d="M7.5 6.5 V17.5 M10.5 6.5 V17.5 M13.5 6.5 V17.5 M16.5 6.5 V17.5"/></g><g class="ink-fill"><rect x="6.4" y="6.5" width="1.6" height="6"/><rect x="9.4" y="6.5" width="1.6" height="6"/><rect x="12.4" y="6.5" width="1.6" height="6"/><rect x="15.4" y="6.5" width="1.6" height="6"/></g></svg>`,
   // an hourglass — is it over now?
