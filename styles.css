@@ -66,9 +66,11 @@
   .app { width: 100%; max-width: 660px; position: relative; z-index: 1; perspective: 1700px; perspective-origin: 50% 0%; }
 
   /* ---------- Desk props (decorative, desktop only) ----------
-     Quiet, semi-realistic objects that straddle the screen edges — each runs
-     roughly half off the viewport so the desk reads as continuing past the
-     window. Hidden on narrow screens where they'd crowd the notebook. */
+     Quiet, semi-realistic objects on the desk. The big ones straddle the
+     screen edges, half off the viewport, so the desk reads as continuing past
+     the window; the pencil, sharpener and picks sit whole on the wood beside
+     the notebook, as if just set down. Hidden on narrow screens where they'd
+     crowd the notebook. */
   .desk-items { position: fixed; inset: 0; z-index: 0; pointer-events: none; display: none; overflow: hidden; }
   /* December snowfall: full-viewport decorative canvas, above the notebook but
      below the settings modal (z 200). Shown/hidden + animated by app.js, gated on
@@ -80,14 +82,25 @@
   }
   .desk-item svg { display: block; width: 100%; height: auto; overflow: visible; }
 
-  /* left edge — pinned to left:0, shifted so ~half hangs off the screen */
+  /* screen-edge props: pinned to a viewport edge, roughly half hanging off */
   .di-glasses { width: 170px; top: 10%;  left: 0; transform: translateX(-50%) rotate(-7deg); }
   .di-mug     { width: 142px; top: 39%;  left: 0; transform: translateX(-46%); }
-  .di-pencil  { width: 216px; top: 72%;  left: 0; transform: translateX(-50%) rotate(7deg); }
-  /* right edge */
   .di-floss   { width: 158px; top: 11%;  right: 0; transform: translateX(28%); }
   .di-cassette{ width: 190px; top: 40%;  right: 0; transform: translateX(50%) rotate(-5deg); }
-  .di-picks   { width: 128px; top: 72%;  right: 0; transform: translateX(48%) rotate(6deg); }
+  /* on-desk props: anchored to the notebook column (the .app is a fixed 660px
+     wide whenever props are visible, so calc(50% +/- 330px) is the paper edge)
+     rather than the viewport, keeping their gap to the page constant */
+  .di-pencil {
+    width: 216px; top: 56%; left: calc(50% - 410px);
+    /* near-vertical, tip down toward the sharpener; the scaleY flip keeps the
+       palest hex facet toward the upper-left light after the rotation */
+    transform: translate(-50%, -50%) rotate(100deg) scaleY(-1);
+    /* shadow offset pre-rotated (filter applies before transform) so the cast
+       shadow still falls down-right on screen like every other prop */
+    filter: drop-shadow(6.4px 4.2px 6px rgba(46,32,14,0.30)) saturate(0.88);
+  }
+  .di-sharpener { width: 92px; top: 73%; left: calc(50% - 444px); }
+  .di-picks   { width: 128px; top: 66%; left: calc(50% + 356px); transform: rotate(6deg); }
 
   /* mug steam — faint wisps drifting up */
   .desk-steam path { animation: deskSteam 4.4s ease-in-out infinite; transform-origin: center bottom; }
