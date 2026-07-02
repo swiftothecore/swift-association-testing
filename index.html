@@ -43,113 +43,305 @@ if (location.pathname.endsWith('/index.html')) {
 <body data-era="gold">
 <canvas id="snowfall" aria-hidden="true"></canvas>
 <div class="desk-items" aria-hidden="true">
-  <!-- LEFT: reading glasses -->
+  <!-- LEFT: reading glasses, folded flat on the desk, seen from directly above.
+       Resting front-down, so the folded temples cross over the lenses. -->
   <div class="desk-item di-glasses">
     <svg viewBox="0 0 170 84" xmlns="http://www.w3.org/2000/svg">
-      <defs><linearGradient id="glLens" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cfe0e6" stop-opacity="0.55"/><stop offset="1" stop-color="#aebfc6" stop-opacity="0.3"/></linearGradient></defs>
-      <g fill="none" stroke="#6b4a2b" stroke-width="4.5" stroke-linecap="round"><path d="M16 24 C30 20 42 23 50 30"/><path d="M154 24 C140 20 128 23 120 30"/></g>
-      <path d="M78 38 q7 -8 14 0" fill="none" stroke="#6b4a2b" stroke-width="4.5"/>
-      <ellipse cx="56" cy="46" rx="30" ry="24" fill="url(#glLens)" stroke="#6b4a2b" stroke-width="5"/>
-      <ellipse cx="114" cy="46" rx="30" ry="24" fill="url(#glLens)" stroke="#6b4a2b" stroke-width="5"/>
-      <path d="M44 34 q10 -6 20 2" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="2.5" stroke-linecap="round"/>
-      <path d="M102 34 q10 -6 20 2" fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="2.5" stroke-linecap="round"/>
+      <defs>
+        <linearGradient id="glAcetate" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7c4e2a"/><stop offset="0.55" stop-color="#5f3a1e"/><stop offset="1" stop-color="#472a13"/></linearGradient>
+        <linearGradient id="glLens" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="#dde9ec" stop-opacity="0.42"/><stop offset="0.55" stop-color="#c2d1d5" stop-opacity="0.2"/><stop offset="1" stop-color="#adbec4" stop-opacity="0.32"/></linearGradient>
+      </defs>
+      <!-- front frame: two acetate rims + keyhole bridge -->
+      <rect x="6" y="30" width="70" height="50" rx="24" fill="url(#glAcetate)"/>
+      <rect x="94" y="30" width="70" height="50" rx="24" fill="url(#glAcetate)"/>
+      <path d="M74 46 C77 37 93 37 96 46" fill="none" stroke="url(#glAcetate)" stroke-width="8" stroke-linecap="round"/>
+      <!-- lenses: translucent so the wood shows through -->
+      <rect x="13" y="37" width="56" height="36" rx="17" fill="url(#glLens)"/>
+      <rect x="101" y="37" width="56" height="36" rx="17" fill="url(#glLens)"/>
+      <rect x="13.5" y="37.5" width="55" height="35" rx="16.5" fill="none" stroke="#8a5a33" stroke-width="1" opacity="0.6"/>
+      <rect x="101.5" y="37.5" width="55" height="35" rx="16.5" fill="none" stroke="#8a5a33" stroke-width="1" opacity="0.6"/>
+      <!-- diagonal lens glare -->
+      <path d="M26 44 L46 64" stroke="#ffffff" stroke-opacity="0.26" stroke-width="6" stroke-linecap="round"/>
+      <path d="M36 41 L52 57" stroke="#ffffff" stroke-opacity="0.32" stroke-width="2.2" stroke-linecap="round"/>
+      <path d="M114 44 L134 64" stroke="#ffffff" stroke-opacity="0.26" stroke-width="6" stroke-linecap="round"/>
+      <path d="M124 41 L140 57" stroke="#ffffff" stroke-opacity="0.32" stroke-width="2.2" stroke-linecap="round"/>
+      <!-- warm sheen along the top of each rim -->
+      <path d="M18 34.5 Q40 29.5 60 33" fill="none" stroke="#9c6a42" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
+      <path d="M110 33 Q130 29.5 152 34.5" fill="none" stroke="#9c6a42" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
+      <!-- folded temples, nested one over the other -->
+      <path d="M160 37 C126 28 76 24.5 46 26" fill="none" stroke="url(#glAcetate)" stroke-width="5" stroke-linecap="round"/>
+      <path d="M50 26 C36 26.5 27 31 28 40" fill="none" stroke="#46290f" stroke-width="6.5" stroke-linecap="round"/>
+      <path d="M156 35.5 C126 27 84 23.8 58 24.8" fill="none" stroke="#a5714a" stroke-width="1.2" stroke-linecap="round" opacity="0.7"/>
+      <path d="M10 37 C46 24 100 19.5 128 21" fill="none" stroke="url(#glAcetate)" stroke-width="5" stroke-linecap="round"/>
+      <path d="M124 20.7 C138 22 146 27 144.5 36" fill="none" stroke="#46290f" stroke-width="6.5" stroke-linecap="round"/>
+      <path d="M12 35.5 C46 22.5 100 18 126 19.5" fill="none" stroke="#ab7748" stroke-width="1.3" stroke-linecap="round" opacity="0.9"/>
+      <!-- gold hinges -->
+      <rect x="4" y="37" width="4.5" height="10" rx="1.6" fill="#b28e50" stroke="#8a6a38" stroke-width="0.6"/>
+      <rect x="161.5" y="37" width="4.5" height="10" rx="1.6" fill="#b28e50" stroke="#8a6a38" stroke-width="0.6"/>
     </svg>
   </div>
-  <!-- LEFT: coffee mug + steam -->
+  <!-- LEFT: coffee mug from directly above: concentric rim, inner wall and
+       coffee disc, flat handle loop pointing right, on a stitched cork coaster -->
   <div class="desk-item di-mug">
     <svg viewBox="0 0 140 156" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="mugBody" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#e8e2d6"/><stop offset="0.5" stop-color="#f3eee4"/><stop offset="0.78" stop-color="#d6cdbc"/><stop offset="1" stop-color="#c2b7a1"/></linearGradient>
-        <radialGradient id="mugCoffee" cx="0.42" cy="0.4" r="0.7"><stop offset="0" stop-color="#5a3a21"/><stop offset="1" stop-color="#382310"/></radialGradient>
+        <radialGradient id="mgCoaster" cx="0.42" cy="0.38" r="0.75"><stop offset="0" stop-color="#cca470"/><stop offset="1" stop-color="#a37846"/></radialGradient>
+        <radialGradient id="mgBody" cx="0.34" cy="0.3" r="0.9"><stop offset="0" stop-color="#f8f3e7"/><stop offset="0.55" stop-color="#ece4d2"/><stop offset="1" stop-color="#cfc2a9"/></radialGradient>
+        <linearGradient id="mgWall" x1="0" y1="0" x2="0.7" y2="1"><stop offset="0" stop-color="#9f8f6d"/><stop offset="1" stop-color="#e8dfc9"/></linearGradient>
+        <radialGradient id="mgCoffee" cx="0.42" cy="0.38" r="0.72"><stop offset="0" stop-color="#74502c"/><stop offset="0.7" stop-color="#4a2f16"/><stop offset="1" stop-color="#35200d"/></radialGradient>
+        <linearGradient id="mgHandle" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#efe8d6"/><stop offset="1" stop-color="#bfb18f"/></linearGradient>
       </defs>
-      <g class="desk-steam" fill="none" stroke="#cfc4b2" stroke-width="3.4" stroke-linecap="round">
-        <path d="M52 58 q-8 -12 2 -22 q9 -10 1 -22"/>
-        <path d="M72 58 q8 -12 -2 -22 q-9 -10 -1 -22"/>
-        <path d="M90 58 q-7 -11 2 -20 q8 -9 1 -19"/>
+      <!-- cork coaster -->
+      <circle cx="70" cy="90" r="62" fill="url(#mgCoaster)" stroke="#8c6a3e" stroke-width="1.5"/>
+      <g fill="#7a5a32" opacity="0.25">
+        <circle cx="98" cy="46" r="1.3"/><circle cx="116" cy="74" r="1"/><circle cx="121" cy="102" r="1.5"/><circle cx="104" cy="132" r="1.1"/><circle cx="76" cy="146" r="1.3"/><circle cx="44" cy="140" r="1"/><circle cx="70" cy="34" r="1.1"/><circle cx="46" cy="42" r="1.4"/><circle cx="24" cy="70" r="1"/><circle cx="18" cy="102" r="1.3"/><circle cx="30" cy="128" r="1.2"/><circle cx="110" cy="58" r="0.9"/>
       </g>
-      <path d="M104 84 q26 2 24 26 q-2 22 -26 22" fill="none" stroke="#c6bba4" stroke-width="11"/>
-      <path d="M104 84 q26 2 24 26 q-2 22 -26 22" fill="none" stroke="#e7e0d2" stroke-width="5"/>
-      <path d="M30 72 q39 -8 78 0 l-6 64 q-3 14 -17 16 q-16 2 -32 0 q-14 -2 -17 -16 z" fill="url(#mugBody)" stroke="#b0a48c" stroke-width="1.6"/>
-      <ellipse cx="69" cy="73" rx="39" ry="9" fill="url(#mugCoffee)" stroke="#2c1b0e" stroke-width="1.4"/>
-      <ellipse cx="61" cy="71" rx="13" ry="3" fill="#7a5536" opacity="0.5"/>
-      <path d="M40 82 q4 38 8 54" fill="none" stroke="#ffffff" stroke-opacity="0.38" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="70" cy="90" r="56" fill="none" stroke="#f2e7cd" stroke-width="1.4" stroke-dasharray="3.5 5" opacity="0.5"/>
+      <!-- handle loop, drawn under the body so the join is clean -->
+      <path d="M104 68 C126 60 134 76 132 90 C134 104 126 120 104 112" fill="none" stroke="url(#mgHandle)" stroke-width="13" stroke-linecap="round"/>
+      <path d="M105 69 C124 63 131 78 129.5 89" fill="none" stroke="#fbf6ea" stroke-width="3.5" stroke-linecap="round" opacity="0.5"/>
+      <!-- rim, inner wall, coffee -->
+      <circle cx="70" cy="90" r="44" fill="url(#mgBody)" stroke="#ab9d80" stroke-width="1.4"/>
+      <circle cx="70" cy="90" r="42.5" fill="none" stroke="#fffdf4" stroke-width="1.3" stroke-opacity="0.55"/>
+      <circle cx="70" cy="90" r="37" fill="url(#mgWall)"/>
+      <circle cx="70" cy="90" r="31.5" fill="url(#mgCoffee)"/>
+      <path d="M40.4 79.2 A31.5 31.5 0 0 1 94.1 69.8" fill="none" stroke="#1c1004" stroke-width="4" stroke-linecap="round" opacity="0.3"/>
+      <!-- crema swirl, sheen, a few bubbles by the edge -->
+      <path d="M68 84 q8 -4 14 1 q5 5 -1 9" fill="none" stroke="#bd8f5c" stroke-width="1.6" stroke-linecap="round" opacity="0.5"/>
+      <path d="M64 96 q6 5 13 2" fill="none" stroke="#bd8f5c" stroke-width="1.2" stroke-linecap="round" opacity="0.4"/>
+      <ellipse cx="78" cy="71" rx="10" ry="4.5" fill="#ffffff" opacity="0.1" transform="rotate(-18 78 71)"/>
+      <circle cx="92" cy="102" r="2.2" fill="#8a5c33"/><circle cx="95.5" cy="99.5" r="1.5" fill="#9a6a3c"/><circle cx="89.5" cy="99" r="1.1" fill="#9a6a3c"/>
+      <circle cx="91.4" cy="101.2" r="0.6" fill="#ffffff" opacity="0.6"/><circle cx="95.1" cy="99" r="0.4" fill="#ffffff" opacity="0.5"/>
+      <!-- steam wisps curling up off the surface -->
+      <g class="desk-steam" fill="none" stroke="#efe5cf" stroke-width="3" stroke-linecap="round">
+        <path d="M66 68 q-9 -9 -2 -18 q6 -8 -2 -16"/>
+        <path d="M82 66 q9 -10 1 -19 q-6 -8 2 -16"/>
+        <path d="M96 70 q-8 -9 -1 -17 q6 -8 -1 -15"/>
+      </g>
     </svg>
   </div>
-  <!-- LEFT: pencil -->
+  <!-- LEFT: hexagonal pencil from above: three shaded facets, brass ferrule,
+       worn eraser off-screen, sharpened tip pointing at the notebook -->
   <div class="desk-item di-pencil">
     <svg viewBox="0 0 232 54" xmlns="http://www.w3.org/2000/svg">
-      <defs><linearGradient id="pcBody" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6c54a"/><stop offset="0.5" stop-color="#e9a92f"/><stop offset="1" stop-color="#c8861d"/></linearGradient></defs>
-      <path d="M6 27 L30 19 L30 35 Z" fill="#3a3a3a"/>
-      <path d="M6 27 L18 23 L18 31 Z" fill="#1f1f1f"/>
-      <path d="M30 16 L52 14 L52 40 L30 38 Z" fill="#e6c08a"/>
-      <path d="M30 16 L52 14 L52 27 L30 27 Z" fill="#f1d6a6"/>
-      <rect x="52" y="13" width="140" height="28" fill="url(#pcBody)"/>
-      <rect x="52" y="13" width="140" height="6" fill="#ffffff" opacity="0.28"/>
-      <rect x="52" y="35" width="140" height="6" fill="#7a4f12" opacity="0.32"/>
-      <rect x="192" y="12" width="22" height="30" fill="#cfc7bb"/>
-      <g fill="#9a9082"><rect x="196" y="12" width="2" height="30"/><rect x="204" y="12" width="2" height="30"/><rect x="210" y="12" width="2" height="30"/></g>
-      <path d="M214 14 q14 0 14 13 q0 13 -14 13 Z" fill="#d98aa0"/>
-      <path d="M214 15 q8 0 11 7" fill="none" stroke="#ffffff" stroke-opacity="0.4" stroke-width="2"/>
+      <defs>
+        <linearGradient id="pcFer" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0ede3"/><stop offset="0.45" stop-color="#b7b1a2"/><stop offset="1" stop-color="#837c6c"/></linearGradient>
+      </defs>
+      <!-- eraser -->
+      <path d="M16 12.5 H11 Q2 12.5 2 27 Q2 41.5 11 41.5 H16 Z" fill="#d795a1"/>
+      <rect x="5" y="15" width="10" height="4" rx="2" fill="#ecb7c0" opacity="0.8"/>
+      <path d="M14 38.5 q-8 1 -11 -8" fill="none" stroke="#b06e7c" stroke-width="2.5" stroke-linecap="round" opacity="0.6"/>
+      <!-- brass ferrule with crimp dimples -->
+      <rect x="16" y="11.5" width="20" height="31" fill="url(#pcFer)"/>
+      <rect x="16" y="15" width="20" height="4" fill="#ffffff" opacity="0.35"/>
+      <rect x="16" y="11.5" width="2" height="31" fill="#8f897b"/>
+      <rect x="34" y="11.5" width="2" height="31" fill="#8f897b" opacity="0.8"/>
+      <g fill="#6c665a" opacity="0.6"><circle cx="21.5" cy="16" r="1"/><circle cx="21.5" cy="23" r="1"/><circle cx="21.5" cy="30" r="1"/><circle cx="21.5" cy="37" r="1"/><circle cx="30.5" cy="16" r="1"/><circle cx="30.5" cy="23" r="1"/><circle cx="30.5" cy="30" r="1"/><circle cx="30.5" cy="37" r="1"/></g>
+      <!-- barrel: three hex facets, lit from the upper left -->
+      <rect x="36" y="13" width="138.5" height="9.5" fill="#f2cd6e"/>
+      <rect x="36" y="22.5" width="138.5" height="9.5" fill="#e5a93a"/>
+      <rect x="36" y="32" width="138.5" height="9" fill="#bd8225"/>
+      <path d="M36 13.6 H174" stroke="#ffe9ac" stroke-width="1" opacity="0.8"/>
+      <g stroke="#925f10" stroke-width="0.8" stroke-opacity="0.35"><path d="M36 22.5 H174.5"/><path d="M36 32 H174.5"/></g>
+      <!-- whittled collar and wood cone -->
+      <path d="M174 13 q3 4.7 0 9.3 q-3 4.7 0 9.4 q3 4.7 0 9.3" fill="none" stroke="#8a5c12" stroke-width="1.2" opacity="0.45"/>
+      <path d="M174 13 L208 24.5 L208 29.5 L174 41 Z" fill="#ead0a2"/>
+      <path d="M174 13 L208 24.5 L208 27 L174 27 Z" fill="#f4e2bd"/>
+      <path d="M174 27 L208 27 L208 29.5 L174 41 Z" fill="#d9b988"/>
+      <g stroke="#c1a071" stroke-width="0.8"><path d="M177 16 L204 25.4"/><path d="M177 38 L204 28.6"/></g>
+      <!-- graphite point -->
+      <path d="M208 24.5 L226 27 L208 29.5 Z" fill="#4d4d4d"/>
+      <path d="M208 27 L226 27 L208 29.5 Z" fill="#2b2b2b"/>
+      <circle cx="221" cy="26.4" r="0.6" fill="#a8a8a8"/>
     </svg>
   </div>
-  <!-- RIGHT: friendship-bracelet floss spool, beads + paper stars -->
+  <!-- RIGHT: bracelet-making flat lay: two floss skeins seen from above,
+       a trailing strand threading three beads, and folded paper stars -->
   <div class="desk-item di-floss">
     <svg viewBox="0 0 150 124" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="flWood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d8b483"/><stop offset="1" stop-color="#b88f5c"/></linearGradient>
-        <linearGradient id="flThread" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e0708f"/><stop offset="1" stop-color="#c24f72"/></linearGradient>
+        <linearGradient id="flRose" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#dc95ab"/><stop offset="1" stop-color="#b45874"/></linearGradient>
+        <linearGradient id="flBlue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#86a5cb"/><stop offset="1" stop-color="#5b7ba3"/></linearGradient>
+        <linearGradient id="flBand" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6efdc"/><stop offset="1" stop-color="#e9deca"/></linearGradient>
+        <linearGradient id="flGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e5bc5a"/><stop offset="1" stop-color="#c1913a"/></linearGradient>
+        <radialGradient id="flBeadG" cx="0.35" cy="0.3" r="0.85"><stop offset="0" stop-color="#f0d089"/><stop offset="1" stop-color="#c79a3e"/></radialGradient>
+        <radialGradient id="flBeadB" cx="0.35" cy="0.3" r="0.85"><stop offset="0" stop-color="#a9c2de"/><stop offset="1" stop-color="#6c8cb4"/></radialGradient>
+        <radialGradient id="flBeadR" cx="0.35" cy="0.3" r="0.85"><stop offset="0" stop-color="#e2a2b4"/><stop offset="1" stop-color="#c06880"/></radialGradient>
+        <g id="flStarG">
+          <path d="M0 -12 L2.94 -4.05 L11.41 -3.71 L4.76 1.55 L7.05 9.71 L0 5 L-7.05 9.71 L-4.76 1.55 L-11.41 -3.71 L-2.94 -4.05 Z"/>
+          <path d="M0 0 L0 -12 L2.94 -4.05 Z M0 0 L11.41 -3.71 L4.76 1.55 Z M0 0 L7.05 9.71 L0 5 Z M0 0 L-7.05 9.71 L-4.76 1.55 Z M0 0 L-11.41 -3.71 L-2.94 -4.05 Z" fill="#4a3316" opacity="0.18" stroke="none"/>
+          <path d="M0 0 L0 -12 M0 0 L11.41 -3.71 M0 0 L7.05 9.71 M0 0 L-7.05 9.71 M0 0 L-11.41 -3.71" fill="none" stroke="#ffffff" stroke-width="0.9" opacity="0.35"/>
+        </g>
       </defs>
-      <ellipse cx="40" cy="34" rx="13" ry="30" fill="url(#flWood)" stroke="#9a7244" stroke-width="1.4"/>
-      <rect x="40" y="10" width="64" height="48" fill="url(#flThread)"/>
-      <rect x="40" y="10" width="64" height="10" fill="#7aa6d8" opacity="0.7"/>
-      <rect x="40" y="48" width="64" height="10" fill="#e8c45a" opacity="0.65"/>
-      <g stroke="#a83f63" stroke-width="1" opacity="0.45"><path d="M48 11 L48 57 M58 10 L58 58 M68 10 L68 58 M78 10 L78 58 M88 10 L88 58 M96 11 L96 57"/></g>
-      <ellipse cx="104" cy="34" rx="13" ry="30" fill="url(#flWood)" stroke="#9a7244" stroke-width="1.4"/>
-      <ellipse cx="100" cy="26" rx="4" ry="10" fill="#ffffff" opacity="0.18"/>
-      <g class="desk-sway">
-        <path d="M104 44 q14 18 6 40 q-3 10 4 22" fill="none" stroke="#c24f72" stroke-width="2.6" stroke-linecap="round"/>
-        <circle cx="110" cy="92" r="5.5" fill="#7aa6d8" stroke="#3f6fa3" stroke-width="1"/>
-        <circle cx="112" cy="104" r="5" fill="#e8c45a" stroke="#b8943a" stroke-width="1"/>
-        <circle cx="114" cy="115" r="4.5" fill="#cf6f8f" stroke="#a83f63" stroke-width="1"/>
+      <!-- denim skein, tucked behind, running off the screen edge -->
+      <g transform="translate(100 26) rotate(15)">
+        <rect x="-32" y="-9" width="64" height="18" rx="9" fill="url(#flBlue)" stroke="#4c6b91" stroke-width="1"/>
+        <g fill="none" stroke-width="0.9">
+          <path d="M-30 -6 q15 2 30 0 q15 -2 30 0" stroke="#4f6f96" opacity="0.55"/>
+          <path d="M-30 -3 q15 -2 30 0 q15 2 30 0" stroke="#b3c8e0" opacity="0.7"/>
+          <path d="M-30 0 q15 2 30 0 q15 -2 30 0" stroke="#4f6f96" opacity="0.55"/>
+          <path d="M-30 3 q15 -2 30 0 q15 2 30 0" stroke="#b3c8e0" opacity="0.7"/>
+          <path d="M-30 6 q15 2 30 0 q15 -2 30 0" stroke="#4f6f96" opacity="0.55"/>
+        </g>
+        <path d="M-25 -7 a8 8 0 0 0 0 14 M25 -7 a8 8 0 0 1 0 14" fill="none" stroke="#42618a" stroke-width="1" opacity="0.6"/>
+        <rect x="-18" y="-11.5" width="14" height="23" rx="1.5" fill="url(#flBand)" stroke="#cbbc9c" stroke-width="0.8"/>
+        <rect x="-18" y="-11.5" width="1.6" height="23" fill="#d8cbb0" opacity="0.7"/>
+        <rect x="-5.6" y="-11.5" width="1.6" height="23" fill="#d8cbb0" opacity="0.7"/>
+        <rect x="12" y="-11" width="8" height="22" rx="1.5" fill="url(#flBand)" stroke="#cbbc9c" stroke-width="0.8"/>
+        <rect x="12" y="-11" width="1.4" height="22" fill="#d8cbb0" opacity="0.7"/>
       </g>
-      <path d="M20 76 l3 6 6.5 0.8 -4.8 4.5 1.3 6.5 -6 -3.2 -6 3.2 1.3 -6.5 -4.8 -4.5 6.5 -0.8 z" fill="#e6b84a" stroke="#b8923a" stroke-width="0.8"/>
-      <path d="M30 100 l2 4 4.4 0.5 -3.2 3 0.9 4.4 -4.1 -2.2 -4.1 2.2 0.9 -4.4 -3.2 -3 4.4 -0.5 z" fill="#d98aa0" stroke="#a83f63" stroke-width="0.7"/>
+      <!-- dusty-rose skein, front -->
+      <g transform="translate(58 42) rotate(-18)">
+        <rect x="-42" y="-11" width="84" height="22" rx="11" fill="url(#flRose)" stroke="#9d4664" stroke-width="1"/>
+        <g fill="none" stroke-width="0.9">
+          <path d="M-40 -9 q20 2.5 40 0 q20 -2.5 40 0" stroke="#a04a68" opacity="0.6"/>
+          <path d="M-40 -6.8 q20 -2.5 40 0 q20 2.5 40 0" stroke="#edb9c8" opacity="0.75"/>
+          <path d="M-40 -4.6 q20 2.5 40 0 q20 -2.5 40 0" stroke="#a04a68" opacity="0.6"/>
+          <path d="M-40 -2.4 q20 -2.5 40 0 q20 2.5 40 0" stroke="#edb9c8" opacity="0.75"/>
+          <path d="M-40 -0.2 q20 2.5 40 0 q20 -2.5 40 0" stroke="#a04a68" opacity="0.6"/>
+          <path d="M-40 2 q20 -2.5 40 0 q20 2.5 40 0" stroke="#edb9c8" opacity="0.75"/>
+          <path d="M-40 4.2 q20 2.5 40 0 q20 -2.5 40 0" stroke="#a04a68" opacity="0.6"/>
+          <path d="M-40 6.4 q20 -2.5 40 0 q20 2.5 40 0" stroke="#edb9c8" opacity="0.75"/>
+          <path d="M-40 8.6 q20 2.5 40 0 q20 -2.5 40 0" stroke="#a04a68" opacity="0.6"/>
+        </g>
+        <path d="M-31 -9 a10.5 10.5 0 0 0 0 18 M-30 -6 a6.5 6.5 0 0 0 0 12" fill="none" stroke="#8f3f5c" stroke-width="1" opacity="0.6"/>
+        <path d="M31 -9 a10.5 10.5 0 0 1 0 18 M30 -6 a6.5 6.5 0 0 1 0 12" fill="none" stroke="#8f3f5c" stroke-width="1" opacity="0.6"/>
+        <rect x="-24" y="-14" width="16" height="28" rx="1.5" fill="url(#flBand)" stroke="#cbbc9c" stroke-width="0.8"/>
+        <rect x="-24" y="-14" width="1.8" height="28" fill="#d8cbb0" opacity="0.7"/>
+        <rect x="-9.8" y="-14" width="1.8" height="28" fill="#d8cbb0" opacity="0.7"/>
+        <path d="M-24 9 H-8" stroke="#b23a3f" stroke-width="1.4" opacity="0.6"/>
+        <rect x="16" y="-13.5" width="10" height="27" rx="1.5" fill="url(#flBand)" stroke="#cbbc9c" stroke-width="0.8"/>
+        <rect x="16" y="-13.5" width="1.6" height="27" fill="#d8cbb0" opacity="0.7"/>
+      </g>
+      <!-- loose strand threading three beads, swaying gently -->
+      <g class="desk-sway">
+        <path d="M21 60 C14 76 34 82 28 96 C24 105 34 108 33 118" fill="none" stroke="#b45874" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="28" cy="96" r="5" fill="url(#flBeadG)" stroke="#9c7527" stroke-width="0.8"/>
+        <circle cx="28" cy="96" r="1.6" fill="#5d4318"/>
+        <circle cx="26.4" cy="94.4" r="1" fill="#ffffff" opacity="0.55"/>
+        <circle cx="31" cy="107" r="4.6" fill="url(#flBeadB)" stroke="#4c6b91" stroke-width="0.8"/>
+        <circle cx="31" cy="107" r="1.5" fill="#324e6e"/>
+        <circle cx="29.5" cy="105.5" r="0.9" fill="#ffffff" opacity="0.55"/>
+        <circle cx="33" cy="117" r="4.2" fill="url(#flBeadR)" stroke="#964962" stroke-width="0.8"/>
+        <circle cx="33" cy="117" r="1.4" fill="#6e3247"/>
+        <circle cx="31.6" cy="115.6" r="0.8" fill="#ffffff" opacity="0.55"/>
+      </g>
+      <!-- folded paper stars -->
+      <use href="#flStarG" transform="translate(86 96) rotate(12)" fill="url(#flGold)" stroke="#a87c2e" stroke-width="0.8"/>
+      <use href="#flStarG" transform="translate(60 110) rotate(-18) scale(0.72)" fill="#d795a1" stroke="#a35b6d" stroke-width="0.8"/>
     </svg>
   </div>
-  <!-- RIGHT: cassette tape (blank ruled label, no artwork) -->
+  <!-- RIGHT: cassette lying flat, face up: ruled label with a window cutout,
+       unevenly wound reels mid-song, head-access cutout along the bottom -->
   <div class="desk-item di-cassette">
     <svg viewBox="0 0 192 124" xmlns="http://www.w3.org/2000/svg">
-      <defs><linearGradient id="csShell" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a4742"/><stop offset="1" stop-color="#322f2b"/></linearGradient></defs>
-      <rect x="4" y="6" width="184" height="112" rx="9" fill="url(#csShell)" stroke="#211f1c" stroke-width="2"/>
-      <g fill="#6b6760"><circle cx="16" cy="18" r="2.4"/><circle cx="176" cy="18" r="2.4"/><circle cx="16" cy="106" r="2.4"/><circle cx="176" cy="106" r="2.4"/><circle cx="96" cy="107" r="2.4"/></g>
-      <rect x="22" y="16" width="148" height="40" rx="3" fill="#efe7d4" stroke="#cbbfa6" stroke-width="1.4"/>
-      <path d="M22 28 H170" stroke="#b23a3f" stroke-width="1" opacity="0.5"/>
-      <g stroke="#9aa0c0" stroke-width="0.8" opacity="0.55"><path d="M28 39 H164"/><path d="M28 48 H164"/></g>
-      <rect x="34" y="62" width="124" height="42" rx="6" fill="#26241f" stroke="#191712" stroke-width="1.4"/>
-      <circle cx="66" cy="83" r="15" fill="#3a3732" stroke="#1c1a16" stroke-width="1.4"/>
-      <circle cx="66" cy="83" r="6" fill="#dcd3c0"/>
-      <g stroke="#1c1a16" stroke-width="1.4"><path d="M66 77 V71 M66 89 V95 M60 83 H54 M72 83 H78 M61.7 78.7 L57 74 M70.3 78.7 L75 74 M61.7 87.3 L57 92 M70.3 87.3 L75 92"/></g>
-      <circle cx="126" cy="83" r="15" fill="#3a3732" stroke="#1c1a16" stroke-width="1.4"/>
-      <circle cx="126" cy="83" r="9.5" fill="#5a4a32"/>
-      <circle cx="126" cy="83" r="6" fill="#dcd3c0"/>
-      <g stroke="#1c1a16" stroke-width="1.4"><path d="M126 77 V71 M126 89 V95 M120 83 H114 M132 83 H138"/></g>
-      <rect x="84" y="94" width="24" height="8" rx="2" fill="#0f0e0c"/>
+      <defs>
+        <linearGradient id="csShell" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a463f"/><stop offset="1" stop-color="#2c2925"/></linearGradient>
+        <linearGradient id="csLabel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3ecd9"/><stop offset="1" stop-color="#e3d7ba"/></linearGradient>
+        <radialGradient id="csScrew" cx="0.35" cy="0.3" r="0.9"><stop offset="0" stop-color="#a9a296"/><stop offset="1" stop-color="#635d52"/></radialGradient>
+      </defs>
+      <rect x="4" y="6" width="184" height="112" rx="10" fill="url(#csShell)" stroke="#1c1a16" stroke-width="2"/>
+      <rect x="7" y="9" width="178" height="106" rx="8" fill="none" stroke="#726c60" stroke-width="1" opacity="0.28"/>
+      <rect x="34" y="6" width="8" height="4" fill="#17150f"/>
+      <rect x="150" y="6" width="8" height="4" fill="#17150f"/>
+      <!-- window interior: tape reels behind the label cutout -->
+      <rect x="48" y="36" width="96" height="32" fill="#16130f"/>
+      <circle cx="74" cy="52" r="12.5" fill="#3a2a15"/>
+      <g fill="none" stroke="#55401f" stroke-width="0.7" opacity="0.8"><circle cx="74" cy="52" r="9.6"/><circle cx="74" cy="52" r="11.3"/></g>
+      <circle cx="118" cy="52" r="10" fill="#3a2a15"/>
+      <circle cx="118" cy="52" r="8.9" fill="none" stroke="#55401f" stroke-width="0.7" opacity="0.8"/>
+      <path d="M62 64.8 H128" stroke="#3a2a15" stroke-width="2.2"/>
+      <circle cx="74" cy="52" r="7.5" fill="#ece4d0" stroke="#b5aa8f" stroke-width="1"/>
+      <path d="M77 52 H80.8 M75.5 54.6 L77.4 57.9 M72.5 54.6 L70.6 57.9 M71 52 H67.2 M72.5 49.4 L70.6 46.1 M75.5 49.4 L77.4 46.1" stroke="#8a7f66" stroke-width="1.8"/>
+      <circle cx="74" cy="52" r="2.4" fill="#16130f"/>
+      <circle cx="118" cy="52" r="7.5" fill="#ece4d0" stroke="#b5aa8f" stroke-width="1"/>
+      <path d="M121 52 H124.8 M119.5 54.6 L121.4 57.9 M116.5 54.6 L114.6 57.9 M115 52 H111.2 M116.5 49.4 L114.6 46.1 M119.5 49.4 L121.4 46.1" stroke="#8a7f66" stroke-width="1.8"/>
+      <circle cx="118" cy="52" r="2.4" fill="#16130f"/>
+      <path d="M58 38 L74 38 L62 66 L54 66 Z" fill="#ffffff" opacity="0.05"/>
+      <path d="M80 38 L86 38 L76 66 L73 66 Z" fill="#ffffff" opacity="0.04"/>
+      <!-- aged paper label with the window cut out of it -->
+      <path d="M22 16 H170 Q174 16 174 20 V72 Q174 76 170 76 H22 Q18 76 18 72 V20 Q18 16 22 16 Z M50 38 H142 V66 H50 Z" fill-rule="evenodd" fill="url(#csLabel)" stroke="#c8bb9e" stroke-width="1"/>
+      <path d="M24 16 H42 L24 34 Z" fill="#c76a7e" opacity="0.75"/>
+      <path d="M168 16 H150 L168 34 Z" fill="#c76a7e" opacity="0.75"/>
+      <path d="M24 26 H168" stroke="#b23a3f" stroke-width="1.2" opacity="0.55"/>
+      <path d="M24 32.5 H168" stroke="#8f9ab8" stroke-width="0.9" opacity="0.5"/>
+      <path d="M24 71 H168" stroke="#8f9ab8" stroke-width="0.9" opacity="0.35"/>
+      <path d="M173 75 L164 75 L173 66 Z" fill="#dbcfae"/>
+      <path d="M164 75 L173 66" stroke="#b3a685" stroke-width="0.8"/>
+      <!-- molded grooves and head-access cutout -->
+      <g><path d="M30 84 H162" stroke="#211e19" stroke-width="1.2"/><path d="M30 85.4 H162" stroke="#5d574c" stroke-width="0.8" opacity="0.4"/></g>
+      <g><path d="M30 90 H162" stroke="#211e19" stroke-width="1.2"/><path d="M30 91.4 H162" stroke="#5d574c" stroke-width="0.8" opacity="0.4"/></g>
+      <path d="M70 118 L75 97 H117 L122 118 Z" fill="#1a1712" stroke="#0f0d0a" stroke-width="1"/>
+      <circle cx="81" cy="106" r="3.2" fill="#0b0a08"/><circle cx="81" cy="106" r="1.1" fill="#938c7c"/>
+      <circle cx="111" cy="106" r="3.2" fill="#0b0a08"/><circle cx="111" cy="106" r="1.1" fill="#938c7c"/>
+      <rect x="89" y="99" width="14" height="8" rx="1" fill="#0b0a08"/>
+      <rect x="56" y="98" width="5" height="6" fill="#12100c"/>
+      <rect x="131" y="98" width="5" height="6" fill="#12100c"/>
+      <!-- corner screws -->
+      <g>
+        <circle cx="16" cy="18" r="3" fill="url(#csScrew)"/><path d="M13.9 15.9 L18.1 20.1 M18.1 15.9 L13.9 20.1" stroke="#35312a" stroke-width="1"/>
+        <circle cx="176" cy="18" r="3" fill="url(#csScrew)"/><path d="M173.9 15.9 L178.1 20.1 M178.1 15.9 L173.9 20.1" stroke="#35312a" stroke-width="1"/>
+        <circle cx="16" cy="106" r="3" fill="url(#csScrew)"/><path d="M13.9 103.9 L18.1 108.1 M18.1 103.9 L13.9 108.1" stroke="#35312a" stroke-width="1"/>
+        <circle cx="176" cy="106" r="3" fill="url(#csScrew)"/><path d="M173.9 103.9 L178.1 108.1 M178.1 103.9 L173.9 108.1" stroke="#35312a" stroke-width="1"/>
+      </g>
     </svg>
   </div>
-  <!-- RIGHT: guitar picks -->
+  <!-- RIGHT: three guitar picks scattered face up: tortoiseshell, pearloid, rose -->
   <div class="desk-item di-picks">
     <svg viewBox="0 0 122 112" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="pk1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#caa24a"/><stop offset="1" stop-color="#8a5a22"/></linearGradient>
-        <linearGradient id="pk2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c75d6e"/><stop offset="1" stop-color="#8f3247"/></linearGradient>
+        <path id="pkShape" d="M0 -33 C20 -33 32 -21 28 -2 C24 14 8 33 0 39 C-8 33 -24 14 -28 -2 C-32 -21 -20 -33 0 -33 Z"/>
+        <linearGradient id="pkTort" x1="0" y1="0" x2="0.6" y2="1"><stop offset="0" stop-color="#cf9a45"/><stop offset="1" stop-color="#8f5e1f"/></linearGradient>
+        <linearGradient id="pkPearl" x1="0" y1="0" x2="0.6" y2="1"><stop offset="0" stop-color="#f5efe0"/><stop offset="1" stop-color="#ded2b8"/></linearGradient>
+        <linearGradient id="pkRose" x1="0" y1="0" x2="0.6" y2="1"><stop offset="0" stop-color="#c97487"/><stop offset="1" stop-color="#9c4257"/></linearGradient>
+        <filter id="pkBlur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="1.5"/></filter>
+        <filter id="pkBlurS" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="0.9"/></filter>
+        <clipPath id="pkClipT"><use href="#pkShape"/></clipPath>
+        <clipPath id="pkClipP"><use href="#pkShape"/></clipPath>
       </defs>
-      <g transform="rotate(-20 40 56)">
-        <path d="M40 14 C70 14 74 40 62 66 C54 84 46 95 40 95 C34 95 26 84 18 66 C6 40 10 14 40 14 Z" fill="url(#pk2)" stroke="#6f2436" stroke-width="2"/>
-        <path d="M26 30 q14 -8 28 0" fill="none" stroke="#ffffff" stroke-opacity="0.3" stroke-width="3" stroke-linecap="round"/>
+      <!-- rose pick, mostly tucked under the tortoiseshell one -->
+      <g transform="translate(84 56) rotate(40) scale(0.9)">
+        <use href="#pkShape" fill="url(#pkRose)" stroke="#7e3346" stroke-width="1.5"/>
+        <use href="#pkShape" transform="scale(0.9)" fill="none" stroke="#e0a2b1" stroke-width="1.2" opacity="0.35"/>
+        <path d="M-13 -21 q13 -7 25 -1" fill="none" stroke="#ffffff" stroke-opacity="0.28" stroke-width="2.8" stroke-linecap="round"/>
       </g>
-      <g transform="rotate(16 80 54)">
-        <path d="M80 12 C110 12 114 38 102 64 C94 82 86 93 80 93 C74 93 66 82 58 64 C46 38 50 12 80 12 Z" fill="url(#pk1)" stroke="#5e3a14" stroke-width="2"/>
-        <path d="M66 28 q14 -8 28 0" fill="none" stroke="#ffffff" stroke-opacity="0.32" stroke-width="3" stroke-linecap="round"/>
+      <!-- tortoiseshell pick -->
+      <g transform="translate(42 40) rotate(-14)">
+        <use href="#pkShape" fill="url(#pkTort)" stroke="#6d4413" stroke-width="1.6"/>
+        <g clip-path="url(#pkClipT)" filter="url(#pkBlur)">
+          <g fill="#54330d" opacity="0.6">
+            <ellipse cx="-10" cy="-17" rx="7.5" ry="4" transform="rotate(28 -10 -17)"/>
+            <ellipse cx="11" cy="-7" rx="4.5" ry="7.5" transform="rotate(-22 11 -7)"/>
+            <ellipse cx="-16" cy="5" rx="4" ry="6.5" transform="rotate(14 -16 5)"/>
+            <ellipse cx="4" cy="14" rx="7.5" ry="4" transform="rotate(18 4 14)"/>
+            <ellipse cx="15" cy="-21" rx="4" ry="2.6" transform="rotate(-12 15 -21)"/>
+            <ellipse cx="-2" cy="27" rx="4.5" ry="2.8" transform="rotate(8 -2 27)"/>
+            <ellipse cx="-22" cy="-10" rx="3" ry="4.5" transform="rotate(30 -22 -10)"/>
+            <ellipse cx="20" cy="8" rx="3" ry="4.8" transform="rotate(-20 20 8)"/>
+          </g>
+          <g fill="#eec06d" opacity="0.45">
+            <ellipse cx="-2" cy="-27" rx="5" ry="3"/>
+            <ellipse cx="19" cy="4" rx="3.5" ry="5"/>
+            <ellipse cx="-21" cy="-4" rx="3.5" ry="4.5"/>
+          </g>
+        </g>
+        <use href="#pkShape" transform="scale(0.9)" fill="none" stroke="#f0cf8e" stroke-width="1.2" opacity="0.3"/>
+        <path d="M-15 -23 q15 -8 29 -1" fill="none" stroke="#ffffff" stroke-opacity="0.32" stroke-width="3" stroke-linecap="round"/>
+        <path d="M22 8 q-6 18 -20 28" fill="none" stroke="#402507" stroke-opacity="0.25" stroke-width="2.5" stroke-linecap="round"/>
+      </g>
+      <!-- soft cast shadow, then the pearloid pick on top -->
+      <ellipse cx="52" cy="64" rx="20" ry="12" fill="#2b1c0e" opacity="0.16" filter="url(#pkBlur)"/>
+      <g transform="translate(56 80) rotate(26) scale(0.88)">
+        <use href="#pkShape" fill="url(#pkPearl)" stroke="#b9ad91" stroke-width="1.4"/>
+        <g clip-path="url(#pkClipP)" filter="url(#pkBlurS)" fill="none" stroke-linecap="round">
+          <path d="M-26 -12 q16 -7 34 -3" stroke="#d6c9ab" stroke-width="2.4" opacity="0.7"/>
+          <path d="M-28 2 q18 -6 36 -1" stroke="#d6c9ab" stroke-width="2.4" opacity="0.7"/>
+          <path d="M-20 16 q14 -7 28 -4" stroke="#d6c9ab" stroke-width="2.4" opacity="0.7"/>
+          <path d="M-24 -6 q16 -6 32 -2" stroke="#fdfaf1" stroke-width="1.6" opacity="0.6"/>
+          <path d="M-24 9 q15 -6 30 -3" stroke="#fdfaf1" stroke-width="1.6" opacity="0.6"/>
+        </g>
+        <use href="#pkShape" transform="scale(0.9)" fill="none" stroke="#fffcf2" stroke-width="1.2" opacity="0.4"/>
+        <path d="M-14 -21 q13 -7 26 -1" fill="none" stroke="#ffffff" stroke-opacity="0.55" stroke-width="2.4" stroke-linecap="round"/>
       </g>
     </svg>
   </div>

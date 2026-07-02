@@ -99,7 +99,7 @@
     70%  { opacity: 0.18; }
     100% { opacity: 0; transform: translateY(-12px) scaleY(1.15); }
   }
-  /* a dangling bead on the floss spool sways gently */
+  /* the loose beaded strand trailing off the floss skein sways gently */
   .desk-sway { transform-box: fill-box; transform-origin: 50% 0%; animation: deskSway 5.2s ease-in-out infinite; }
   @keyframes deskSway { 0%,100% { transform: rotate(-2.4deg); } 50% { transform: rotate(2.4deg); } }
 
